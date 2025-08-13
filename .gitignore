@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.p~  
+*.swp
+*.bak
+*.log
+
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+.ENV/
+
+# Django stuff:
+*.sqlite3
+*.db
+db.sqlite3
+*.pyc
+
+# Media and static files (optional - depends on how you handle them)
+media/
+staticfiles/
+
+# VS Code
+.vscode/
+
+# Mac OS
+.DS_Store
+
+# Pytest
+.cache/
+.pytest_cache/
+
+# Migrations (optional, depending on your policy)
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Cove
