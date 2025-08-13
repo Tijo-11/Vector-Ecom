@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,12 +32,22 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third Party Apps
+    'rest_framework',
+    'corsheaders',
+    'rest_framework_simplejwt',
+    # Custom Apps
+    'userauth',
+    'store',
+    'vendor',
+    'customer',
 ]
 
 MIDDLEWARE = [
@@ -74,11 +85,14 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DATABASE_NAME'),
+        'USER': config('DATABASE_USER'),
+        'PASSWORD': config('DATABASE_PASSWORD'),
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -114,9 +128,27 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = 'static/' #URL prefix for serving static files like CSS, JS, and images.
+STATICFILES_DIRS = [BASE_DIR / 'static'] #Tells Django where to find additional static files during development.
+STATIC_ROOT = BASE_DIR / 'staticfiles' #Directory where Django collects all static files for production (collectstatic
+#Create folder staticfiles in the root directory, here inside project level backend
+MEDIA_URL = 'media/' #URL prefix for serving uploaded media files (e.g. user images, documents).
+MEDIA_ROOT = BASE_DIR / 'media' #Files uploaded by users are stored here on the server.
+
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+JAZZMIN_SETTINGS = {
+    "site_title":"RetroRelics",
+    "site_header":"RetroRelics",
+    "site_brand" : "Your destination for timeless treasures.",
+    #"Shop stories, not just things", "Because memories never go out of style"
+    "welcome_sign": "Welcome to RetroRelics",
+    "copyright" : "Tijo Thomas 2025 All rights reserved",
+    'show_ui_builder' :True,
+    #https://django-jazzmin.readthedocs.io/ui_customisation/
+}
