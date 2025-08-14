@@ -136,6 +136,9 @@ MEDIA_URL = 'media/' #URL prefix for serving uploaded media files (e.g. user ima
 MEDIA_ROOT = BASE_DIR / 'media' #Files uploaded by users are stored here on the server.
 
 
+AUTH_USER_MODEL = 'userauth.User' #Note it is included as string
+
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -145,7 +148,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 JAZZMIN_SETTINGS = {
     "site_title":"RetroRelics",
     "site_header":"RetroRelics",
-    "site_brand" : "Your destination for timeless treasures.",
+    "site_brand" : "RetroRelics", #Your destination for timeless treasures.",
     #"Shop stories, not just things", "Because memories never go out of style"
     "welcome_sign": "Welcome to RetroRelics",
     "copyright" : "Tijo Thomas 2025 All rights reserved",
