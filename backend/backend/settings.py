@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
+#timedelta represents a duration, the difference between two dates or times.
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
+    'drf_yasg',
     # Custom Apps
     'userauth',
     'store',
@@ -155,3 +158,21 @@ JAZZMIN_SETTINGS = {
     'show_ui_builder' :True,
     #https://django-jazzmin.readthedocs.io/ui_customisation/
 }
+SIMPLE_JWT= {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=50),
+    'ROTATE_REFRESH_TOKENS' : True,
+#'ROTATE_REFRESH_TOKENS': True ensures that a new refresh token is issued every time the user gets a new 
+# access token using the old refresh token.This helps prevent token reuse and makes it easier to revoke 
+# compromised tokens.
+    'BLACKLIST_AFTER_ROTATION' :True,
+#ensures that old refresh tokens are invalidated (blacklisted) after a new one is issued during rotation.
+#This setting works hand-in-hand with 'ROTATE_REFRESH_TOKENS': True to enforce strict token hygiene—making
+# sure that once a refresh token is rotated, the previous one can't be used again. It's a smart move for apps
+# that prioritize security and want to reduce the risk of token theft or replay attacks.
+    'UPDATE_LAST_LOGIN' :True
+#ensures that the user's last_login field is updated every time they log in, even if it's not their first time.
+#This is useful for tracking user activity, monitoring engagement, or implementing features like login history,
+# session analytics, or security alerts.
+}
+

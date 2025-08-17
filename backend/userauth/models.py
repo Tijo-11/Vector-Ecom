@@ -184,13 +184,13 @@ post_save.connect(save_user_profile, sender = User)
 # the profile depends on updated user data.
 
 #################
-#Error
 #ERRORS:
 # auth.User.groups: (fields.E304) Reverse accessor 'Group.user_set' for 'auth.User.groups' clashes with
 # reverse accessor for 'userauth.User.groups'
 #Just set AUTH_USER_MODEL in settings.py
 ##################
 #while running migrate
+#ERROR
 # raise InconsistentMigrationHistory(
 #django.db.migrations.exceptions.InconsistentMigrationHistory: Migration admin.0001_initial is applied before
 # its dependency userauth.0001_initial on database 'default'.
