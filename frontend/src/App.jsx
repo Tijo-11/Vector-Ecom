@@ -1,10 +1,16 @@
-// src/App.jsx
-function App() {
+import { useState } from "react";
+import { Routes, Route, BrowserRouter } from "react-router-dom";
+import Login from "./views/auth/login";
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-500">
-      <h1 className="text-4xl font-bold text-white">🎉 Tailwind is working!</h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<h1>Welcome</h1>} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;

@@ -2,7 +2,7 @@ import { useAuthStore } from "../store/auth";
 import apiInstance from "./axios"; // <-- import axios from "./axios"; works since it was an exported  as default.
 //Better thing is import apiInstance from './axios';
 // Imports the jwt-decode library to decode JSON Web Tokens (JWT) on the client side
-import jwt_decode from "jwt-decode";
+import { jwtDecode } from "jwt-decode"; // ✅ Correct way to import a named export
 //jwt-decode is a super useful library when you want to extract information from a JWT without verifying it.
 //  It’s commonly used in frontend apps to read user data like user_id, email, or roles embedded in the token.
 import cookies from "js-cookie"; //js-cookie is a lightweight JavaScript library that simplifies working with
@@ -127,7 +127,7 @@ export const setAuthUser = async (access_token, refresh_token) => {
   Cookies.set("refresh_token", refresh_token, { expires: 7, secure: true });
   //secure: true ensures the cookie is only sent over HTTPS — great for production environments.
   // Decoding access token to get user information
-  const user = jwt_decode(access_token) || null;
+  const user = jwtDecode(access_token) || null;
   // If user information is present, update user state; otherwise, set loading state to false
   if (user) {
     useAuthStore.getState().setUser(user);
@@ -138,7 +138,6 @@ export const setAuthUser = async (access_token, refresh_token) => {
 // Function to refresh the access token using the refresh token
 export const getRefreshToken = async (refresh_token) => {
   // Retrieving refresh token from cookies and making a POST request to refresh the access token
-  const refresh_token = Cookies.get("refresh_token");
   const response = await apiInstance.post("user/token/refresh", {
     refresh: refresh_token,
   });
@@ -149,7 +148,7 @@ export const getRefreshToken = async (refresh_token) => {
 export const isAccessTokenExpired = (accessToken) => {
   try {
     // Decoding the access token and checking if it has expired
-    const decodedToken = jwt_decode(accessToken);
+    const decodedToken = jwtDecode(accessToken);
     return decodedToken.exp < Date.now() / 1000;
     //Compares the token’s exp (expiry time in seconds) with the current time (converted to seconds).
     //.exp is a It’s a property of the decoded JWT (JSON Web Token) payload. Specifically:
