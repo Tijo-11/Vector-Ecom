@@ -9,11 +9,13 @@ export default function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn); //function from Zustand store:
+  //After successful login,  the auth store  sets isLoggedIn internally.
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn()) {
+      //or you can make isLoggedIn() is  a function call inside if block and it's fine because it's only run once.
       navigate("/");
     }
   }, []);

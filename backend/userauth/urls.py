@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import MyTokenObtainPairView, RegisterView
-from rest_framework import TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('user/token/', MyTokenObtainPairView.as_view(), name="token_obtain_pair"),

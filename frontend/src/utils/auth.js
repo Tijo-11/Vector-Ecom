@@ -55,7 +55,7 @@ export const login = async (email, password) => {
   }
 };
 // Function to handle user registration
-export const Register = async (
+export const register = async (
   full_name,
   email,
   phone,
