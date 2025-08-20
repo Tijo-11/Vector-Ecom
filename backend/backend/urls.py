@@ -33,16 +33,14 @@ schema_view = get_schema_view(
 
 
 urlpatterns = [
-    # Serves interactive Swagger UI for exploring and testing API at root URL ('/')
-    #This gives developers and frontend teams a live, clickable interface to view endpoints, send requests,
-    # and see responses—perfect for integrating with React frontend or debugging your Django backend.
-    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    
-    #path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     # Serves raw OpenAPI schema (JSON/YAML) without Swagger UI at /swagger.json or /swagger.yaml
     #This is useful for tools or services that consume your API schema programmatically—like Postman 
     # or frontend code generators. The <format> part dynamically handles .json or .yaml extensions.
-
+    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    # Serves interactive Swagger UI for exploring and testing API at root URL ('/')
+    #This gives developers and frontend teams a live, clickable interface to view endpoints, send requests,
+    # and see responses—perfect for integrating with React frontend or debugging your Django backend.
     path('admin/', admin.site.urls),
     path('api/', include('userauth.urls')),
     
