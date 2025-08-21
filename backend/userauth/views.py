@@ -128,6 +128,7 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
             link = f"http://localhost:5173/create-new-password?otp={otp}&uidb64={uidb64}/"
 
             # TODO: send email with `link`
+            print(f"[DEBUG] Password reset link for {email}: {link}")
 
         # Always return safe response
         return Response({"message": "If this email exists, a reset link was sent."})
