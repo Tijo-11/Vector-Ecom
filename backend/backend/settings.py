@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -175,4 +176,13 @@ SIMPLE_JWT= {
 #This is useful for tracking user activity, monitoring engagement, or implementing features like login history,
 # session analytics, or security alerts.
 }
-
+# Optional if you're using cookies with JWT
+CORS_ALLOW_METHODS = ['GET', 'POST', 'OPTIONS','PUT', 'PATCH', 'DELETE']
+CORS_ALLOW_HEADERS = [
+    "X-CSRFToken",
+    "Content-Type",
+    "Authorization",
+]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",   # React dev server
+]
