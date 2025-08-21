@@ -5,7 +5,7 @@ import apiInstance from "./axios"; // <-- import axios from "./axios"; works sin
 import { jwtDecode } from "jwt-decode"; // ✅ Correct way to import a named export
 //jwt-decode is a super useful library when you want to extract information from a JWT without verifying it.
 //  It’s commonly used in frontend apps to read user data like user_id, email, or roles embedded in the token.
-import cookies from "js-cookie"; //js-cookie is a lightweight JavaScript library that simplifies working with
+import Cookies from "js-cookie"; //js-cookie is a lightweight JavaScript library that simplifies working with
 // cookies in the browser. It’s perfect for storing tokens, user preferences, or session data without diving
 // into the messy details of cookie syntax.
 import Swal from "sweetalert2";

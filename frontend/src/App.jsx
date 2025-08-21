@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
-import Login from "./views/auth/login";
+import Login from "./views/auth/Login";
 import Register from "./views/auth/Register";
+import Dashboard from "./views/auth/Dashboard";
+import Logout from "./views/auth/Logout";
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -9,9 +11,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<h1>Welcome</h1>} />
+        <Route path="/" element={<Dashboard />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/logout" element={<Logout />} />
       </Routes>
     </BrowserRouter>
   );
