@@ -5,6 +5,7 @@ import Register from "./views/auth/Register";
 import Dashboard from "./views/auth/Dashboard";
 import Logout from "./views/auth/Logout";
 import ForgotPassword from "./views/auth/ForgotPassword";
+import CreateNewPassword from "./views/auth/CreateNewPassword";
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/create-new-password" element={<CreateNewPassword />} />
       </Routes>
     </BrowserRouter>
   );
