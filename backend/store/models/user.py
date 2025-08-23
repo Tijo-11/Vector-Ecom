@@ -1,4 +1,6 @@
 # Wishlist, Address, Notifications
+
+#country in address is commented out, rerun migrations after adding add-on tax application
 from .common import *
 from .product import Product
 from .order import CartOrder, CartOrderItem

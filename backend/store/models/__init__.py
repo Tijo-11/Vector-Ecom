@@ -1,5 +1,5 @@
 from .product import Product
-from .category import  Brand, Tag
+from .category import  Brand, Tag, Category
 from .order import Cart, CartOrder, CartOrderItem, CancelledOrder, Coupon, CouponUsers, DeliveryCouriers
 from .user import Wishlist, Address, Notification
 from .review import Review, ProductFaq
