@@ -48,6 +48,36 @@ GENDER = (
     ("male", "Male"),
     ("others", "Others")
 )
+#Purpose: Dynamically generate a user-specific upload path for an image, even if the user is nested under 
+# vendor or product.vendor. If no user is found, it uses a fallback path.
+def user_directory_path(instance, filename):
+    user = None
+    
+    if hasattr(instance, 'user') and instance.user:
+#hasattr() is a built-in Python function,It checks if an object has a specific attribute.
+#eg hasattr(object, 'attribute_name'), Returns True if the attribute exists, False otherwise.
+#This checks if instance has a user attribute before trying to access it, which prevents AttributeError.
+#It’s super useful in Django models where relationships might vary or be optional.
+        user = instance.user
+    elif hasattr(instance, 'vendor') and hasattr(instance.vendor, 'user') and instance.vendor.user:
+        user = instance.vendor.user
+    elif hasattr(instance, 'product') and hasattr(instance.product.vendor, 'user') and instance.product.vendor.user:
+        user = instance.product.vendor.user
+
+    if user:
+        ext = filename.split('.')[-1]
+        # - Extract file extension from original filename
+        filename = "%s.%s" % (user.id, ext)
+        # - Rename file to <user_id>.<ext> for uniqueness
+        return 'user_{0}/{1}'.format(user.id, filename)
+    # - Return path: user_<user_id>/<user_id>.<ext>
+    else:
+        # Handle the case when user is None
+        # You can return a default path or raise an exception, depending on your requirements.
+        # For example, return a path with 'unknown_user' as the user ID:
+        ext = filename.split('.')[-1]
+        filename = "%s.%s" % ('file', ext)
+        return 'user_{0}/{1}'.format('file', filename)
 
 # Create your models here.
 class User(AbstractUser):
