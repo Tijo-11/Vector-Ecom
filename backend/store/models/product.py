@@ -1,27 +1,14 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
-from shortuuid.django_fields import ShortUUIDField
 from django.utils.html import mark_safe
 from django.utils import timezone
-from django.template.defaultfilters import escape
-from django.urls import reverse
-from django.shortcuts import redirect
-from django.dispatch import receiver
 from django.utils.text import slugify
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-
-from userauth.models import User, user_directory_path, Profile
+from shortuuid.django_fields import ShortUUIDField
+import shortuuid
+from userauth.models import user_directory_path
 from vendor.models import Vendor
 
-import shortuuid
-import datetime
-import os 
-
+# Assuming STATUS and PRODUCT_TYPE are defined in choices.py or common.py
+from .choices import STATUS, PRODUCT_TYPE
 
 # Model for Products
 class Product(models.Model):
@@ -29,7 +16,7 @@ class Product(models.Model):
     image = models.FileField(upload_to=user_directory_path, blank=True, null=True, default="product.jpg")
     description = models.TextField(null=True, blank=True)
     # Categories that the product belongs to
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="category")
+    category = models.ForeignKey('store.Category', on_delete=models.SET_NULL, null=True, blank=True, related_name="category")
 #on_delete=models.SET_NULL means:, If a Category is deleted, the category field in Product will be set
 # to NULL — instead of deleting the Product. This works only because null=True is set — it allows the field to 
 # be empty in the database. You can delete a Category without breaking Product
@@ -96,47 +83,55 @@ class Product(models.Model):
         verbose_name_plural = "Products"
     # Returns an HTML image tag for the product's image
     def product_image(self):
-        return mark_safe('<img src="%s"  width="50" height="50" style="object-fit:cover; border-radius: 6px;" />' %(self.img.url))
+        return mark_safe('<img src="%s"  width="50" height="50" style="object-fit:cover; border-radius: 6px;" />' %(self.image.url))
 
 
     def __str__(self):
         return self.title
      # Returns the count of products in the same category as this product
     def category_count(self):
-        return Product.object.filter(category=(self.category).count())
+        return Product.objects.filter(category=self.category).count()
 ## category__in expects an iterable (e.g. list of Category objects or IDs), no need to use here
     # Calculates the discount percentage between old and new prices
     def get_percentage(self):
-        percentage = ((self.price - self.old_price)/self.old_price)*100
+        percentage = ((self.old_price - self.price)/self.old_price)*100
         return round(percentage, 0)
     
     # Calculates the average rating of the product
     def product_rating(self):
-        product_rating = Review.objects.filter(product=self).aggregate(avg_rating= models.Avg('rating'))
+        from .review import Review
+        product_rating = Review.objects.filter(product=self).aggregate(avg_rating=models.Avg('rating'))
         return product_rating['avg_rating']
     #the separate return statement is needed because .aggregate() returns a dictionary, not a direct value.
     
     # Returns the count of ratings for the product
     def rating_count(self):
+        from .review import Review
         rating_count = Review.objects.filter(product=self).count()
         return rating_count
     # Returns the count of orders for the product with "paid" payment status
     def order_count(self):
+        from .order import CartOrderItem
         order_count = CartOrderItem.objects.filter(product=self, order__payment_status="paid").count()
         return order_count
     # Returns the gallery images linked to this product
     def gallery(self):
+        from .item import Gallery
         gallery = Gallery.objects.filter(product=self)
         return gallery
     def specification(self):
+        from .item import Specification
         return Specification.objects.filter(product=self)
     def color(self):
+        from .item import Color
         return Color.objects.filter(product=self)
     def size(self):
+        from .item import Size
         return Size.objects.filter(product=self)
     # Returns a list of products frequently bought together with this product
     def frequently_bought_together(self):
-        frequently_bought_together_products = Product.objects.filter(order_item__order__in=CartOrder.objects.filter(orderitem__product=self)).exclude(id=self.id).annotate(count=models.Count('id')).order_by('-id')[:3]
+        from .order import CartOrder, CartOrderItem
+        frequently_bought_together_products = Product.objects.filter(order_item__order__in=CartOrder.objects.filter(orderitem__product=self)).exclude(id=self.id).annotate(count=models.Count('order_item')).order_by('-count')[:3]
         #CartOrder.objects.filter(orderitem__product=self), Finds all orders that contain the current product (self).
         #Product.objects.filter(order_item__order__in=...)Finds all products that were part of those same orders.
         #.exclude(id=self.id)
@@ -161,5 +156,4 @@ class Product(models.Model):
                 self.stock_qty = 0
                 self.in_stock = False
         self.rating = self.product_rating()
-        super(Product, self).save(*args, **kwargs) 
-            
+        super(Product, self).save(*args, **kwargs)

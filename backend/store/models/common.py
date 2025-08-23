@@ -1,4 +1,3 @@
-
 from django.db import models # Create your models here. from shortuuid.django_fields import ShortUUIDField 
 #Imports a Django model field that generates short, unique IDs using the shortuuid library. 
 #Useful for replacing default UUIDs with shorter, URL-friendly identifiers in Django models. 
@@ -33,6 +32,7 @@ import datetime #Imports Python’s built-in datetime module for working with da
 import os #Imports Python’s os module for interacting with the operating system. 
 #Used for tasks like reading environment variables, handling file paths, or accessing the file system — e.g., 
 # os.path.join() or os.getenv().
+from shortuuid.django_fields import ShortUUIDField
 
 
 
