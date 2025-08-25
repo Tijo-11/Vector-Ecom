@@ -55,5 +55,8 @@ class Tax(models.Model):
     def __str__(self):
         return f"{self.country}"
     
+    
+#Serializer is in store serializer
+    
 
         
