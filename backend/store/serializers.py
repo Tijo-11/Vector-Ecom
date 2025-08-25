@@ -59,7 +59,7 @@ class ColorSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     # Serialize related Category, Tag, and Brand models
     #Nested serializers for related models; many=True for lists, read_only to prevent updates via this serializer
-    category = CategorySerializer(many=True, read_only=True)
+    category = CategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     gallery = GallerySerializer(many=True, read_only=True)
     color = ColorSerializer(many=True, read_only=True)
@@ -95,7 +95,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "views",
             "orders",
             "saved",
-            # "rating",
+            "rating",
             "vendor",
             "sku",
             "pid",
@@ -108,7 +108,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "product_rating",
             "rating_count",
             'order_count',
-            "get_precentage",
+            #"get_precentage",
         ]
     def __init__(self, *args, **kwargs):
         super(ProductSerializer, self).__init__(*args, **kwargs)

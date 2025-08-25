@@ -43,6 +43,7 @@ urlpatterns = [
     # and see responses—perfect for integrating with React frontend or debugging your Django backend.
     path('admin/', admin.site.urls),
     path('api/', include('userauth.urls')),
+    path('api/', include('store.urls')),
     
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

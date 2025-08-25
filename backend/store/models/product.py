@@ -100,8 +100,10 @@ class Product(models.Model):
     # Calculates the average rating of the product
     def product_rating(self):
         from .review import Review
-        product_rating = Review.objects.filter(product=self).aggregate(avg_rating=models.Avg('rating'))
-        return product_rating['avg_rating']
+        if self.pk:  # Only query if the product is saved
+            product_rating = Review.objects.filter(product=self).aggregate(avg_rating=models.Avg('rating'))
+            return product_rating['avg_rating'] or 0  # Return 0 if no reviews exist
+        return 0  # Return 0 for unsaved instances
     #the separate return statement is needed because .aggregate() returns a dictionary, not a direct value.
     
     # Returns the count of ratings for the product
@@ -142,6 +144,8 @@ class Product(models.Model):
         #.order_by('-count')[:3]
         return frequently_bought_together_products
      # Custom save method to generate a slug if it's empty, update in_stock, and calculate the product rating
+     
+    
     def save(self, *args, **kwargs):
         if self.slug == "" or self.slug is None:
             uuid_key = shortuuid.uuid()
