@@ -58,7 +58,7 @@ class Address(models.Model):
     full_name = models.CharField(max_length=200)
     mobile = models.CharField(max_length=50)
     email = models.CharField(max_length=100)
-    #country = models.ForeignKey("addon.Tax", on_delete=models.SET_NULL, null=True, related_name="address_country", blank=True)
+    country = models.ForeignKey("addon.Tax", on_delete=models.SET_NULL, null=True, related_name="address_country", blank=True)
     town_city = models.CharField(max_length=100)
     address = models.CharField(max_length=100)
     zip = models.CharField(max_length=100)
