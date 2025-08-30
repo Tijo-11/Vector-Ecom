@@ -44,3 +44,4 @@ staticfiles/
 !**/migrations/__init__.py
 
 # Cove
+node_modules

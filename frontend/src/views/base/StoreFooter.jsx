@@ -96,8 +96,18 @@ function StoreFooter() {
 
           {/* Products */}
           <div>
-            <h3 className="font-semibold mb-3">Products</h3>
+            <h3 className="font-semibold mb-3">Categories</h3>
             <ul className="space-y-2 text-sm">
+              <li>
+                <a href="#!" className="hover:text-blue-600">
+                  Retro Cameras & Photography
+                </a>
+              </li>
+              <li>
+                <a href="#!" className="hover:text-blue-600">
+                  Vinyl Records & Music
+                </a>
+              </li>
               <li>
                 <a href="#!" className="hover:text-blue-600">
                   Electronics
@@ -105,17 +115,38 @@ function StoreFooter() {
               </li>
               <li>
                 <a href="#!" className="hover:text-blue-600">
-                  Fashion
+                  Books, Magazines & Comics Vintage Toys
                 </a>
               </li>
               <li>
                 <a href="#!" className="hover:text-blue-600">
-                  Beauty
+                  Vintage Toys & Games
                 </a>
               </li>
               <li>
                 <a href="#!" className="hover:text-blue-600">
-                  Automotive
+                  Kitchenware & Appliances
+                </a>
+              </li>
+              <li>
+                <a href="#!" className="hover:text-blue-600">
+                  Military & Wartime Collectibles Gear
+                </a>
+              </li>
+              <li>
+                <a href="#!" className="hover:text-blue-600">
+                  Antique & Vintage Home Decor
+                </a>
+              </li>
+
+              <li>
+                <a href="#!" className="hover:text-blue-600">
+                  Automobilia & Transportation Memorabilia
+                </a>
+              </li>
+              <li>
+                <a href="#!" className="hover:text-blue-600">
+                  Vintage Fashion & Accessories
                 </a>
               </li>
             </ul>
