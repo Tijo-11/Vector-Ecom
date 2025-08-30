@@ -1,4 +1,10 @@
-import React from "react";
+import {
+  FaFacebookF,
+  FaPinterestP,
+  FaYoutube,
+  FaInstagram,
+} from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6"; // Twitter → X logo
 
 function StoreFooter() {
   return (
@@ -17,15 +23,15 @@ function StoreFooter() {
               className="w-9 h-9 flex items-center justify-center rounded-full text-white"
               style={{ backgroundColor: "#3b5998" }}
             >
-              <i className="fab fa-facebook-f" />
+              <FaFacebookF />
             </a>
-            {/* Twitter */}
+            {/* X (Twitter) */}
             <a
               href="#!"
               className="w-9 h-9 flex items-center justify-center rounded-full text-white"
-              style={{ backgroundColor: "#55acee" }}
+              style={{ backgroundColor: "#000000" }}
             >
-              <i className="fab fa-twitter" />
+              <FaXTwitter />
             </a>
             {/* Pinterest */}
             <a
@@ -33,7 +39,7 @@ function StoreFooter() {
               className="w-9 h-9 flex items-center justify-center rounded-full text-white"
               style={{ backgroundColor: "#c61118" }}
             >
-              <i className="fab fa-pinterest" />
+              <FaPinterestP />
             </a>
             {/* YouTube */}
             <a
@@ -41,7 +47,7 @@ function StoreFooter() {
               className="w-9 h-9 flex items-center justify-center rounded-full text-white"
               style={{ backgroundColor: "#ed302f" }}
             >
-              <i className="fab fa-youtube" />
+              <FaYoutube />
             </a>
             {/* Instagram */}
             <a
@@ -49,7 +55,7 @@ function StoreFooter() {
               className="w-9 h-9 flex items-center justify-center rounded-full text-white"
               style={{ backgroundColor: "#ac2bac" }}
             >
-              <i className="fab fa-instagram" />
+              <FaInstagram />
             </a>
           </div>
         </div>

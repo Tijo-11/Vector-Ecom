@@ -191,7 +191,7 @@ function StoreHeader() {
             <input
               onChange={handleSearchChange}
               name="search"
-              className="rounded-lg px-3 py-1 text-gray-900 focus:outline-none"
+              className="rounded-lg bg-white  px-3 py-1 text-gray-900 focus:outline-none"
               type="text"
               placeholder="Search"
             />
