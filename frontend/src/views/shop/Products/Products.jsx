@@ -6,6 +6,7 @@ import apiInstance from "../../../utils/axios";
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
   // useState([]) returns [stateValue, setStateFunction]
   // Destructuring assigns: products = stateValue, setProducts = updater function
   useEffect(() => {
@@ -18,8 +19,15 @@ export default function Products() {
       setProducts(response.data);
       setLoading(false); // stop loading after data is fetched
     });
+    // console.log(products);
   }, []); //empty dependence array means useEffect runs once
-  console.log(products);
+
+  useEffect(() => {
+    apiInstance.get(`category/`).then((response) => {
+      setCategories(response.data);
+      console.log(response.data);
+    });
+  }, []);
 
   if (loading) {
     return <ProductsPlaceholder />; // render placeholder while loading
@@ -36,7 +44,7 @@ export default function Products() {
             <a
               key={product.id}
               href={`/product/${product.slug}`}
-              className="group"
+              className="group flex flex-col h-full"
             >
               <img
                 src={product.image}
@@ -61,8 +69,15 @@ export default function Products() {
                   ⭐ {product.rating}
                 </p>
               )}
+              {/* Category */}
+              {product.category && (
+                <p className="text-sm text-gray-500">
+                  Category: {product.category.title}
+                </p>
+              )}
+
               {/* New Buttons */}
-              <div className="mt-4 flex flex-col gap-2">
+              <div className="mt-auto flex flex-col gap-2">
                 <button className="flex items-center justify-center gap-2 w-full rounded-lg bg-blue-600 text-white py-2 hover:bg-blue-700 transition">
                   <ShoppingCart size={18} /> Add to Cart
                 </button>
@@ -74,6 +89,32 @@ export default function Products() {
           ))}
         </div>
       </div>
+      {categories && categories.length > 0 ? (
+        <div className="mt-6">
+          <h2 className="text-xl font-bold mb-4">Categories</h2>
+
+          {/* Netflix-style horizontal scroll */}
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-4">
+            {categories.map((cat) => (
+              <div
+                key={cat.id}
+                className="flex-shrink-0 w-40 cursor-pointer group"
+              >
+                <div className="relative h-24 w-40 rounded-lg overflow-hidden">
+                  <img
+                    src={cat.image}
+                    alt={cat.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+                <p className="mt-2 text-sm font-medium text-gray-700 text-center">
+                  {cat.title}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
