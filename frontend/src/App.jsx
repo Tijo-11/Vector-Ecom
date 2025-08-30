@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
-import Login from "./views/auth/Login";
+import Login from "./views/auth/login";
 import Register from "./views/auth/Register";
 import Dashboard from "./views/auth/Dashboard";
+import PrivateRoute from "./layouts/PrivateRoute"; // Importing the 'PrivateRoute' component.
+//import Private from "./views/auth/private"; // Importing the 'Private' component.
 import Logout from "./views/auth/Logout";
 import ForgotPassword from "./views/auth/ForgotPassword";
 import CreateNewPassword from "./views/auth/CreateNewPassword";
 import StoreHeader from "./views/base/StoreHeader";
 import StoreFooter from "./views/base/StoreFooter";
 import Products from "./views/shop/Products/Products";
+import MainWrapper from "./layouts/MainWrapper";
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -16,15 +19,26 @@ export default function App() {
   return (
     <BrowserRouter>
       <StoreHeader />
-      <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/logout" element={<Logout />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/create-new-password" element={<CreateNewPassword />} />
-        <Route path="/" element={<Products />} />
-      </Routes>
+      <MainWrapper>
+        <Routes>
+          {/* <Route // Define a specific route.
+            path="/private" // Set the route path to "/private".
+            element={
+              // Render the element when this route matches.
+              <PrivateRoute>
+                <Private />
+              </PrivateRoute>
+            }
+          /> */}
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/logout" element={<Logout />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/create-new-password" element={<CreateNewPassword />} />
+          <Route path="/" element={<Products />} />
+        </Routes>
+      </MainWrapper>
       <StoreFooter />
     </BrowserRouter>
   );

@@ -1,14 +1,19 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { useAuthStore } from "../../store/auth";
 import { Link, useNavigate } from "react-router-dom";
-// import { CartContext } from "../plugin/Context";
 
 function StoreHeader() {
-  // Memoize the selector to get a stable boolean for isLoggedIn
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const user = useAuthStore((state) => state.user);
+
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
+
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isVendorOpen, setIsVendorOpen] = useState(false);
+
+  const accountRef = useRef(null);
+  const vendorRef = useRef(null);
 
   const handleSearchChange = (event) => {
     setSearch(event.target.value);
@@ -17,12 +22,27 @@ function StoreHeader() {
   const handleSearchSubmit = () => {
     navigate(`/search?query=${search}`);
   };
-  const [isAccountOpen, setIsAccountOpen] = useState(false);
-  const [isVendorOpen, setIsVendorOpen] = useState(false);
 
-  // Toggle functions for dropdowns
+  // Toggle functions
   const toggleAccountDropdown = () => setIsAccountOpen(!isAccountOpen);
   const toggleVendorDropdown = () => setIsVendorOpen(!isVendorOpen);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (accountRef.current && !accountRef.current.contains(event.target)) {
+        setIsAccountOpen(false);
+      }
+      if (vendorRef.current && !vendorRef.current.contains(event.target)) {
+        setIsVendorOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="bg-gray-900 text-white shadow-md">
@@ -37,7 +57,7 @@ function StoreHeader() {
 
           <nav className="hidden md:flex space-x-6">
             {/* Account Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={accountRef}>
               <button
                 onClick={toggleAccountDropdown}
                 className="hover:text-gray-300 focus:outline-none"
@@ -52,7 +72,7 @@ function StoreHeader() {
                 <Link
                   to="/customer/account/"
                   className="block px-4 py-2 hover:bg-gray-100"
-                  onClick={() => setIsAccountOpen(false)} // Close dropdown on link click
+                  onClick={() => setIsAccountOpen(false)}
                 >
                   <i className="fas fa-user"></i> Account
                 </Link>
@@ -88,7 +108,7 @@ function StoreHeader() {
             </div>
 
             {/* Vendor Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={vendorRef}>
               <button
                 onClick={toggleVendorDropdown}
                 className="hover:text-gray-300 focus:outline-none"
@@ -212,14 +232,6 @@ function StoreHeader() {
                 </Link>
               </>
             )}
-            {/* Commented out cart section as CartContext is not implemented
-            <Link to="/cart/" className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg">
-              <i className="fas fa-shopping-cart"></i>
-              <span id="cart-total-items" className="ml-1">
-                {cartCount || 0}
-              </span>
-            </Link>
-            */}
           </div>
         </div>
       </div>

@@ -1,35 +1,47 @@
-import { create } from "zustand"; //Zustand is a lightweight state management library for React. The create
-// function is used to build custom hooks that manage shared state across components—without boilerplate
-// or context providers.
-import { mountStoreDevtool } from "simple-zustand-devtools";
-//simple-zustand-devtools is a handy utility that lets you inspect and debug your Zustand store right from
-// your browser's developer tools. Once you mount it, you can track state changes, see actions, and get a
-// clearer view of your app’s state flow.
+import { create } from "zustand";
+// Zustand is a lightweight state management library for React. The `create` function is used
+// to build custom hooks that manage shared state across components without boilerplate or context providers.
 
-const useAuthStore = create((set, get) => ({
-  //set: Function to update the store’s state.get: Function to retrieve the current state.
-  allUserData: null, //Stores user information (e.g., user_id, username). Initialized as null
-  loading: false, //Tracks loading state (e.g., during login). Initialized as false
-  //Define a user function to return user-related data:
-  user: () => ({
-    user_id: get().allUserData?.user_id || null, // Uses optional chaining to safely access user_id; returns
-    // null if allUserData is undefined
-    username: get().allUserData?.username || null,
-  }),
-  //Define a setUser function to update allUserData:
-  setUser: (user) => ({ allUserData: user }),
-  // Define a setLoading function to update the loading state:
+import { mountStoreDevtool } from "simple-zustand-devtools";
+// simple-zustand-devtools is a handy utility that lets you inspect and debug your Zustand store right
+// from the browser’s developer tools. It helps track state changes and actions for easier debugging.
+
+const useAuthStore = create((set) => ({
+  // allUserData: Stores the full decoded user information (e.g., user_id, username) from the JWT.
+  allUserData: null,
+
+  // loading: Tracks loading state (e.g., during login requests). Initialized as false.
+  loading: false,
+
+  // user: Stores a simplified user object (commonly used fields like user_id and username).
+  // This is derived when we set `allUserData`, so components can access it directly.
+  user: null,
+
+  // isLoggedIn: Boolean flag that directly tracks if a user session is active (true when allUserData is not null).
+  isLoggedIn: false,
+
+  // setUser: Updates `allUserData`, `user`, and `isLoggedIn` in one go whenever login/logout happens.
+  setUser: (user) =>
+    set({
+      allUserData: user,
+      user: user
+        ? {
+            user_id: user.user_id || null,
+            username: user.username || null,
+          }
+        : null,
+      isLoggedIn: !!user,
+    }),
+
+  // setLoading: Updates the loading state during API calls (true while waiting, false after response).
   setLoading: (loading) => set({ loading }),
-  isLoggedIn: () => get().allUserData !== null,
-  //Checks if user is logged in — returns true if allUserData exists (i.e., not null),
-  // meaning a user session is active.
 }));
-//Conditionally attach Zustand dev tools in the development environment:
+
+// Conditionally attach Zustand devtools in the development environment:
 if (import.meta.env.DEV) {
-  //import.meta.env.DEV is a Vite-specific way to check if the app is running in
-  // development mode.
-  mountStoreDevtool("Store", useAuthStore); //This conditional ensures the devtools are only active during
-  // development, keeping production builds clean and performant.
+  // import.meta.env.DEV is a Vite-specific way to check if the app is running in development mode.
+  mountStoreDevtool("Store", useAuthStore);
+  // Mounts Zustand devtools with the name "Store". This helps visualize state in browser devtools.
 }
 
 export { useAuthStore };

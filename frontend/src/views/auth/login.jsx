@@ -14,7 +14,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isLoggedIn()) {
+    if (isLoggedIn) {
       //or you can make isLoggedIn() is  a function call inside if block and it's fine because it's only run once.
       navigate("/");
     }

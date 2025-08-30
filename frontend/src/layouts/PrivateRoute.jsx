@@ -12,3 +12,4 @@ export default function PrivateRout({ children }) {
   // If the user is not authenticated, redirect them to the login page.
   return loggedIn ? <>{children}</> : <Navigate to="/login" />;
 }
+// Export the 'PrivateRoute' component to make it available for use in other parts of the application.

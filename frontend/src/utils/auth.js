@@ -2,7 +2,7 @@ import { useAuthStore } from "../store/auth";
 import apiInstance from "./axios"; // <-- import axios from "./axios"; works since it was an exported  as default.
 //Better thing is import apiInstance from './axios';
 // Imports the jwt-decode library to decode JSON Web Tokens (JWT) on the client side
-import { jwtDecode } from "jwt-decode"; // ✅ Correct way to import a named export
+import { jwtDecode } from "jwt-decode"; // ✅ Correct import (default export)
 //jwt-decode is a super useful library when you want to extract information from a JWT without verifying it.
 //  It’s commonly used in frontend apps to read user data like user_id, email, or roles embedded in the token.
 import Cookies from "js-cookie"; //js-cookie is a lightweight JavaScript library that simplifies working with
@@ -90,11 +90,15 @@ export const register = async (
 };
 
 // Function to handle user logout
+// Function to handle user logout
 export const logout = () => {
-  // Removing access and refresh tokens from cookies, resetting user state, and displaying success toast
-  Cookies.remove("access_token"),
-    Cookies.remove("refresh_token"),
-    useAuthStore.getState().setUser(null);
+  // Removing access and refresh tokens from cookies
+  Cookies.remove("access_token");
+  Cookies.remove("refresh_token");
+
+  // Resetting Zustand store: clears allUserData, user, and isLoggedIn
+  useAuthStore.getState().setUser(null);
+
   // Displaying a success toast notification
   Toast.fire({
     icon: "success",
@@ -112,7 +116,7 @@ export const setUser = async () => {
     return;
   }
   // If access token is expired, refresh it; otherwise, set the authenticated user
-  if (isAccessTokenExpired) {
+  if (isAccessTokenExpired(accessToken)) {
     const response = await getRefreshToken(refreshToken);
     setAuthUser(response.access, response.refresh);
   } else {
@@ -121,7 +125,7 @@ export const setUser = async () => {
 };
 
 // Function to set the authenticated user and update user state
-export const setAuthUser = async (access_token, refresh_token) => {
+export const setAuthUser = (access_token, refresh_token) => {
   //Retrieving access and refresh tokens from cookies
   Cookies.set("access_token", access_token, { expires: 1, secure: true }); //expires: 1 means the cookie will expire in 1 day.
   Cookies.set("refresh_token", refresh_token, { expires: 7, secure: true });
@@ -131,14 +135,14 @@ export const setAuthUser = async (access_token, refresh_token) => {
   // If user information is present, update user state; otherwise, set loading state to false
   if (user) {
     useAuthStore.getState().setUser(user);
-    useAuthStore.getState().setLoading(false);
   }
+  useAuthStore.getState().setLoading(false);
 };
 
 // Function to refresh the access token using the refresh token
 export const getRefreshToken = async (refresh_token) => {
   // Retrieving refresh token from cookies and making a POST request to refresh the access token
-  const response = await apiInstance.post("user/token/refresh", {
+  const response = await apiInstance.post("user/token/refresh/", {
     refresh: refresh_token,
   });
   return response.data; //Returns new access and refresh tokens.
