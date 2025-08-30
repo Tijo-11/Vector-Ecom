@@ -1,20 +1,29 @@
-import apiInstance from "../../../utils/axios";
 import { useState, useEffect } from "react";
+import { ShoppingCart, Heart } from "lucide-react";
+import ProductsPlaceholder from "./ProductsPlaceHolder";
+import apiInstance from "../../../utils/axios";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
   // useState([]) returns [stateValue, setStateFunction]
   // Destructuring assigns: products = stateValue, setProducts = updater function
   useEffect(() => {
+    setLoading(true); // start loading before API call
     apiInstance.get(`products/`).then((response) => {
       // apiInstance.get(...) returns a Promise, so .then() handles its result
       // .then() is a method of a Promise object
       // .then() handles the response asynchronously once data is received
       // It registers a callback to run when the Promise resolves successfully
       setProducts(response.data);
+      setLoading(false); // stop loading after data is fetched
     });
   }, []); //empty dependence array means useEffect runs once
   console.log(products);
+
+  if (loading) {
+    return <ProductsPlaceholder />; // render placeholder while loading
+  }
   return (
     <div className="container p-6">
       <h1 className="text-5xl text-center font-bold mb-10">Products</h1>
