@@ -11,6 +11,7 @@ import CreateNewPassword from "./views/auth/CreateNewPassword";
 import StoreHeader from "./views/base/StoreHeader";
 import StoreFooter from "./views/base/StoreFooter";
 import Products from "./views/shop/Products/Products";
+import ProductDetail from "./views/shop/ProductDetail/ProductDetail";
 import MainWrapper from "./layouts/MainWrapper";
 
 export default function App() {
@@ -36,7 +37,9 @@ export default function App() {
           <Route path="/logout" element={<Logout />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/create-new-password" element={<CreateNewPassword />} />
+          {/* Shop */}
           <Route path="/" element={<Products />} />
+          <Route path="/product/:slug" element={<ProductDetail />} />
         </Routes>
       </MainWrapper>
       <StoreFooter />

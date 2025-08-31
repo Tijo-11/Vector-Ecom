@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { ShoppingCart, Heart } from "lucide-react";
 import ProductsPlaceholder from "./ProductsPlaceHolder";
 import apiInstance from "../../../utils/axios";
@@ -41,26 +42,28 @@ export default function Products() {
 
         <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
           {products?.map((product) => (
-            <a
-              key={product.id}
-              href={`/product/${product.slug}`}
+            <div
+              key={product.id} // Unique key for React list rendering
               className="group flex flex-col h-full"
             >
-              <img
-                src={product.image}
-                alt={product.title}
-                className="w-full h-64 rounded-lg bg-gray-200 object-contain group-hover:opacity-75"
-              />
-              <h3 className="mt-4 text-sm text-gray-700">{product.title}</h3>
+              <Link to={`/product/${product.slug}`}>
+                {/*  Link to product detail page using slug */}
+                <img
+                  src={product.image}
+                  alt={product.title}
+                  className="w-full h-64 rounded-lg bg-gray-200 object-contain group-hover:opacity-75"
+                />
+                <h3 className="mt-4 text-sm text-gray-700">{product.title}</h3>
+              </Link>
 
               <div className="flex items-center gap-2">
                 {product.old_price && (
                   <p className="text-sm line-through text-gray-400">
-                    ${product.old_price}
+                    ₹{product.old_price}
                   </p>
                 )}
                 <p className="mt-1 text-lg font-medium text-gray-900">
-                  ${product.price}
+                  ₹{product.price}
                 </p>
               </div>
 
@@ -69,6 +72,7 @@ export default function Products() {
                   ⭐ {product.rating}
                 </p>
               )}
+
               {/* Category */}
               {product.category && (
                 <p className="text-sm text-gray-500">
@@ -85,12 +89,12 @@ export default function Products() {
                   <Heart size={18} /> Add to Wishlist
                 </button>
               </div>
-            </a>
+            </div>
           ))}
         </div>
       </div>
       {categories && categories.length > 0 ? (
-        <div className="mt-6">
+        <div className="mt-6 ml-8">
           <h2 className="text-xl font-bold mb-4">Categories</h2>
 
           {/* Netflix-style horizontal scroll */}
@@ -101,11 +105,13 @@ export default function Products() {
                 className="flex-shrink-0 w-40 cursor-pointer group"
               >
                 <div className="relative h-24 w-40 rounded-lg overflow-hidden">
-                  <img
-                    src={cat.image}
-                    alt={cat.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
+                  <Link to={`\products/${cat.slug}`}>
+                    <img
+                      src={cat.image}
+                      alt={cat.title}
+                      className="h-full w-full  transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </Link>
                 </div>
                 <p className="mt-2 text-sm font-medium text-gray-700 text-center">
                   {cat.title}

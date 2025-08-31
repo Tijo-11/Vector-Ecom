@@ -61,17 +61,28 @@ class ProductAdminForm(forms.ModelForm):
     vendor = forms.ModelChoiceField(queryset=Vendor.objects.filter(user__is_staff=True))
 #Creates a dropdown field in the form to select a Vendor whose associated user has staff privileges (is_staff=True).
 
-class ProductAdmin(ImportExportModelAdmin):
+
 #Registers multiple inline admin classes to allow editing related models (ProductImages, Specification, Color, Size) directly within the Product admin page.
+class ProductAdmin(ImportExportModelAdmin):
     inlines = [ProductImagesAdmin, SpecificationAdmin, ColorAdmin, SizeAdmin]
     search_fields = ['title', 'price', 'slug']
     list_filter = ['featured', 'status', 'in_stock', 'type', 'vendor']
-    list_editable = ['image', 'title', 'price', 'featured', 'status',  'shipping_amount', 'hot_deal', 'special_offer']
-    list_display = ['product_image', 'image', 'title',   'price', 'featured', 'shipping_amount', 'in_stock' ,'stock_qty', 'order_count', 'vendor' ,'status', 'featured', 'special_offer' ,'hot_deal']
+    list_display = [
+        'title', 'price', 'in_stock', 'stock_qty',
+        'shipping_amount', 'featured', 'status', 
+        'special_offer', 'hot_deal'
+    ]
+    list_editable = [
+        'price', 'in_stock', 'stock_qty',
+        'shipping_amount', 'featured', 'status',
+        'special_offer', 'hot_deal'
+    ]
+    list_display_links = ['title']   # title is the only clickable link
     actions = [make_published, make_in_review, make_featured]
     list_per_page = 100
     prepopulated_fields = {"slug": ("title", )}
     form = ProductAdminForm
+
     
 class CartAdmin(ImportExportModelAdmin):
     list_display = ['product', 'cart_id', 'qty', 'price', 'sub_total' , 'shipping_amount', 'service_fee', 'tax_fee', 'total', 'country', 'size', 'color', 'date']

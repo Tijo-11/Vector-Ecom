@@ -1,4 +1,4 @@
-export default function ProductsPagePlaceholder() {
+export default function ProductsDetailPlaceholder() {
   return (
     <div className="container mx-auto py-8 animate-pulse">
       {/* animate-pulse — applies a subtle pulsing animation (fading in and out) to indicate loading or attention. */}
