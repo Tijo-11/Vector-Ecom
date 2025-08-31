@@ -3,22 +3,37 @@ import { ShoppingCart, Heart } from "lucide-react";
 import { useParams } from "react-router-dom";
 // Enables reading dynamic route params like /product/:slug
 import apiInstance from "../../../utils/axios";
+import ProductDetailPlaceholder from "./ProductDetailPlaceHolder";
 
 export default function ProductDetail() {
   const [product, setProduct] = useState({});
+  const [loading, setLoading] = useState(false);
   const [mainImage, setMainImage] = useState("");
   const param = useParams();
+  const [colorValue, setColorValue] = useState("No Color");
+  const [colorImage, setColorImage] = useState("image-url.jpg");
+  const [size, setSize] = useState([]);
+  const [color, setColor] = useState(["Green"]);
+  const [sizeValue, setSizeValue] = useState("No Size");
+  const [qtyValue, setQtyValue] = useState(1);
   useEffect(() => {
+    setLoading(true);
     apiInstance.get(`products/${param.slug}/`).then((response) => {
       setProduct(response.data);
       setMainImage(response.data.image);
+      setColor(response.data.color);
+      setSize(response.data.size);
       console.log(response.data);
+      setLoading(false);
     });
   }, []);
   const allImages = [
     { id: "main", image: product.image }, // Adds main image with a manual id to match gallery format
     ...(product?.gallery || []), // Merges gallery images if available; ensures fallback to empty array
   ];
+  if (loading) {
+    return <ProductDetailPlaceholder />; // render placeholder while loading
+  }
 
   return (
     <div className="bg-gray-100">
@@ -91,16 +106,110 @@ export default function ProductDetail() {
               </span>
             </div>
 
-            <p className="text-gray-700 mb-6">{product.brand}</p>
-
             {/* Features */}
             <div>
               <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
-              <ul className="list-disc list-inside text-gray-700">
-                {/* {product.features.map((f, idx) => (
-                  <li key={idx}>{f}</li>
-                ))} */}
+              <ul className="list-disc list-inside text-gray-700 mb-4">
+                <li>Category: {product.category?.title}</li>
+                <li>Brand: {product.brand}</li>
               </ul>
+              <hr />
+              <div>
+                <div className="flex flex-col">
+                  {/* Quantity */}
+                  <div className="w-full md:w-1/2 mb-4">
+                    <div className="mb-2">
+                      <label
+                        className="block text-sm font-medium"
+                        htmlFor="typeNumber"
+                      >
+                        <b>Quantity</b>
+                      </label>
+                      <input
+                        type="number"
+                        id="typeNumber"
+                        className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 quantity"
+                        min={1}
+                        value={qtyValue}
+                        onChange={handleQuantityChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Size */}
+              {size?.length > 0 ? (
+                // Render something when the 'size' array has items
+                <div className="w-full md:w-1/2 mb-4">
+                  <div className="mb-2">
+                    <label
+                      className="block text-sm font-medium"
+                      htmlFor="typeNumber"
+                    >
+                      <b>Size:</b> {sizeValue}
+                    </label>
+                  </div>
+                  <div className="flex">
+                    {size?.map((s, index) => (
+                      <div key={index} className="mr-2">
+                        <input
+                          type="hidden"
+                          className="size_name"
+                          value={s.name}
+                        />
+                        <button
+                          onClick={handleSizeButtonClick}
+                          className="px-4 py-2 bg-gray-600 text-white rounded size_button"
+                        >
+                          {s.name}
+                        </button>
+                      </div>
+                    ))}
+                    {/* Colors */}
+                    {color?.length > 0 ? (
+                      <div className="w-full md:w-1/2 mb-4">
+                        <div className="mb-2">
+                          <label
+                            className="block text-sm font-medium"
+                            htmlFor="typeNumber"
+                          >
+                            <b>Color:</b> <span>{colorValue}</span>
+                          </label>
+                        </div>
+                        <div className="flex">
+                          {color?.map((c, index) => (
+                            <div key={index}>
+                              <input
+                                type="hidden"
+                                className="color_name"
+                                value={c.name}
+                              />
+                              <input
+                                type="hidden"
+                                className="color_image"
+                                value={c.image}
+                              />
+                              <button
+                                className="p-3 mr-2 rounded color_button"
+                                onClick={handleColorButtonClick}
+                                style={{ backgroundColor: `${c.color_code}` }}
+                              ></button>
+                            </div>
+                          ))}
+                        </div>
+                        <hr className="my-4 border-gray-300" />
+                      </div>
+                    ) : (
+                      // Render empty div
+                      <div></div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                // Render empty div
+                <div></div>
+              )}
+
               <div className="mt-4 flex flex-col gap-2">
                 <button className="flex items-center justify-center gap-2 w-2/5 rounded-lg bg-blue-600 text-white py-1.5 hover:bg-blue-700 transition">
                   <ShoppingCart size={16} /> Add
