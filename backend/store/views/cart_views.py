@@ -86,15 +86,18 @@ class CartListView(generics.ListAPIView):
     permission_classes = (AllowAny,)
     queryset = Cart.objects.all()
     
-    def get_queryset(self):#overriding default queryset
+    def get_queryset(self):  # Overriding default queryset
         cart_id = self.kwargs['cart_id']
         user_id = self.kwargs.get('user_id')
         
         if user_id is not None:
-            user = User.objects.filter(id = user_id)
-            queryset = Cart.objects.filter(user=user, cart_id= cart_id)
+            user = User.objects.filter(id=user_id).first()  # Get single user or None
+            if user:
+                queryset = Cart.objects.filter(user=user, cart_id=cart_id)
+            else:
+                queryset = Cart.objects.none()  # Return empty queryset if user not found
         else:
-            queryset = Cart.objects.filter(cart_id = cart_id)
+            queryset = Cart.objects.filter(cart_id=cart_id)
         return queryset
             
     

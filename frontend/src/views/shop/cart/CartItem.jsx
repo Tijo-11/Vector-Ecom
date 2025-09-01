@@ -1,61 +1,36 @@
 import React from "react";
 
-// Placeholder data; replace with API data later
-const items = [
-  {
-    id: 1,
-    code: "RF293",
-    title: "Luxe card holder",
-    height: "10 inches",
-    color: "Black",
-    composition: "100% calf leather",
-    price: 1000,
-    image: "https://i.ibb.co/6gzWwSq/Rectangle-20-1.png",
-    imageMobile: "https://i.ibb.co/TTnzMTf/Rectangle-21.png",
-  },
-  {
-    id: 2,
-    code: "RF294",
-    title: "Luxe card holder",
-    height: "10 inches",
-    color: "Black",
-    composition: "100% calf leather",
-    price: 1000,
-    image: "https://i.ibb.co/6gzWwSq/Rectangle-20-1.png",
-    imageMobile: "https://i.ibb.co/TTnzMTf/Rectangle-21.png",
-  },
-];
-
-function CartItem() {
+function CartItem({ cartItems }) {
   return (
     <>
-      {items.map((item) => (
+      {cartItems.map((c, index) => (
         <div
-          key={item.id}
+          key={index}
           className="md:flex items-stretch py-8 md:py-10 lg:py-8 border-t border-gray-50"
         >
           <div className="md:w-4/12 2xl:w-1/4 w-full">
             <img
-              src={item.image}
-              alt={item.title}
-              className="h-full object-center object-cover md:block hidden"
+              src={c.product.image}
+              alt={c.product.title}
+              className="h-full object-cover md:block hidden rounded-[10px]"
             />
             <img
-              src={item.imageMobile}
-              alt={item.title}
-              className="md:hidden w-full h-full object-center object-cover"
+              src={c.product.image}
+              alt={c.product.title}
+              className="md:hidden w-full h-full object-cover rounded-[10px]"
             />
           </div>
           <div className="md:pl-3 md:w-8/12 2xl:w-3/4 flex flex-col justify-center">
             <p className="text-xs leading-3 text-gray-800 md:pt-0 pt-4">
-              {item.code}
+              {c.product.code || "N/A"}
             </p>
             <div className="flex items-center justify-between w-full">
               <p className="text-base font-black leading-none text-gray-800">
-                {item.title}
+                {c.product.title}
               </p>
               <select
                 aria-label="Select quantity"
+                defaultValue={c.qty}
                 className="py-2 px-1 border border-gray-200 mr-6 focus:outline-none"
               >
                 <option>01</option>
@@ -64,13 +39,20 @@ function CartItem() {
               </select>
             </div>
             <p className="text-xs leading-3 text-gray-600 pt-2">
-              Height: {item.height}
+              Height: {c.product.height || "N/A"}
             </p>
-            <p className="text-xs leading-3 text-gray-600 py-4">
-              Color: {item.color}
-            </p>
+            {c.size && c.size !== "no size" && (
+              <p className="text-xs leading-3 text-gray-600 py-4">
+                Size: {c.size}
+              </p>
+            )}
+            {c.color && c.color !== "no color" && (
+              <p className="text-xs leading-3 text-gray-600 py-4">
+                Color: {c.color}
+              </p>
+            )}
             <p className="w-96 text-xs leading-3 text-gray-600">
-              Composition: {item.composition}
+              Composition: {c.product.composition || "N/A"}
             </p>
             <div className="flex items-center justify-between pt-5">
               <div className="flex items-center">
@@ -82,7 +64,7 @@ function CartItem() {
                 </p>
               </div>
               <p className="text-base font-black leading-none text-gray-800">
-                ${item.price}
+                ₹{c.price}
               </p>
             </div>
           </div>

@@ -7,8 +7,16 @@ import apiInstance from "../../../utils/axios";
 import UserCountry from "../ProductDetail/UserCountry";
 import UserData from "../../plugin/UserData";
 import cartID from "../ProductDetail/CartId";
+import Swal from "sweetalert2";
 
 export default function CategoryProducts() {
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top",
+    showConfirmButton: false,
+    timer: 1500,
+    timerProgressBar: true,
+  });
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -101,6 +109,10 @@ export default function CategoryProducts() {
     try {
       const response = await apiInstance.post(`cart/`, formData);
       console.log(response.data);
+      Toast.fire({
+        icon: "success",
+        title: response.data.message || "Added to cart",
+      });
     } catch (error) {
       console.error("Error adding to cart:", error);
     }
