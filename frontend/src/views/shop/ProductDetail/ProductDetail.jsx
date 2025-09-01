@@ -5,13 +5,15 @@ import ProductOptions from "./ProductOptions";
 import RelatedProducts from "./RelatedProducts";
 import UserCountry from "./UserCountry";
 import UserData from "../../plugin/UserData";
+import CartId from "./CartId";
 
 export default function ProductDetail() {
   const [product, setProduct] = useState({});
   const [mainImage, setMainImage] = useState("");
   const param = useParams();
   const currentAddress = UserCountry();
-  const userData = UserData(); // Get user data from UserData component
+  const userData = UserData();
+  const cartId = CartId(); // Get cart ID from CartId component
 
   useEffect(() => {
     apiInstance.get(`products/${param.slug}/`).then((response) => {
@@ -105,6 +107,7 @@ export default function ProductDetail() {
               setMainImage={setMainImage}
               country={currentAddress.country}
               userId={userData.user_id}
+              cartId={cartId}
             />
           </div>
         </div>

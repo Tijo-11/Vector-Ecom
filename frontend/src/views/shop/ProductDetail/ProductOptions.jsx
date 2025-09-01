@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { ShoppingCart, Heart } from "lucide-react";
+import apiInstance from "../../../utils/axios";
 
 export default function ProductOptions({
   product,
   setMainImage,
   country,
   userId,
+  cartId,
 }) {
   const [color, setColor] = useState([]);
   const [size, setSize] = useState([]);
@@ -40,17 +42,24 @@ export default function ProductOptions({
     setQtyValue(event.target.value);
   };
 
-  const handleAddToCart = () => {
-    console.log({
-      productId: product.id,
-      price: product.price,
-      shipping_amount: product.shipping_amount,
-      qty: qtyValue,
-      color: colorValue,
-      size: sizeValue,
-      country: country || "Unknown",
-      user_id: userId || null, // Fallback if user is not logged in
-    });
+  const handleAddToCart = async () => {
+    const formData = new FormData();
+    formData.append("productId", product.id);
+    formData.append("user_id", userId || "");
+    formData.append("qty", qtyValue);
+    formData.append("price", product.price);
+    formData.append("shipping_amount", product.shipping_amount);
+    formData.append("country", country || "Unknown");
+    formData.append("size", sizeValue);
+    formData.append("color", colorValue);
+    formData.append("cart_id", cartId || "");
+
+    try {
+      const response = await apiInstance.post("cart/", formData);
+      console.log(response.data);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
   };
 
   return (
