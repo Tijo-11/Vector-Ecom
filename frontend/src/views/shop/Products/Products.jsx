@@ -35,7 +35,15 @@ export default function Products() {
   }
   return (
     <div className="container p-6">
-      <h1 className="text-5xl text-center font-bold mb-10">Products</h1>
+      <div className="bg-gray-100 py-4 text-center">
+        {/*  vertical padding (py-16 → 4rem top & bottom),centered text alignment (text-center)*/}
+        <h1 className="text-4xl font-bold mb-4">
+          Your Destination for Timeless Treasures.
+        </h1>
+        <p className="text-lg text-gray-600 ">
+          Because memories never go out of style.
+        </p>
+      </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <h2 className="sr-only">Products</h2>
