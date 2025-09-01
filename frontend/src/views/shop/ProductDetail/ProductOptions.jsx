@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ShoppingCart, Heart } from "lucide-react";
 import apiInstance from "../../../utils/axios";
+import Swal from "sweetalert2";
 
 export default function ProductOptions({
   product,
@@ -9,6 +10,14 @@ export default function ProductOptions({
   user,
   cartId,
 }) {
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top",
+    showConfirmButton: false,
+    timer: 1500,
+    timerProgressBar: true,
+  });
+
   const [color, setColor] = useState([]);
   const [size, setSize] = useState([]);
   const [specification, setSpecification] = useState([]);
@@ -57,6 +66,10 @@ export default function ProductOptions({
     try {
       const response = await apiInstance.post("cart/", formData);
       console.log(response.data);
+      Toast.fire({
+        icon: "success",
+        title: response.data.message || "Added to cart",
+      });
     } catch (error) {
       console.error("Error adding to cart:", error);
     }
