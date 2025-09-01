@@ -107,7 +107,7 @@ function StoreFooter() {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
-                  to="/category/retro-cameras-photography"
+                  to="/category/retro-cameras-photography-gear-ca8c"
                   className="hover:text-blue-600"
                 >
                   Retro Cameras & Photography
@@ -115,7 +115,7 @@ function StoreFooter() {
               </li>
               <li>
                 <Link
-                  to="/category/vinyl-records-music"
+                  to="/category/vinyl-records-music-mviv"
                   className="hover:text-blue-600"
                 >
                   Vinyl Records & Music
@@ -123,7 +123,7 @@ function StoreFooter() {
               </li>
               <li>
                 <Link
-                  to="/category/electronics"
+                  to="/category/electronics-ftot"
                   className="hover:text-blue-600"
                 >
                   Electronics
@@ -131,7 +131,7 @@ function StoreFooter() {
               </li>
               <li>
                 <Link
-                  to="/category/books-magazines-comics"
+                  to="/category/books-magazines-comics-egdf"
                   className="hover:text-blue-600"
                 >
                   Books, Magazines & Comics
@@ -139,7 +139,7 @@ function StoreFooter() {
               </li>
               <li>
                 <Link
-                  to="/category/vintage-toys-games"
+                  to="/category/vintage-toys-games-scvj"
                   className="hover:text-blue-600"
                 >
                   Vintage Toys & Games
@@ -155,7 +155,7 @@ function StoreFooter() {
               </li>
               <li>
                 <Link
-                  to="/category/military-wartime-collectibles"
+                  to="/category/military-wartime-collectibles-4fab"
                   className="hover:text-blue-600"
                 >
                   Military & Wartime Collectibles
@@ -163,7 +163,7 @@ function StoreFooter() {
               </li>
               <li>
                 <Link
-                  to="/category/antique-vintage-home-decor"
+                  to="/category/antique-vintage-home-decor-vfb4"
                   className="hover:text-blue-600"
                 >
                   Antique & Vintage Home Decor
@@ -171,7 +171,7 @@ function StoreFooter() {
               </li>
               <li>
                 <Link
-                  to="/category/automobilia-transportation"
+                  to="/category/automobilia-transportation-memorabilia-bdud"
                   className="hover:text-blue-600"
                 >
                   Automobilia & Transportation Memorabilia
@@ -179,7 +179,7 @@ function StoreFooter() {
               </li>
               <li>
                 <Link
-                  to="/category/vintage-fashion-accessories"
+                  to="/category/vintage-fashion-accessories-v3gb"
                   className="hover:text-blue-600"
                 >
                   Vintage Fashion & Accessories

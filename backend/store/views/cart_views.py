@@ -80,4 +80,23 @@ class CartAPIView(generics.ListCreateAPIView):# Handles GET (list) and POST (cre
             cart.save()
             return Response({"message": "Cart updated successfully"}, status=status.HTTP_200_OK)
         
+##-------------------------------------------------------------------------------------
+class CartListView(generics.ListAPIView):
+    serializer_class = CartSerializer
+    permission_classes = (AllowAny,)
+    queryset = Cart.objects.all()
+    
+    def get_queryset(self):#overriding default queryset
+        cart_id = self.kwargs['cart_id']
+        user_id = self.kwargs.get('user_id')
+        
+        if user_id is not None:
+            user = User.objects.filter(id = user_id)
+            queryset = Cart.objects.filter(user=user, cart_id= cart_id)
+        else:
+            queryset = Cart.objects.filter(cart_id = cart_id)
+        return queryset
+            
+    
+        
     
