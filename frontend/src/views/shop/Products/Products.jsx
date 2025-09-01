@@ -4,6 +4,9 @@ import { ShoppingCart, Heart } from "lucide-react";
 import ProductsPlaceholder from "./ProductsPlaceHolder";
 import Categories from "../category/Categories";
 import apiInstance from "../../../utils/axios";
+import UserCountry from "../ProductDetail/UserCountry";
+import UserData from "../../plugin/UserData";
+import cartID from "../ProductDetail/CartId";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -17,7 +20,15 @@ export default function Products() {
   useEffect(() => {
     setLoading(true);
     apiInstance.get(`products/`).then((response) => {
+      const initialQuantities = response.data.reduce(
+        (acc, product) => ({
+          ...acc,
+          [product.id]: "0",
+        }),
+        {}
+      );
       setProducts(response.data);
+      setQuantityValue(initialQuantities);
       setLoading(false);
     });
   }, []);
@@ -27,6 +38,10 @@ export default function Products() {
       setCategories(response.data);
     });
   }, []);
+
+  const currentAddress = UserCountry();
+  const user = UserData();
+  const cart_id = cartID();
 
   const handleColorButtonClick = (e, productId, colorName) => {
     setSelectedColors((prev) => ({ ...prev, [productId]: colorName }));
@@ -41,6 +56,22 @@ export default function Products() {
   const handleQuantityChange = (e, productId) => {
     setQuantityValue((prev) => ({ ...prev, [productId]: e.target.value }));
     setSelectedProduct(productId);
+  };
+
+  const handleAddToCart = async (product_id, price, shipping_amount) => {
+    const formData = new FormData();
+    formData.append("product", product_id);
+    formData.append("user", user?.user_id);
+    formData.append("qty", quantityValue[product_id] || "0");
+    formData.append("price", price);
+    formData.append("shipping_amount", shipping_amount);
+    formData.append("country", currentAddress?.country);
+    formData.append("size", selectedSizes[product_id] || "");
+    formData.append("color", selectedColors[product_id] || "");
+    formData.append("cart_id", cart_id);
+
+    const response = await apiInstance.post(`cart/`, formData);
+    console.log(response.data);
   };
 
   if (loading) return <ProductsPlaceholder />;
@@ -69,7 +100,6 @@ export default function Products() {
                 />
                 <h3 className="mt-4 text-sm text-gray-700">{product.title}</h3>
               </Link>
-
               <div className="flex items-center gap-2">
                 {product.old_price && (
                   <p className="text-sm line-through text-gray-400">
@@ -80,19 +110,16 @@ export default function Products() {
                   ₹{product.price}
                 </p>
               </div>
-
               {product.rating && (
                 <p className="mt-2 text-yellow-500 text-sm">
                   ⭐ {product.rating}
                 </p>
               )}
-
               {product.category && (
                 <p className="text-sm text-gray-500">
                   Category: {product.category.title}
                 </p>
               )}
-
               <div className="mt-2">
                 {product.size?.length > 0 && (
                   <div>
@@ -134,18 +161,29 @@ export default function Products() {
                   </div>
                 )}
                 <div>
-                  <label>Quantity:</label>
+                  <div>
+                    <label>Quantity:</label>
+                  </div>
                   <input
                     type="number"
+                    value={quantityValue[product.id] || "0"}
                     onChange={(e) => handleQuantityChange(e, product.id)}
-                    className="border rounded px-2 py-1 w-16"
-                    min="1"
+                    className="border rounded px-2 py-1 w-16 my-2"
+                    min="0"
                   />
                 </div>
               </div>
-
               <div className="mt-auto flex flex-col gap-2">
-                <button className="flex items-center justify-center gap-2 w-full rounded-lg bg-blue-600 text-white py-2 hover:bg-blue-700 transition">
+                <button
+                  onClick={() =>
+                    handleAddToCart(
+                      product.id,
+                      product.price,
+                      product.shipping_amount
+                    )
+                  }
+                  className="flex items-center justify-center gap-2 w-full rounded-lg bg-blue-600 text-white py-2 hover:bg-blue-700 transition"
+                >
                   <ShoppingCart size={18} /> Add to Cart
                 </button>
                 <button className="flex items-center justify-center gap-2 w-full rounded-lg border border-gray-300 py-2 hover:bg-gray-100 transition">
@@ -156,7 +194,6 @@ export default function Products() {
           ))}
         </div>
       </div>
-
       {categories && categories.length > 0 ? (
         <Categories categories={categories} />
       ) : null}
