@@ -3,11 +3,15 @@ import { useParams } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import ProductOptions from "./ProductOptions";
 import RelatedProducts from "./RelatedProducts";
+import UserCountry from "./UserCountry";
+import UserData from "../../plugin/UserData";
 
 export default function ProductDetail() {
   const [product, setProduct] = useState({});
   const [mainImage, setMainImage] = useState("");
   const param = useParams();
+  const currentAddress = UserCountry();
+  const userData = UserData(); // Get user data from UserData component
 
   useEffect(() => {
     apiInstance.get(`products/${param.slug}/`).then((response) => {
@@ -96,7 +100,12 @@ export default function ProductDetail() {
             <p className="text-gray-700 mb-6">{product.brand}</p>
 
             {/* Product Options */}
-            <ProductOptions product={product} setMainImage={setMainImage} />
+            <ProductOptions
+              product={product}
+              setMainImage={setMainImage}
+              country={currentAddress.country}
+              userId={userData.user_id}
+            />
           </div>
         </div>
 

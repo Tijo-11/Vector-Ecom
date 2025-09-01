@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { ShoppingCart, Heart } from "lucide-react";
 
-export default function ProductOptions({ product, setMainImage }) {
+export default function ProductOptions({
+  product,
+  setMainImage,
+  country,
+  userId,
+}) {
   const [color, setColor] = useState([]);
   const [size, setSize] = useState([]);
   const [specification, setSpecification] = useState([]);
@@ -20,14 +25,14 @@ export default function ProductOptions({ product, setMainImage }) {
   const handleColorButtonClick = (colorName, colorImage) => {
     setColorValue(colorName);
     if (colorImage) {
-      setMainImage(colorImage); // Update main image with color image
+      setMainImage(colorImage);
     }
   };
 
   const handleSizeButtonClick = (sizeName, sizeImage) => {
     setSizeValue(sizeName);
     if (sizeImage) {
-      setMainImage(sizeImage); // Update main image with size image
+      setMainImage(sizeImage);
     }
   };
 
@@ -38,9 +43,13 @@ export default function ProductOptions({ product, setMainImage }) {
   const handleAddToCart = () => {
     console.log({
       productId: product.id,
+      price: product.price,
+      shipping_amount: product.shipping_amount,
       qty: qtyValue,
       color: colorValue,
       size: sizeValue,
+      country: country || "Unknown",
+      user_id: userId || null, // Fallback if user is not logged in
     });
   };
 
