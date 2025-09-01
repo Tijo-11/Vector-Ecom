@@ -4,6 +4,7 @@ import {
   FaYoutube,
   FaInstagram,
 } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import { FaXTwitter } from "react-icons/fa6"; // Twitter → X logo
 
 function StoreFooter() {
@@ -100,60 +101,89 @@ function StoreFooter() {
             </ul>
           </div>
 
-          {/* Products */}
+          {/* Categories */}
           <div>
             <h3 className="font-semibold mb-3">Categories</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#!" className="hover:text-blue-600">
+                <Link
+                  to="/category/retro-cameras-photography"
+                  className="hover:text-blue-600"
+                >
                   Retro Cameras & Photography
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
+                <Link
+                  to="/category/vinyl-records-music"
+                  className="hover:text-blue-600"
+                >
                   Vinyl Records & Music
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
+                <Link
+                  to="/category/electronics"
+                  className="hover:text-blue-600"
+                >
                   Electronics
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Books, Magazines & Comics Vintage Toys
-                </a>
+                <Link
+                  to="/category/books-magazines-comics"
+                  className="hover:text-blue-600"
+                >
+                  Books, Magazines & Comics
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
+                <Link
+                  to="/category/vintage-toys-games"
+                  className="hover:text-blue-600"
+                >
                   Vintage Toys & Games
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
+                <Link
+                  to="/category/kitchenware-appliances"
+                  className="hover:text-blue-600"
+                >
                   Kitchenware & Appliances
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Military & Wartime Collectibles Gear
-                </a>
+                <Link
+                  to="/category/military-wartime-collectibles"
+                  className="hover:text-blue-600"
+                >
+                  Military & Wartime Collectibles
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
+                <Link
+                  to="/category/antique-vintage-home-decor"
+                  className="hover:text-blue-600"
+                >
                   Antique & Vintage Home Decor
-                </a>
+                </Link>
               </li>
-
               <li>
-                <a href="#!" className="hover:text-blue-600">
+                <Link
+                  to="/category/automobilia-transportation"
+                  className="hover:text-blue-600"
+                >
                   Automobilia & Transportation Memorabilia
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
+                <Link
+                  to="/category/vintage-fashion-accessories"
+                  className="hover:text-blue-600"
+                >
                   Vintage Fashion & Accessories
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

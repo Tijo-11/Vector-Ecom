@@ -13,6 +13,7 @@ import StoreFooter from "./views/base/StoreFooter";
 import Products from "./views/shop/Products/Products";
 import ProductDetail from "./views/shop/ProductDetail/ProductDetail";
 import MainWrapper from "./layouts/MainWrapper";
+import CategoryProducts from "./views/shop/Category/CategoryProducts";
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -40,6 +41,8 @@ export default function App() {
           {/* Shop */}
           <Route path="/" element={<Products />} />
           <Route path="/product/:slug" element={<ProductDetail />} />
+          <Route path="/category/:slug" element={<CategoryProducts />} />{" "}
+          {/* 👈 new route */}
         </Routes>
       </MainWrapper>
       <StoreFooter />

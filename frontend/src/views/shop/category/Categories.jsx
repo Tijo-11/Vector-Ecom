@@ -8,7 +8,7 @@ export default function Categories({ categories }) {
         {categories.map((cat) => (
           <div key={cat.id} className="flex-shrink-0 w-40 cursor-pointer group">
             <div className="relative h-24 w-40 rounded-full overflow-hidden">
-              <Link to={`/products/${cat.slug}`}>
+              <Link to={`/category/${cat.slug}`}>
                 <img
                   src={cat.image}
                   alt={cat.title}
