@@ -175,6 +175,7 @@ export default function Products() {
               </div>
               <div className="mt-auto flex flex-col gap-2">
                 <button
+                  disabled={!Number(quantityValue[product.id])}
                   onClick={() =>
                     handleAddToCart(
                       product.id,
@@ -182,10 +183,15 @@ export default function Products() {
                       product.shipping_amount
                     )
                   }
-                  className="flex items-center justify-center gap-2 w-full rounded-lg bg-blue-600 text-white py-2 hover:bg-blue-700 transition"
+                  className={`flex items-center justify-center gap-2 w-full rounded-lg py-2 transition ${
+                    !Number(quantityValue[product.id])
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                  }`}
                 >
                   <ShoppingCart size={18} /> Add to Cart
                 </button>
+
                 <button className="flex items-center justify-center gap-2 w-full rounded-lg border border-gray-300 py-2 hover:bg-gray-100 transition">
                   <Heart size={18} /> Add to Wishlist
                 </button>

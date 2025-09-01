@@ -1,24 +1,15 @@
 import { useAuthStore } from "../store/auth";
 import apiInstance from "./axios"; // <-- import axios from "./axios"; works since it was an exported  as default.
 //Better thing is import apiInstance from './axios';
-// Imports the jwt-decode library to decode JSON Web Tokens (JWT) on the client side
 import { jwtDecode } from "jwt-decode"; // ✅ Correct import (default export)
 //jwt-decode is a super useful library when you want to extract information from a JWT without verifying it.
-//  It’s commonly used in frontend apps to read user data like user_id, email, or roles embedded in the token.
-import Cookies from "js-cookie"; //js-cookie is a lightweight JavaScript library that simplifies working with
-// cookies in the browser. It’s perfect for storing tokens, user preferences, or session data without diving
-// into the messy details of cookie syntax.
+import Cookies from "js-cookie"; //js-cookie is a lightweight JavaScript library that simplifies working with cookies
 import Swal from "sweetalert2";
 // Importing Swal (SweetAlert2) for displaying toast notifications # npm install sweetalert2
 
-///////////////////////////////////////////////////////////////////////
-
 // Configuring global toast notifications using Swal.mixin
-//It’s a sleek, customizable replacement for window.alert() — perfect for React apps that want polished user
-// feedback. You can explore more examples on SweetAlert2’s npm page
 const Toast = Swal.mixin({
   //This line sets up a Toast object using Swal.mixin() to define default options for lightweight, non-blocking
-  // notifications. You can now call Toast.fire({...}) with minimal config each time.
   toast: true,
   position: "top",
   showConfirmButton: false,
@@ -31,14 +22,12 @@ export const login = async (email, password) => {
   try {
     // Making a POST request to obtain user tokens
     const { data, status } = await apiInstance.post("user/token/", {
-      //just pulling out the data and status from that response from json object response
       email,
       password,
     });
     // If the request is successful (status code 200), set authentication user and display success toast
     if (status === 200) {
       setAuthUser(data.access, data.refresh);
-
       // Displaying a success toast notification
       Toast.fire({
         icon: "success",
@@ -54,6 +43,7 @@ export const login = async (email, password) => {
     };
   }
 };
+
 // Function to handle user registration
 export const register = async (
   full_name,
@@ -90,15 +80,14 @@ export const register = async (
 };
 
 // Function to handle user logout
-// Function to handle user logout
 export const logout = () => {
   // Removing access and refresh tokens from cookies
   Cookies.remove("access_token");
   Cookies.remove("refresh_token");
-
+  // Clear random_string from local storage
+  localStorage.removeItem("random_string");
   // Resetting Zustand store: clears allUserData, user, and isLoggedIn
   useAuthStore.getState().setUser(null);
-
   // Displaying a success toast notification
   Toast.fire({
     icon: "success",
@@ -155,15 +144,11 @@ export const isAccessTokenExpired = (accessToken) => {
     const decodedToken = jwtDecode(accessToken);
     return decodedToken.exp < Date.now() / 1000;
     //Compares the token’s exp (expiry time in seconds) with the current time (converted to seconds).
-    //.exp is a It’s a property of the decoded JWT (JSON Web Token) payload. Specifically:
-    //It’s a Unix timestamp (in seconds) indicating when the token should expire
-    //JWT payloads are just JSON objects, so their fields are accessed like regular object properties.
   } catch (err) {
     // Returning true if the token is invalid or expired
     return true;
   }
 };
-
 /********************************************************************* */
 /*
 🍪 js-cookie is a lightweight JavaScript library that simplifies working with cookies in the browser. It’s perfect for storing tokens, user preferences, or session data without diving into the messy details of cookie syntax.
