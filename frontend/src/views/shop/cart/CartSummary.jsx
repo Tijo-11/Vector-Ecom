@@ -1,29 +1,57 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import apiInstance from "../../../utils/axios";
+import cartID from "../ProductDetail/cartID";
 
-function CartSummary() {
-  // Placeholder data; replace with API data later
-  const summary = {
-    itemCount: 3,
-    subtotal: 590,
-    shipping: 10,
-    total: 600,
-  };
+function CartSummary({ cartItems }) {
+  const [cart_total, setCartTotal] = useState({
+    itemCount: cartItems.length || 0,
+    sub_total: 0,
+    shipping: 0,
+    tax: 0,
+    service_fee: 0,
+    total: 0,
+  });
+  const cart_id = cartID();
+
+  useEffect(() => {
+    const fetchCartTotal = async () => {
+      if (cart_id && cart_id !== "undefined") {
+        try {
+          const response = await apiInstance.get(`/cart-detail/${cart_id}/`);
+          console.log(response.data);
+          setCartTotal({
+            itemCount: cartItems.length || 0,
+            sub_total: response.data.sub_total || 0,
+            shipping: response.data.shipping || 0,
+            tax: response.data.tax || 0,
+            service_fee: response.data.service_fee || 0,
+            total: response.data.total || 0,
+          });
+        } catch (error) {
+          console.error("Error fetching cart totals:", error);
+        }
+      }
+    };
+    fetchCartTotal();
+  }, [cart_id, cartItems]);
 
   return (
     <div id="summary" className="w-full sm:w-1/4 md:w-1/2 px-8 py-10">
       <h1 className="font-semibold text-2xl border-b pb-8">Order Summary</h1>
       <div className="flex justify-between mt-10 mb-5">
         <span className="font-semibold text-sm uppercase">
-          Items {summary.itemCount}
+          Items {cart_total.itemCount}
         </span>
-        <span className="font-semibold text-sm">${summary.subtotal}</span>
+        <span className="font-semibold text-sm">
+          ₹{cart_total.sub_total.toFixed(2)}
+        </span>
       </div>
       <div>
         <label className="font-medium inline-block mb-3 text-sm uppercase">
           Shipping
         </label>
         <select className="block p-2 text-gray-600 w-full text-sm">
-          <option>Standard shipping - ${summary.shipping}</option>
+          <option>Standard shipping - ${cart_total.shipping.toFixed(2)}</option>
         </select>
       </div>
       <div className="py-10">
@@ -45,8 +73,16 @@ function CartSummary() {
       </button>
       <div className="border-t mt-8">
         <div className="flex font-semibold justify-between py-6 text-sm uppercase">
+          <span>Tax</span>
+          <span>₹{cart_total.tax.toFixed(2)}</span>
+        </div>
+        <div className="flex font-semibold justify-between py-6 text-sm uppercase">
+          <span>Service Fee</span>
+          <span>₹{cart_total.service_fee.toFixed(2)}</span>
+        </div>
+        <div className="flex font-semibold justify-between py-6 text-sm uppercase">
           <span>Total cost</span>
-          <span>${summary.total}</span>
+          <span>₹{cart_total.total.toFixed(2)}</span>
         </div>
         <button className="bg-indigo-500 font-semibold hover:bg-indigo-600 py-3 text-sm text-white uppercase w-full">
           Checkout

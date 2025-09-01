@@ -1,6 +1,6 @@
 from django.urls import path
 from .views.product_category import CategoryListView, ProductListView, FeaturedProductListView, ProductDetailView
-from .views.cart_views import CartAPIView, CartListView
+from .views.cart_views import CartAPIView, CartListView, CartDetailView
 
 urlpatterns = [
     path('category/', CategoryListView.as_view(), name="category"),
@@ -12,5 +12,6 @@ urlpatterns = [
     path('cart-list/<str:cart_id>/', CartListView.as_view(), name="cart-list-view"),
     #If unauthenticated or registered user places order to handle order this url is used, we don't need 
     #new view for it
+    path('cart-detail/<str:cart_id>/', CartDetailView.as_view(), name='cart-detail'),
     
 ]
