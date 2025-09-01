@@ -106,7 +106,7 @@ export default function ProductDetail() {
               product={product}
               setMainImage={setMainImage}
               country={currentAddress.country}
-              userId={userData.user_id}
+              user={userData.user_id}
               cartId={cartId}
             />
           </div>

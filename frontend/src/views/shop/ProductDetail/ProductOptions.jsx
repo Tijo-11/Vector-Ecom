@@ -6,7 +6,7 @@ export default function ProductOptions({
   product,
   setMainImage,
   country,
-  userId,
+  user,
   cartId,
 }) {
   const [color, setColor] = useState([]);
@@ -44,8 +44,8 @@ export default function ProductOptions({
 
   const handleAddToCart = async () => {
     const formData = new FormData();
-    formData.append("productId", product.id);
-    formData.append("user_id", userId || "");
+    formData.append("product", product.id);
+    formData.append("user", user.id || "");
     formData.append("qty", qtyValue);
     formData.append("price", product.price);
     formData.append("shipping_amount", product.shipping_amount);

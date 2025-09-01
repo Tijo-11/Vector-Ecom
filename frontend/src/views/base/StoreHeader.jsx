@@ -3,9 +3,13 @@ import { useAuthStore } from "../../store/auth";
 import { Link, useNavigate } from "react-router-dom";
 import { FaShoppingCart } from "react-icons/fa";
 
+// Hypothetical cart store; replace with your actual cart state management
+import { useCartStore } from "../../store/cart";
+
 function StoreHeader() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const user = useAuthStore((state) => state.user);
+  const cartItems = useCartStore((state) => state.cartItems); // Get cart items
 
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -194,7 +198,7 @@ function StoreHeader() {
               <input
                 onChange={handleSearchChange}
                 name="search"
-                className="rounded-lg bg-white  px-3 py-1 text-gray-900 focus:outline-none"
+                className="rounded-lg bg-white px-3 py-1 text-gray-900 focus:outline-none"
                 type="text"
                 placeholder="Search"
               />
@@ -214,9 +218,17 @@ function StoreHeader() {
                   </Link>
                   <Link
                     to="/logout"
-                    className="bg-red-600 hover:bg-blue-700 px-3 py-1 rounded-lg"
+                    className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg"
                   >
                     Logout
+                  </Link>
+                  <Link to="/cart" className="relative">
+                    <FaShoppingCart className="text-2xl" />
+                    {cartItems.length > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {cartItems.length}
+                      </span>
+                    )}
                   </Link>
                 </>
               ) : (
@@ -233,8 +245,13 @@ function StoreHeader() {
                   >
                     Register
                   </Link>
-                  <Link to="/cart">
+                  <Link to="/cart" className="relative">
                     <FaShoppingCart className="text-2xl" />
+                    {cartItems.length > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {cartItems.length}
+                      </span>
+                    )}
                   </Link>
                 </>
               )}

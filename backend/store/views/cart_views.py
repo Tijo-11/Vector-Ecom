@@ -1,7 +1,5 @@
 from .common import *
-#presently I don't implement tax system, and other countries. But option for it is there.
-#Models are already created, but no cart or order doesn't require countries
-#Similarly size and color is also not needed as the products are not coming in much variation
+
 
 class CartAPIView(generics.ListCreateAPIView):# Handles GET (list) and POST (create) for Cart items
     #Ideal for exposing cart data via API—clients can fetch all cart items or add new ones.
@@ -21,7 +19,7 @@ class CartAPIView(generics.ListCreateAPIView):# Handles GET (list) and POST (cre
         color = payload['color']
         cart_id = payload['cart_id']
         product = Product.objects.filter(status="published", id=product_id).first()
-        if user_id != "undefined":
+        if user_id and user_id.isdigit():
             user = User.objects.filter(id=user_id).first()
         else:
             user = None

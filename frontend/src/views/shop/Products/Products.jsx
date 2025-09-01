@@ -2,60 +2,66 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Heart } from "lucide-react";
 import ProductsPlaceholder from "./ProductsPlaceHolder";
+import Categories from "../category/Categories";
 import apiInstance from "../../../utils/axios";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
-  // useState([]) returns [stateValue, setStateFunction]
-  // Destructuring assigns: products = stateValue, setProducts = updater function
+  const [selectedColors, setSelectedColors] = useState({});
+  const [selectedSizes, setSelectedSizes] = useState({});
+  const [quantityValue, setQuantityValue] = useState({});
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   useEffect(() => {
-    setLoading(true); // start loading before API call
+    setLoading(true);
     apiInstance.get(`products/`).then((response) => {
-      // apiInstance.get(...) returns a Promise, so .then() handles its result
-      // .then() is a method of a Promise object
-      // .then() handles the response asynchronously once data is received
-      // It registers a callback to run when the Promise resolves successfully
       setProducts(response.data);
-      setLoading(false); // stop loading after data is fetched
+      setLoading(false);
     });
-    // console.log(products);
-  }, []); //empty dependence array means useEffect runs once
+  }, []);
 
   useEffect(() => {
     apiInstance.get(`category/`).then((response) => {
       setCategories(response.data);
-      console.log(response.data);
     });
   }, []);
 
-  if (loading) {
-    return <ProductsPlaceholder />; // render placeholder while loading
-  }
+  const handleColorButtonClick = (e, productId, colorName) => {
+    setSelectedColors((prev) => ({ ...prev, [productId]: colorName }));
+    setSelectedProduct(productId);
+  };
+
+  const handleSizeButtonClick = (e, productId, sizeName) => {
+    setSelectedSizes((prev) => ({ ...prev, [productId]: sizeName }));
+    setSelectedProduct(productId);
+  };
+
+  const handleQuantityChange = (e, productId) => {
+    setQuantityValue((prev) => ({ ...prev, [productId]: e.target.value }));
+    setSelectedProduct(productId);
+  };
+
+  if (loading) return <ProductsPlaceholder />;
+
   return (
     <div className="container p-6">
       <div className="bg-gray-100 py-4 text-center">
-        {/*  vertical padding (py-16 → 4rem top & bottom),centered text alignment (text-center)*/}
         <h1 className="text-4xl font-bold mb-4">
           Your Destination for Timeless Treasures.
         </h1>
-        <p className="text-lg text-gray-600 ">
+        <p className="text-lg text-gray-600">
           Because memories never go out of style.
         </p>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <h2 className="sr-only">Products</h2>
-
         <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
           {products?.map((product) => (
-            <div
-              key={product.id} // Unique key for React list rendering
-              className="group flex flex-col h-full"
-            >
+            <div key={product.id} className="group flex flex-col h-full">
               <Link to={`/product/${product.slug}`}>
-                {/*  Link to product detail page using slug */}
                 <img
                   src={product.image}
                   alt={product.title}
@@ -81,14 +87,63 @@ export default function Products() {
                 </p>
               )}
 
-              {/* Category */}
               {product.category && (
                 <p className="text-sm text-gray-500">
                   Category: {product.category.title}
                 </p>
               )}
 
-              {/* New Buttons */}
+              <div className="mt-2">
+                {product.size?.length > 0 && (
+                  <div>
+                    <p>Size: {selectedSizes[product.id] || "No size"}</p>
+                    <ul className="flex gap-2">
+                      {product.size.map((size, index) => (
+                        <li key={index}>
+                          <button
+                            onClick={(e) =>
+                              handleSizeButtonClick(e, product.id, size.name)
+                            }
+                            className="px-2 py-1 border rounded hover:bg-gray-100"
+                          >
+                            {size.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {product.color?.length > 0 && (
+                  <div>
+                    <p>Color: {selectedColors[product.id] || "No color"}</p>
+                    <ul className="flex gap-2">
+                      {product.color.map((color, index) => (
+                        <li key={index}>
+                          <button
+                            onClick={(e) =>
+                              handleColorButtonClick(e, product.id, color.name)
+                            }
+                            className="px-2 py-1 border rounded hover:bg-gray-100"
+                            style={{ backgroundColor: color.color_code }}
+                          >
+                            {color.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div>
+                  <label>Quantity:</label>
+                  <input
+                    type="number"
+                    onChange={(e) => handleQuantityChange(e, product.id)}
+                    className="border rounded px-2 py-1 w-16"
+                    min="1"
+                  />
+                </div>
+              </div>
+
               <div className="mt-auto flex flex-col gap-2">
                 <button className="flex items-center justify-center gap-2 w-full rounded-lg bg-blue-600 text-white py-2 hover:bg-blue-700 transition">
                   <ShoppingCart size={18} /> Add to Cart
@@ -101,33 +156,9 @@ export default function Products() {
           ))}
         </div>
       </div>
-      {categories && categories.length > 0 ? (
-        <div className="mt-6 ml-8">
-          <h2 className="text-xl font-bold mb-4">Categories</h2>
 
-          {/* Netflix-style horizontal scroll */}
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-4">
-            {categories.map((cat) => (
-              <div
-                key={cat.id}
-                className="flex-shrink-0 w-40 cursor-pointer group"
-              >
-                <div className="relative h-24 w-40 rounded-lg overflow-hidden">
-                  <Link to={`\products/${cat.slug}`}>
-                    <img
-                      src={cat.image}
-                      alt={cat.title}
-                      className="h-full w-full  transition-transform duration-300 group-hover:scale-105"
-                    />
-                  </Link>
-                </div>
-                <p className="mt-2 text-sm font-medium text-gray-700 text-center">
-                  {cat.title}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+      {categories && categories.length > 0 ? (
+        <Categories categories={categories} />
       ) : null}
     </div>
   );
