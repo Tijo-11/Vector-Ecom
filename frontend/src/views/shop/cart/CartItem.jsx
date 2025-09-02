@@ -188,7 +188,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                 </p>
               </div>
               <p className="text-base font-black leading-none text-gray-800">
-                ${c.price}
+                ₹{c.price}
               </p>
             </div>
           </div>

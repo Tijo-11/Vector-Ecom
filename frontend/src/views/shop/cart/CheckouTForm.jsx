@@ -59,10 +59,11 @@ function CheckoutForm({ onSubmit }) {
       Swal.fire({
         icon: "success",
         title: "Order Created",
-        text: `Order ID: ${response.data.order_id}. ${response.data.message}`,
+        text: `Order ID: ${response.data.order_oid}. ${response.data.message}`,
       });
       onSubmit(formData);
       navigate("/checkout"); // Placeholder route for checkout page
+      // localStorage.removeItem("random_string"); No need of here, it should be in checkout page
     } catch (error) {
       Swal.fire({
         icon: "error",
