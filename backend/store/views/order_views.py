@@ -91,26 +91,17 @@ class CreateOrderView(generics.CreateAPIView):
             status=status.HTTP_201_CREATED
         )
         
-        
-# Redundancy and Future-Proofing:
+#----------------------------------------------------------
+class CheckoutView(generics.RetrieveAPIView):
+    serializer_class = CartOrderSerializer
+    lookup_field = 'order_oid'
+    
+    def get_object(self): #override
+        order_oid = self.kwargs['order_oid']
+        order = CartOrder.objects.get(oid= order_oid)
+        return order
 
-# The use of both total_initial_total and total_total (both set to c.total) seems redundant in this view because 
-# no discounts are applied. However, the structure is designed to accommodate future coupon/discount logic,
-# where total_total could be reduced (e.g., total_total -= discount), while total_initial_total retains the sum
-# of c.total for comparison.
-# For example, if a coupon reduces the order total by ₹500, order.total would reflect total_total - 500, while 
-# order.initial_total would still equal total_initial_total, allowing the system to display savings (e.g., 
-# "You saved ₹500").
-#c.total refers to the total cost of an individual cart item (Cart model instance), which typically includes 
-# the item’s subtotal, shipping amount, tax fee, and service fee for that specific item. It represents the final 
-# cost for that cart item, accounting for all associated charges.
-#total_initial_total is used to accumulate the sum of c.total for all cart items, representing the original total
-# cost of the order before any discounts or coupons are applied. The transcript emphasizes that initial_total
-# in the CartOrderItems model (and thus total_initial_total in the view) captures the "original total" for each
-# item, which is stored to track the pre-discount cost.
-#total_total also accumulates c.total for all cart items, representing the current total cost of the order. 
-# In this implementation, since no discounts or coupons are applied within the view, total_total is effectively
-# the same as total_initial_total. Both are sums of c.total across all cart items.
+    
         
         
         

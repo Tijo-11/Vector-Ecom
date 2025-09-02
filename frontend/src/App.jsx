@@ -15,6 +15,7 @@ import ProductDetail from "./views/shop/ProductDetail/ProductDetail";
 import MainWrapper from "./layouts/MainWrapper";
 import CategoryProducts from "./views/shop/Category/CategoryProducts";
 import Cart from "./views/shop/cart/cart";
+import Checkout from "./views/shop/checkout/Checkout";
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -44,7 +45,7 @@ export default function App() {
           <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/category/:slug" element={<CategoryProducts />} />{" "}
           <Route path="/cart" element={<Cart />} />
-          {/* 👈 new route */}
+          <Route path="/checkout/:order_id" element={<Checkout />} />
         </Routes>
       </MainWrapper>
       <StoreFooter />
