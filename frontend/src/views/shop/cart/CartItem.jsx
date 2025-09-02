@@ -76,6 +76,36 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       console.error("Error updating cart:", error);
     }
   };
+  const handleDeleteCartItem = async (item_id) => {
+    const url = user?.user_id
+      ? `/cart-delete/${cart_id}/${item_id}/${user.user_id}/`
+      : `/cart-delete/${cart_id}/${item_id}/`;
+    try {
+      const response = await apiInstance.delete(url);
+      console.log(response.data);
+      toast.fire({
+        icon: "success",
+        title: "Item removed from cart",
+      });
+      const cartResponse = await apiInstance.get(
+        user?.user_id
+          ? `/cart-list/${cart_id}/${user.user_id}/`
+          : `/cart-list/${cart_id}/`
+      );
+      setCart(cartResponse.data || []);
+      const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
+      setCartTotal({
+        itemCount: cartResponse.data.length || 0,
+        sub_total: totalResponse.data.sub_total || 0,
+        shipping: totalResponse.data.shipping || 0,
+        tax: totalResponse.data.tax || 0,
+        service_fee: totalResponse.data.service_fee || 0,
+        total: totalResponse.data.total || 0,
+      });
+    } catch (error) {
+      console.error("Error deleting cart item:", error);
+    }
+  };
 
   return (
     <>
@@ -150,12 +180,15 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                 <p className="text-xs leading-3 underline text-gray-800 cursor-pointer">
                   Add to favorites
                 </p>
-                <p className="text-xs leading-3 underline text-red-500 pl-5 cursor-pointer">
+                <p
+                  onClick={() => handleDeleteCartItem(c.id)}
+                  className="text-xs leading-3 underline text-red-500 hover:text-red-600 pl-5 cursor-pointer"
+                >
                   Remove
                 </p>
               </div>
               <p className="text-base font-black leading-none text-gray-800">
-                ₹{c.price}
+                ${c.price}
               </p>
             </div>
           </div>
