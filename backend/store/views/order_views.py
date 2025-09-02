@@ -120,6 +120,10 @@ class CouponAPIView(generics.CreateAPIView):
             coupon = Coupon.objects.get(code=coupon_code)
         except Coupon.DoesNotExist:
             return Response({"message": "Invalid Coupon", "icon":"warning"}, status=status.HTTP_400_BAD_REQUEST)
+        # 🚨 Check if order already has any coupon applied
+        already_applied = CartOrderItem.objects.filter(order=order, coupon__isnull=False).exists()
+        if already_applied:
+            return Response({"message": "A coupon is already applied to this order", "icon": "warning"}, status=status.HTTP_200_OK)
         
         if coupon:
             order_items = CartOrderItem.objects.filter(order=order, vendor = coupon.vendor)
