@@ -99,8 +99,8 @@ function CartSummary({ cartItems, setCartTotal }) {
         </div>
 
         {/* ✅ CheckoutForm inserted here */}
-        <CheckoutForm onSubmit={handleOrderSubmit} />
       </div>
+      <CheckoutForm onSubmit={handleOrderSubmit} />
     </div>
   );
 }
