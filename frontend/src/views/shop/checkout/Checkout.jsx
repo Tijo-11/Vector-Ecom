@@ -2,23 +2,53 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
+import Swal from "sweetalert2";
+import { toast } from "../../../utils/toast";
 
 function Checkout() {
   const [order, setOrder] = useState({});
+  const [couponCode, setCouponCode] = useState("");
   const { order_id } = useParams();
   const user = useAuthStore((state) => state.user);
+  const fetchOrderData = async () => {
+    try {
+      const response = await apiInstance.get(`/checkout/${order_id}/`);
+      setOrder(response.data || {});
+    } catch (error) {
+      console.error("Error fetching order:", error);
+    }
+  };
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const response = await apiInstance.get(`/checkout/${order_id}/`);
-        setOrder(response.data || {});
-      } catch (error) {
-        console.error("Error fetching order:", error);
-      }
-    };
-    if (order_id) fetchOrder();
+    if (order_id) fetchOrderData();
   }, [order_id]);
+
+  //-------------------------------
+  const applyCoupon = async () => {
+    console.log("coupon applied: ", couponCode);
+    console.log(order_id);
+
+    const formdata = new FormData();
+    formdata.append("order_oid", order_id);
+    formdata.append("coupon_code", couponCode);
+    try {
+      const response = await apiInstance.post("coupon/", formdata);
+      Swal.fire({
+        icon: response.data.icon,
+        title: response.data.message,
+      });
+      fetchOrderData();
+    } catch (err) {
+      if (err.response) {
+        Swal.fire({
+          icon: err.response.data.icon,
+          title: err.response.data.message,
+        });
+      } else {
+        console.log(err);
+      }
+    }
+  };
 
   return (
     <div className="container mx-auto mt-10 px-4">
@@ -47,7 +77,7 @@ function Checkout() {
             ))}
           </div>
         </div>
-        <div className="w-full sm:w-1/4 bg-white px-6 py-8 sm:px-8 sm:py-10">
+        <div className="w-full sm:w-1/3 bg-white px-6 py-8 sm:px-8 sm:py-10">
           <h1 className="font-semibold text-2xl border-b pb-4 mb-6">
             Order Summary
           </h1>
@@ -84,6 +114,17 @@ function Checkout() {
                 ₹{order.service_fee || "0.00"}
               </span>
             </div>
+            {/*sfsdaffffffff*/}
+            {order.discount !== "0.00" && (
+              <div className="flex justify-between">
+                <span className="font-semibold text-sm uppercase text-gray-700">
+                  Discount
+                </span>
+                <span className="font-semibold text-sm">
+                  -₹{order.saved || "0.00"}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between border-t pt-4">
               <span className="font-semibold text-sm uppercase text-gray-700">
                 Total
@@ -100,9 +141,13 @@ function Checkout() {
             <input
               type="text"
               placeholder="Enter your code"
+              onChange={(e) => setCouponCode(e.target.value)}
               className="p-2 text-sm w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button className="w-full mt-4 bg-red-500 text-white py-2 rounded-md text-sm uppercase font-semibold hover:bg-red-600 transition">
+            <button
+              onClick={applyCoupon}
+              className="w-full mt-4 bg-red-500 text-white py-2 rounded-md text-sm uppercase font-semibold hover:bg-red-600 transition"
+            >
               Apply
             </button>
           </div>

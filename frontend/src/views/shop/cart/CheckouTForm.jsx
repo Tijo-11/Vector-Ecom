@@ -56,11 +56,11 @@ function CheckoutForm({ onSubmit }) {
 
     try {
       const response = await apiInstance.post("/create-order/", data);
-      Swal.fire({
-        icon: "success",
-        title: "Order Created",
-        text: `Order ID: ${response.data.order_id}. ${response.data.message}`,
-      });
+      // Swal.fire({
+      //   icon: "success",
+      //   title: "Order Created",
+      //   text: `Order ID: ${response.data.order_id}. ${response.data.message}`,
+      // });
       onSubmit(formData);
       navigate(`/checkout/${response.data.order_oid}`); // Placeholder route for checkout page
     } catch (error) {

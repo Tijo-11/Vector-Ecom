@@ -26,9 +26,9 @@ class CartAPIView(generics.ListCreateAPIView):# Handles GET (list) and POST (cre
         #Tax model is in addon
         tax = Tax.objects.filter(country=country).first()
         if tax:
-            tax_rate = tax.rate / 100
+            tax_rate = tax.rate/100
         else:
-            tax_rate = 0
+            tax_rate = 5/100
             
         cart = Cart.objects.filter(cart_id=cart_id, product=product).first()
         if cart:#set data from request to that cart object, 
@@ -39,7 +39,7 @@ class CartAPIView(generics.ListCreateAPIView):# Handles GET (list) and POST (cre
             cart.sub_total = Decimal(price) * int(qty)
             cart.shipping_amount = Decimal(shipping_amount) * int(qty) #int(qty) because qty is a string
             cart.size = size
-            cart.tax_fee = int(qty) * Decimal(tax_rate)# Decimal is imported in commin
+            cart.tax_fee = Decimal(cart.price) * Decimal(tax_rate)# Decimal is imported in commin
             cart.color = color
             cart.country = country
             cart.cart_id = cart_id
@@ -47,7 +47,7 @@ class CartAPIView(generics.ListCreateAPIView):# Handles GET (list) and POST (cre
             # config_settings = ConfigSettings.objects.first() #From Addon Models
             # if config_settings.service_fee_charge_type == "percentage":
             # service_fee_percentage = config_settings.service_fee_percentage / 100
-            service_fee_percentage = 20 / 100
+            service_fee_percentage = 2 / 100
             cart.service_fee = Decimal(service_fee_percentage) * cart.sub_total
             # else:
             #     cart.service_fee = config_settings.service_fee_flat_rate
@@ -63,7 +63,7 @@ class CartAPIView(generics.ListCreateAPIView):# Handles GET (list) and POST (cre
             cart.sub_total = Decimal(price) * int(qty)
             cart.shipping_amount = Decimal(shipping_amount) * int(qty)
             cart.size = size
-            cart.tax_fee = int(qty) * Decimal(tax_rate)
+            cart.tax_fee = Decimal(cart.price) * Decimal(tax_rate)
             cart.color = color
             cart.country = country
             cart.cart_id = cart_id
@@ -72,7 +72,7 @@ class CartAPIView(generics.ListCreateAPIView):# Handles GET (list) and POST (cre
 
             # if config_settings.service_fee_charge_type == "percentage":
             # service_fee_percentage = config_settings.service_fee_percentage / 100
-            service_fee_percentage = 20 / 100
+            service_fee_percentage = 2 / 100
             cart.service_fee = Decimal(service_fee_percentage) * cart.sub_total
             # else:
             #     cart.service_fee = config_settings.service_fee_flat_rate
