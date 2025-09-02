@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
 import cartID from "../ProductDetail/cartID";
 
-function CartSummary({ cartItems }) {
-  const [cart_total, setCartTotal] = useState({
+function CartSummary({ cartItems, setCartTotal }) {
+  const [cart_total, setCartTotalLocal] = useState({
     itemCount: cartItems.length || 0,
     sub_total: 0,
     shipping: 0,
@@ -19,21 +19,23 @@ function CartSummary({ cartItems }) {
         try {
           const response = await apiInstance.get(`/cart-detail/${cart_id}/`);
           console.log(response.data);
-          setCartTotal({
+          const newTotals = {
             itemCount: cartItems.length || 0,
             sub_total: response.data.sub_total || 0,
             shipping: response.data.shipping || 0,
             tax: response.data.tax || 0,
             service_fee: response.data.service_fee || 0,
             total: response.data.total || 0,
-          });
+          };
+          setCartTotalLocal(newTotals);
+          setCartTotal(newTotals);
         } catch (error) {
           console.error("Error fetching cart totals:", error);
         }
       }
     };
     fetchCartTotal();
-  }, [cart_id, cartItems]);
+  }, [cart_id, cartItems, setCartTotal]);
 
   return (
     <div id="summary" className="w-full sm:w-1/4 md:w-1/2 px-8 py-10">
@@ -51,7 +53,7 @@ function CartSummary({ cartItems }) {
           Shipping
         </label>
         <select className="block p-2 text-gray-600 w-full text-sm">
-          <option>Standard shipping - ${cart_total.shipping.toFixed(2)}</option>
+          <option>Standard shipping - ₹{cart_total.shipping.toFixed(2)}</option>
         </select>
       </div>
       <div className="py-10">

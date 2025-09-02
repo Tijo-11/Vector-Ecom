@@ -1,6 +1,82 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import apiInstance from "../../../utils/axios";
+import { useAuthStore } from "../../../store/auth";
+import cartID from "../ProductDetail/cartID";
+import UserCountry from "../ProductDetail/UserCountry";
+import { toast } from "../../../utils/toast";
 
-function CartItem({ cartItems }) {
+function CartItem({ cartItems, setCart, setCartTotal }) {
+  const [product_quantities, setProductQuantities] = useState({});
+  const user = useAuthStore((state) => state.user);
+  const cart_id = cartID();
+  const currentAddress = UserCountry();
+
+  useEffect(() => {
+    const initialQuantities = {};
+    cartItems.forEach((c) => {
+      initialQuantities[c.product.id] = c.qty;
+    });
+    setProductQuantities(initialQuantities);
+  }, [cartItems]);
+
+  const handleQuantityChange = (e, product_id) => {
+    const quantity = e.target.value;
+    setProductQuantities((prev) => ({
+      ...prev,
+      [product_id]: quantity,
+    }));
+  };
+
+  const updateCart = async (
+    product_id,
+    qty_value,
+    price,
+    shipping_amount,
+    color,
+    size
+  ) => {
+    const formData = {
+      product: product_id,
+      user: user?.user_id || null,
+      qty: qty_value,
+      price: price,
+      shipping_amount: shipping_amount,
+      color: color || null,
+      size: size || null,
+      cart_id: cart_id,
+      country: currentAddress?.country || null,
+    };
+    try {
+      const response = await apiInstance.post("/cart/", formData);
+      console.log(response.data);
+      toast.fire({
+        icon: "success",
+        title: "Cart updated successfully",
+      });
+
+      // Refresh cart data
+      const cartResponse = await apiInstance.get(
+        user?.user_id
+          ? `/cart-list/${cart_id}/${user.user_id}/`
+          : `/cart-list/${cart_id}/`
+      );
+      setCart(cartResponse.data || []);
+
+      // Refresh cart totals
+      const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
+      setCartTotal({
+        itemCount: cartResponse.data.length || 0,
+        sub_total: totalResponse.data.sub_total || 0,
+        shipping: totalResponse.data.shipping || 0,
+        tax: totalResponse.data.tax || 0,
+        service_fee: totalResponse.data.service_fee || 0,
+        total: totalResponse.data.total || 0,
+      });
+    } catch (error) {
+      console.error("Error updating cart:", error);
+    }
+  };
+
   return (
     <>
       {cartItems.map((c, index) => (
@@ -28,15 +104,30 @@ function CartItem({ cartItems }) {
               <p className="text-base font-black leading-none text-gray-800">
                 {c.product.title}
               </p>
-              <select
-                aria-label="Select quantity"
-                defaultValue={c.qty}
-                className="py-2 px-1 border border-gray-200 mr-6 focus:outline-none"
-              >
-                <option>01</option>
-                <option>02</option>
-                <option>03</option>
-              </select>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  min="1"
+                  value={product_quantities[c.product.id] || c.qty}
+                  onChange={(e) => handleQuantityChange(e, c.product.id)}
+                  className="py-2 px-1 border border-gray-200 mr-2 w-16 focus:outline-none"
+                />
+                <button
+                  onClick={() =>
+                    updateCart(
+                      c.product.id,
+                      product_quantities[c.product.id] || c.qty,
+                      c.product.price,
+                      c.product.shipping_amount,
+                      c.color,
+                      c.size
+                    )
+                  }
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm"
+                >
+                  Update
+                </button>
+              </div>
             </div>
             <p className="text-xs leading-3 text-gray-600 pt-2">
               Height: {c.product.height || "N/A"}

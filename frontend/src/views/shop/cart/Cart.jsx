@@ -10,6 +10,7 @@ function Cart() {
   const [cart, setCart] = useState([]);
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
+  const [cartTotal, setCartTotal] = useState({});
 
   useEffect(() => {
     const fetchCartData = async (cartId, userId) => {
@@ -60,7 +61,11 @@ function Cart() {
                 <h1 className="font-semibold text-2xl">Shopping Cart</h1>
                 <h2 className="font-semibold text-2xl">{cart.length} Items</h2>
               </div>
-              <CartItem cartItems={cart} />
+              <CartItem
+                cartItems={cart}
+                setCart={setCart}
+                setCartTotal={setCartTotal}
+              />
               <Link
                 to="/"
                 className="flex font-semibold text-indigo-600 text-sm mt-10"
@@ -74,7 +79,7 @@ function Cart() {
                 Continue Shopping
               </Link>
             </div>
-            <CartSummary cartItems={cart} />
+            <CartSummary cartItems={cart} setCartTotal={setCartTotal} />
           </>
         )}
       </div>
