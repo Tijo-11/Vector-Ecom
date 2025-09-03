@@ -12,6 +12,8 @@ class RazorpayCheckoutView(generics.CreateAPIView):
         order_id = self.kwargs['order_id']
         try:
             order = CartOrder.objects.get(oid=order_id)
+            if order.payment_status == "paid":
+                return Response({'message': 'Already paid', 'icon': 'warn'}, status=status.HTTP_200_OK)
         except CartOrder.DoesNotExist:
             return Response({'message': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -30,7 +32,10 @@ class RazorpayCheckoutView(generics.CreateAPIView):
             razorpay_order = client.order.create({
                 'amount': int(order.total * 100),  # In paise
                 'currency': 'INR',
-                'payment_capture': 1  # Auto-capture
+                'payment_capture': 1,  # Auto-capture
+                'notes': {
+        'store_name': 'RetroRelics'  # 👈 Your custom store name
+    }
             })
             order.stripe_session_id = razorpay_order['id']  # Store Razorpay order ID
             order.save()

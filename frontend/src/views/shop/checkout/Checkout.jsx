@@ -60,6 +60,14 @@ function Checkout() {
       });
       return;
     }
+    if (order?.payment_status === "paid") {
+      Swal.fire({
+        icon: "warning",
+        title: "Already Paid",
+        text: "This order has already been paid. Please visit Order Section in your Profile",
+      });
+      return;
+    }
     if (error) {
       Swal.fire({
         icon: "error",
@@ -78,7 +86,7 @@ function Checkout() {
         amount,
         currency,
         order_id: id,
-        name: "Your Store Name",
+        name: "RetroRelics",
         description: `Order #${order_id}`,
         handler: (response) => {
           Swal.fire({
