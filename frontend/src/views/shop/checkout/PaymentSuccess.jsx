@@ -29,10 +29,12 @@ function PaymentSuccess() {
           `/payment-success/${order_id}/`,
           formData
         );
+        console.log("Payment verification response:", verifyResponse.data); // Debugging log
         setStatus(verifyResponse.data.message || "unpaid");
 
         // Fetch order data
         const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
+        console.log("Order response:", orderResponse.data); // Debugging log
         setOrder(orderResponse.data || {});
       } catch (error) {
         console.error("Error verifying payment or fetching order:", error);

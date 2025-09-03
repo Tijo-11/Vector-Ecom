@@ -64,6 +64,7 @@ class PaymentSuccessView(generics.CreateAPIView):
         session_id = request.data.get('session_id')
 
         if not order_id or not session_id:
+            #print(f"Missing order_id: {order_id}, session_id: {session_id}")  # Debugging log
             return Response(
                 {'message': 'Missing order_id or session_id'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -71,7 +72,9 @@ class PaymentSuccessView(generics.CreateAPIView):
 
         try:
             order = CartOrder.objects.get(oid=order_id)
+            #print(f"Order found: {order_id}, current status: {order.payment_status}")  # Debugging log
         except CartOrder.DoesNotExist:
+            #print(f"Order not found: {order_id}")  # Debugging log
             return Response(
                 {'message': 'Order not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -81,6 +84,7 @@ class PaymentSuccessView(generics.CreateAPIView):
         key_id = config('RAZORPAY_KEY_ID')
         key_secret = config('RAZORPAY_KEY_SECRET')
         if not key_id or not key_secret:
+            #print("Razorpay API credentials missing")  # Debugging log
             return Response(
                 {'message': 'Razorpay API credentials are missing'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -92,28 +96,35 @@ class PaymentSuccessView(generics.CreateAPIView):
 
             # Verify payment status
             payment = client.payment.fetch(session_id)
+            #print(f"Razorpay payment response: {payment}")  # Debugging log
             if payment['status'] == 'captured':
-                if order.payment_status == 'pending':
+                if order.payment_status in ['initiated', 'pending', 'processing']:
                     order.payment_status = 'paid'
+                    order.stripe_session_id = session_id  # Store Razorpay payment ID
                     order.save()
+                    print(f"Order {order_id} updated to paid, session_id: {session_id}")  # Debugging log
                     return Response(
                         {'message': 'payment_successful'},
                         status=status.HTTP_200_OK
                     )
+                #print(f"Order {order_id} already paid, status: {order.payment_status}")  # Debugging log
                 return Response(
                     {'message': 'already_paid'},
                     status=status.HTTP_200_OK
                 )
-            elif payment['status'] == 'failed' or payment['status'] == 'cancelled':
+            elif payment['status'] in ['failed', 'cancelled']:
+                #print(f"Payment {session_id} failed or cancelled: {payment['status']}")  # Debugging log
                 return Response(
                     {'message': 'cancelled'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            #print(f"Payment {session_id} status: {payment['status']}")  # Debugging log
             return Response(
                 {'message': 'unpaid'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         except razorpay.errors.BadRequestError as e:
+            #print(f"Razorpay error for payment {session_id}: {str(e)}")  # Debugging log
             return Response(
                 {'message': f'Payment verification failed: {str(e)}'},
                 status=status.HTTP_400_BAD_REQUEST
