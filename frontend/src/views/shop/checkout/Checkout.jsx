@@ -86,7 +86,7 @@ function Checkout() {
             title: "Payment Successful",
             text: `Payment ID: ${response.razorpay_payment_id}`,
           });
-          window.location.href = `/payments-success/${response.razorpay_payment_id}`;
+          window.location.href = `/payments-success/${response.razorpay_payment_id}?order_id=${order_id}`;
         },
         prefill: { name, email, contact },
         theme: { color: "#1E40AF" },

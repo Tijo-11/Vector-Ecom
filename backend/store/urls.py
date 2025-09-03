@@ -2,7 +2,7 @@ from django.urls import path
 from .views.product_category import CategoryListView, ProductListView, FeaturedProductListView, ProductDetailView
 from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartItemDeleteAPIView
 from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView
-from .views.checkout_views import RazorpayCheckoutView
+from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
 
 urlpatterns = [
     path('category/', CategoryListView.as_view(), name="category"),
@@ -15,6 +15,7 @@ urlpatterns = [
     #If unauthenticated or registered user places order to handle order this url is used, we don't need 
     #new view for it
     path('cart-detail/<str:cart_id>/', CartDetailView.as_view(), name='cart-detail'),
+    
     ###
     path('cart-delete/<str:cart_id>/<int:item_id>/<int:user_id>/', CartItemDeleteAPIView.as_view(), name="cart-delete"),
     path('cart-delete/<str:cart_id>/<int:item_id>/', CartItemDeleteAPIView.as_view(), name='cart-delete'),
@@ -24,6 +25,7 @@ urlpatterns = [
     
     ##-Checkout-views
     path('razorpay-checkout/<str:order_id>/', RazorpayCheckoutView.as_view(), name='razorpay-checkout'),
+    path('payment-success/<str:order_id>/', PaymentSuccessView.as_view(), name='payment-success'),
     
     #path('reviews/<product_id>/', store_views.ReviewListView.as_view(), name='create-review'),
     # path('search/', store_views.SearchProductsAPIView.as_view(), name='search'),
