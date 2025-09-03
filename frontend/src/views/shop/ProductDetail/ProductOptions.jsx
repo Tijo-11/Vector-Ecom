@@ -54,7 +54,7 @@ export default function ProductOptions({
   const handleAddToCart = async () => {
     const formData = new FormData();
     formData.append("product", product.id);
-    formData.append("user", user.id || "");
+    formData.append("user", user || ""); /// Fix: use user directly, as it is user_id
     formData.append("qty", qtyValue);
     formData.append("price", product.price);
     formData.append("shipping_amount", product.shipping_amount);

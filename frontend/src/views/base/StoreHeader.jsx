@@ -64,134 +64,138 @@ function StoreHeader() {
 
             <nav className="hidden md:flex space-x-6">
               {/* Account Dropdown */}
-              <div className="relative" ref={accountRef}>
-                <button
-                  onClick={toggleAccountDropdown}
-                  className="hover:text-gray-300 focus:outline-none"
-                >
-                  Account ▾
-                </button>
-                <div
-                  className={`absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
-                    isAccountOpen ? "flex" : "hidden"
-                  }`}
-                >
-                  <Link
-                    to="/customer/account/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsAccountOpen(false)}
+              {null && (
+                <div className="relative" ref={accountRef}>
+                  <button
+                    onClick={toggleAccountDropdown}
+                    className="hover:text-gray-300 focus:outline-none"
                   >
-                    <i className="fas fa-user"></i> Account
-                  </Link>
-                  <Link
-                    to="/customer/orders/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsAccountOpen(false)}
+                    Account ▾
+                  </button>
+                  <div
+                    className={`absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
+                      isAccountOpen ? "flex" : "hidden"
+                    }`}
                   >
-                    <i className="fas fa-shopping-cart"></i> Orders
-                  </Link>
-                  <Link
-                    to="/customer/wishlist/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsAccountOpen(false)}
-                  >
-                    <i className="fas fa-heart"></i> Wishlist
-                  </Link>
-                  <Link
-                    to="/customer/notifications/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsAccountOpen(false)}
-                  >
-                    <i className="fas fa-bell"></i> Notifications
-                  </Link>
-                  <Link
-                    to="/customer/settings/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsAccountOpen(false)}
-                  >
-                    <i className="fas fa-gear"></i> Settings
-                  </Link>
+                    <Link
+                      to="/customer/account/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsAccountOpen(false)}
+                    >
+                      <i className="fas fa-user"></i> Account
+                    </Link>
+                    <Link
+                      to="/customer/orders/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsAccountOpen(false)}
+                    >
+                      <i className="fas fa-shopping-cart"></i> Orders
+                    </Link>
+                    <Link
+                      to="/customer/wishlist/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsAccountOpen(false)}
+                    >
+                      <i className="fas fa-heart"></i> Wishlist
+                    </Link>
+                    <Link
+                      to="/customer/notifications/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsAccountOpen(false)}
+                    >
+                      <i className="fas fa-bell"></i> Notifications
+                    </Link>
+                    <Link
+                      to="/customer/settings/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsAccountOpen(false)}
+                    >
+                      <i className="fas fa-gear"></i> Settings
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Vendor Dropdown */}
-              <div className="relative" ref={vendorRef}>
-                <button
-                  onClick={toggleVendorDropdown}
-                  className="hover:text-gray-300 focus:outline-none"
-                >
-                  Vendor ▾
-                </button>
-                <div
-                  className={`absolute left-0 mt-2 w-56 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
-                    isVendorOpen ? "flex" : "hidden"
-                  }`}
-                >
-                  <Link
-                    to="/vendor/dashboard/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
+              {null && (
+                <div className="relative" ref={vendorRef}>
+                  <button
+                    onClick={toggleVendorDropdown}
+                    className="hover:text-gray-300 focus:outline-none"
                   >
-                    <i className="fas fa-user"></i> Dashboard
-                  </Link>
-                  <Link
-                    to="/vendor/products/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
+                    Vendor ▾
+                  </button>
+                  <div
+                    className={`absolute left-0 mt-2 w-56 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
+                      isVendorOpen ? "flex" : "hidden"
+                    }`}
                   >
-                    <i className="bi bi-grid-fill"></i> Products
-                  </Link>
-                  <Link
-                    to="/vendor/product/new/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
-                  >
-                    <i className="fas fa-plus-circle"></i> Add Products
-                  </Link>
-                  <Link
-                    to="/vendor/orders/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
-                  >
-                    <i className="fas fa-shopping-cart"></i> Orders
-                  </Link>
-                  <Link
-                    to="/vendor/earning/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
-                  >
-                    <i className="fas fa-dollar-sign"></i> Earning
-                  </Link>
-                  <Link
-                    to="/vendor/reviews/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
-                  >
-                    <i className="fas fa-star"></i> Reviews
-                  </Link>
-                  <Link
-                    to="/vendor/coupon/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
-                  >
-                    <i className="fas fa-tag"></i> Coupon
-                  </Link>
-                  <Link
-                    to="/vendor/notifications/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
-                  >
-                    <i className="fas fa-bell"></i> Notifications
-                  </Link>
-                  <Link
-                    to="/vendor/settings/"
-                    className="block px-4 py-2 hover:bg-gray-100"
-                    onClick={() => setIsVendorOpen(false)}
-                  >
-                    <i className="fas fa-gear"></i> Settings
-                  </Link>
+                    <Link
+                      to="/vendor/dashboard/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="fas fa-user"></i> Dashboard
+                    </Link>
+                    <Link
+                      to="/vendor/products/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="bi bi-grid-fill"></i> Products
+                    </Link>
+                    <Link
+                      to="/vendor/product/new/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="fas fa-plus-circle"></i> Add Products
+                    </Link>
+                    <Link
+                      to="/vendor/orders/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="fas fa-shopping-cart"></i> Orders
+                    </Link>
+                    <Link
+                      to="/vendor/earning/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="fas fa-dollar-sign"></i> Earning
+                    </Link>
+                    <Link
+                      to="/vendor/reviews/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="fas fa-star"></i> Reviews
+                    </Link>
+                    <Link
+                      to="/vendor/coupon/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="fas fa-tag"></i> Coupon
+                    </Link>
+                    <Link
+                      to="/vendor/notifications/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="fas fa-bell"></i> Notifications
+                    </Link>
+                    <Link
+                      to="/vendor/settings/"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setIsVendorOpen(false)}
+                    >
+                      <i className="fas fa-gear"></i> Settings
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              )}
             </nav>
 
             <div className="flex items-center space-x-2">
