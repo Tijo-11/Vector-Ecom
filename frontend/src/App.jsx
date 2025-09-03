@@ -16,6 +16,8 @@ import MainWrapper from "./layouts/MainWrapper";
 import CategoryProducts from "./views/shop/Category/CategoryProducts";
 import Cart from "./views/shop/cart/cart";
 import Checkout from "./views/shop/checkout/Checkout";
+import PaymentSuccess from "./views/shop/checkout/PaymentSuccess";
+import PaymentFailed from "./views/shop/checkout/PaymentFailed";
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -46,6 +48,15 @@ export default function App() {
           <Route path="/category/:slug" element={<CategoryProducts />} />{" "}
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout/:order_id" element={<Checkout />} />
+          {/* Payment */}
+          <Route
+            path="/payments-success/:session_id"
+            element={<PaymentSuccess />}
+          />
+          <Route
+            path="/payments-failed/:session_id"
+            element={<PaymentFailed />}
+          />
         </Routes>
       </MainWrapper>
       <StoreFooter />

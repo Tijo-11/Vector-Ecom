@@ -2,6 +2,7 @@ from django.urls import path
 from .views.product_category import CategoryListView, ProductListView, FeaturedProductListView, ProductDetailView
 from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartItemDeleteAPIView
 from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView
+from .views.checkout_views import RazorpayCheckoutView
 
 urlpatterns = [
     path('category/', CategoryListView.as_view(), name="category"),
@@ -20,6 +21,9 @@ urlpatterns = [
     path('create-order/', CreateOrderView.as_view(), name='create-order'),
     path('checkout/<order_oid>/', CheckoutView.as_view(), name='checkout'),
     path('coupon/', CouponAPIView.as_view(), name='coupon'),
+    
+    ##-Checkout-views
+    path('razorpay-checkout/<str:order_id>/', RazorpayCheckoutView.as_view(), name='razorpay-checkout'),
     
     #path('reviews/<product_id>/', store_views.ReviewListView.as_view(), name='create-review'),
     # path('search/', store_views.SearchProductsAPIView.as_view(), name='search'),

@@ -4,12 +4,15 @@ import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
 import Swal from "sweetalert2";
 import { toast } from "../../../utils/toast";
+import { useRazorpay } from "react-razorpay";
 
 function Checkout() {
   const [order, setOrder] = useState({});
   const [couponCode, setCouponCode] = useState("");
   const { order_id } = useParams();
   const user = useAuthStore((state) => state.user);
+  const { error, isLoading, Razorpay } = useRazorpay();
+
   const fetchOrderData = async () => {
     try {
       const response = await apiInstance.get(`/checkout/${order_id}/`);
@@ -23,11 +26,9 @@ function Checkout() {
     if (order_id) fetchOrderData();
   }, [order_id]);
 
-  //-------------------------------
   const applyCoupon = async () => {
     console.log("coupon applied: ", couponCode);
     console.log(order_id);
-
     const formdata = new FormData();
     formdata.append("order_oid", order_id);
     formdata.append("coupon_code", couponCode);
@@ -45,8 +46,68 @@ function Checkout() {
           title: err.response.data.message,
         });
       } else {
-        console.log(err);
+        console.error(err);
       }
+    }
+  };
+
+  const handleRazorpayCheckout = async () => {
+    if (isLoading) {
+      Swal.fire({
+        icon: "info",
+        title: "Loading",
+        text: "Razorpay is still loading, please wait.",
+      });
+      return;
+    }
+    if (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: `Failed to load Razorpay: ${error.message}`,
+      });
+      return;
+    }
+    try {
+      const response = await apiInstance.post(
+        `/razorpay-checkout/${order_id}/`
+      );
+      const { id, amount, currency, key, name, email, contact } = response.data;
+      const options = {
+        key,
+        amount,
+        currency,
+        order_id: id,
+        name: "Your Store Name",
+        description: `Order #${order_id}`,
+        handler: (response) => {
+          Swal.fire({
+            icon: "success",
+            title: "Payment Successful",
+            text: `Payment ID: ${response.razorpay_payment_id}`,
+          });
+          window.location.href = `/payments-success/${response.razorpay_payment_id}`;
+        },
+        prefill: { name, email, contact },
+        theme: { color: "#1E40AF" },
+      };
+      const rzp = new Razorpay(options);
+      rzp.on("payment.failed", (response) => {
+        Swal.fire({
+          icon: "error",
+          title: "Payment Failed",
+          text: `Order ID: ${response.error.metadata.order_id}`,
+        });
+        window.location.href = `/payments-failed/${response.error.metadata.order_id}`;
+      });
+      rzp.open();
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to initiate Razorpay checkout.",
+      });
+      console.error("Error initiating Razorpay checkout:", error);
     }
   };
 
@@ -114,7 +175,6 @@ function Checkout() {
                 ₹{order.service_fee || "0.00"}
               </span>
             </div>
-            {/*sfsdaffffffff*/}
             {order.discount !== "0.00" && (
               <div className="flex justify-between">
                 <span className="font-semibold text-sm uppercase text-gray-700">
@@ -151,8 +211,20 @@ function Checkout() {
               Apply
             </button>
           </div>
-          <button className="w-full mt-4 bg-blue-500 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition">
-            Pay with Stripe
+          {isLoading && (
+            <p className="text-gray-700 mt-4">Loading Razorpay...</p>
+          )}
+          {error && (
+            <p className="text-red-600 mt-4">
+              Error loading Razorpay: {error.message}
+            </p>
+          )}
+          <button
+            onClick={handleRazorpayCheckout}
+            disabled={isLoading}
+            className="w-full mt-4 bg-blue-500 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition disabled:bg-gray-400"
+          >
+            Pay with Razorpay
           </button>
           <button className="w-full mt-2 bg-yellow-400 text-black py-3 rounded-md text-sm uppercase font-semibold hover:bg-yellow-500 transition">
             Pay with PayPal

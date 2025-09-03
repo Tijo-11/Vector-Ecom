@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+import os
+from dotenv import load_dotenv
 from datetime import timedelta
 #timedelta represents a duration, the difference between two dates or times.
 
