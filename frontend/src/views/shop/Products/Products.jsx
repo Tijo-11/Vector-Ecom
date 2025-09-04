@@ -90,8 +90,8 @@ export default function Products() {
   if (loading) return <ProductsPlaceholder />;
 
   return (
-    <div className="container p-6">
-      <div className="bg-gray-100 py-4 text-center">
+    <div className="container">
+      <div className="bg-gray-100 py-8 text-center">
         <h1 className="text-4xl font-bold mb-4">
           Your Destination for Timeless Treasures.
         </h1>
@@ -102,7 +102,7 @@ export default function Products() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <h2 className="sr-only">Products</h2>
-        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8 mt-4">
           {products?.map((product) => (
             <div key={product.id} className="group flex flex-col h-full">
               <Link to={`/product/${product.slug}`}>

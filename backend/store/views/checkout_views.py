@@ -3,6 +3,9 @@ import razorpay
 import os
 from decouple import config
 
+def send_notification(user=None, vendor=None, order=None, order_item=None):
+    Notification.objects.create(user=user, vendor=vendor, order=order, order_item=order_item)
+
 class RazorpayCheckoutView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     permission_classes = [AllowAny]
@@ -62,6 +65,8 @@ class RazorpayCheckoutView(generics.CreateAPIView):
             )
             
 class PaymentSuccessView(generics.CreateAPIView):
+    serializer_class = CartOrderSerializer
+    queryset = CartOrder.objects.all()
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -84,6 +89,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                 {'message': 'Order not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        order_items = CartOrderItem.objects.filter(order=order)
 
         # Check Razorpay API credentials
         key_id = config('RAZORPAY_KEY_ID')
@@ -107,7 +113,28 @@ class PaymentSuccessView(generics.CreateAPIView):
                     order.payment_status = 'paid'
                     order.stripe_session_id = session_id  # Store Razorpay payment ID
                     order.save()
-                    print(f"Order {order_id} updated to paid, session_id: {session_id}")  # Debugging log
+                    #print(f"Order {order_id} updated to paid, session_id: {session_id}")  # Debugging log
+                    #Send Notification to customer
+                    if order.buyer != None:#only send notifications to registered users
+                        send_notification(user=order.buyer, order=order)
+                    #Send notifications to Vendor
+                    for o in order_items:
+                        send_notification(vendor=o.vendor, order=order, order_item=o)
+                        
+                        
+                    
+                    
+                    
+                    
+                    #Send Email To Buyer
+                    
+                    
+                    
+                    
+                    #Send Email to vendor
+                    
+                    
+                    
                     return Response(
                         {'message': 'payment_successful'},
                         status=status.HTTP_200_OK
