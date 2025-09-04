@@ -121,8 +121,8 @@ export default function CategoryProducts() {
   if (loading) return <ProductsPlaceholder />;
 
   return (
-    <div className="container p-6">
-      <div className="bg-gray-100 py-4 text-center">
+    <div className="container mx-auto my-4">
+      <div className="bg-yellow-100 py-8 px-8 text-center">
         <h1 className="text-4xl font-bold mb-4">{pageTitle}</h1>
         <p className="text-lg text-gray-600">
           {category
@@ -138,7 +138,7 @@ export default function CategoryProducts() {
             No products found for this category.
           </p>
         )}
-        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8 mt-4">
           {products?.map((product) => (
             <div key={product.id} className="group flex flex-col h-full">
               <Link to={`/product/${product.slug}`}>

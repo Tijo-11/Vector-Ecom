@@ -90,8 +90,8 @@ export default function Products() {
   if (loading) return <ProductsPlaceholder />;
 
   return (
-    <div className="container">
-      <div className="bg-gray-100 py-8 text-center">
+    <div className="container mx-auto my-8 ">
+      <div className="bg-yellow-100 py-8 text-center">
         <h1 className="text-4xl font-bold mb-4">
           Your Destination for Timeless Treasures.
         </h1>
