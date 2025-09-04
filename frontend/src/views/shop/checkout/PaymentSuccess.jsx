@@ -31,6 +31,8 @@ function PaymentSuccess() {
         );
         console.log("Payment verification response:", verifyResponse.data); // Debugging log
         setStatus(verifyResponse.data.message || "unpaid");
+        // ✅ Remove localStorage item here
+        localStorage.removeItem("random_string");
 
         // Fetch order data
         const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
