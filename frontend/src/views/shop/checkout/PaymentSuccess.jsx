@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
+import { v4 as uuidv4 } from "uuid"; // Import uuid for unique request IDs
 
 function PaymentSuccess() {
   const { session_id } = useParams();
   const [order, setOrder] = useState({});
   const [status, setStatus] = useState("verifying");
+  const [hasRun, setHasRun] = useState(false); // Track if verifyPayment has run
 
   // Get session_id and order_id from query parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -15,36 +17,70 @@ function PaymentSuccess() {
   // Verify payment and fetch order data
   useEffect(() => {
     const verifyPayment = async () => {
+      if (hasRun) {
+        console.log("verifyPayment already executed, skipping");
+        return;
+      }
       if (order_id === "N/A") {
         console.error("Order ID not found in query parameters");
         setStatus("unpaid");
         return;
       }
+
+      setHasRun(true); // Mark as run to prevent duplicates
+      const requestId = uuidv4(); // Generate unique request ID
+      console.log(
+        `Initiating payment verification with request ID: ${requestId}`
+      );
+
       try {
+        // Configure Axios with increased timeout
+        apiInstance.defaults.timeout = 30000; // 30 seconds timeout
+
         // Verify payment
         const formData = new FormData();
         formData.append("order_id", order_id);
         formData.append("session_id", razorpayPaymentId);
         const verifyResponse = await apiInstance.post(
           `/payment-success/${order_id}/`,
-          formData
+          formData,
+          { headers: { "X-Request-ID": requestId } } // Add request ID header
         );
-        console.log("Payment verification response:", verifyResponse.data); // Debugging log
+        console.log("Payment verification response:", verifyResponse.data);
         setStatus(verifyResponse.data.message || "unpaid");
-        // ✅ Remove localStorage item here
+
+        // Remove localStorage item
         localStorage.removeItem("random_string");
 
         // Fetch order data
         const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
-        console.log("Order response:", orderResponse.data); // Debugging log
+        console.log("Order response:", orderResponse.data);
         setOrder(orderResponse.data || {});
       } catch (error) {
-        console.error("Error verifying payment or fetching order:", error);
-        setStatus("unpaid");
+        console.error(
+          `Error verifying payment (Request ID: ${requestId}):`,
+          error
+        );
+        if (error.code === "ECONNABORTED") {
+          // Handle timeout specifically
+          console.log("Request timed out, retrying after 2 seconds...");
+          setTimeout(() => {
+            setHasRun(false); // Allow retry
+            verifyPayment(); // Retry once
+          }, 2000);
+        } else if (error.response?.data?.message === "already_paid") {
+          // Handle case where order is already paid
+          setStatus("already_paid");
+          const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
+          setOrder(orderResponse.data || {});
+        } else {
+          setStatus("unpaid");
+        }
       }
     };
+
     verifyPayment();
-  }, [order_id, razorpayPaymentId]);
+  }, [order_id, razorpayPaymentId, hasRun]);
 
   if (status === "verifying") {
     return (
@@ -88,7 +124,7 @@ function PaymentSuccess() {
           <i className="fas fa-check-circle mr-2"></i>
           {status === "already_paid"
             ? "Already Paid"
-            : "Thank you for your patronage!"}
+            : "Thank you for shopping with us!"}
         </h1>
         <p className="text-gray-700 mb-2">
           Please note your order ID: <strong>#{order_id}</strong>

@@ -25,6 +25,7 @@ export default function Products() {
   const [selectedSizes, setSelectedSizes] = useState({});
   const [quantityValue, setQuantityValue] = useState({});
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -46,6 +47,16 @@ export default function Products() {
     apiInstance.get(`category/`).then((response) => {
       setCategories(response.data);
     });
+  }, []);
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const viewportHeight = window.innerHeight;
+      setShowScrollTop(scrollY > viewportHeight);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const currentAddress = UserCountry();
@@ -85,6 +96,9 @@ export default function Products() {
       icon: "success",
       title: response.data.message || "Added to cart",
     });
+  };
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "auto" }); // Instant scroll
   };
 
   if (loading) return <ProductsPlaceholder />;
@@ -216,6 +230,14 @@ export default function Products() {
       {categories && categories.length > 0 ? (
         <Categories categories={categories} />
       ) : null}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-12 py-2 rounded-full shadow-lg hover:bg-blue-700 transition"
+        >
+          ↑ Got To Top
+        </button>
+      )}
     </div>
   );
 }
