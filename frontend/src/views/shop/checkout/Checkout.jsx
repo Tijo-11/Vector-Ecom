@@ -5,6 +5,7 @@ import { useAuthStore } from "../../../store/auth";
 import Swal from "sweetalert2";
 import RazorpayButton from "./Razorpay";
 import PaypalButton from "./Paypal";
+import Loader from "./Loader";
 
 function Checkout() {
   const [order, setOrder] = useState({});
@@ -157,6 +158,7 @@ function Checkout() {
           {/* Payment Buttons */}
           <RazorpayButton order={order} order_id={order_id} />
           <PaypalButton order={order} order_id={order_id} />
+          {/* <Loader order={order} order_id={order_id} /> */}
         </div>
       </div>
     </div>
@@ -164,3 +166,6 @@ function Checkout() {
 }
 
 export default Checkout;
+
+//In slow connections either Razorpay or Paypal or sometimes both are not getting rendered9throttle-3g).
+//Needs to fix that
