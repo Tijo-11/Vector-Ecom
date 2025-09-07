@@ -100,6 +100,7 @@ function PaypalButton({ order, order_id }) {
           navigate(
             `/payments-success/${order_id}?paypal_capture_id=${captureId}`
           );
+          localStorage.removeItem("random_string");
         });
       } else {
         Swal.fire({

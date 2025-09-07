@@ -64,6 +64,7 @@ function RazorpayButton({ order, order_id }) {
           }).then(() => {
             window.location.href = `/payments-success/${order_id}?session_id=${response.razorpay_payment_id}`;
           });
+          localStorage.removeItem("random_string");
         },
         prefill: { name, email, contact },
         theme: { color: "#1E40AF" },
