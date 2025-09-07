@@ -89,9 +89,9 @@ class PaymentSuccessView(generics.CreateAPIView):
 
         try:
             order = CartOrder.objects.get(oid=order_id)
-            print(f"Order found: {order_id}, current status: {order.payment_status}")
+            #print(f"Order found: {order_id}, current status: {order.payment_status}")
         except CartOrder.DoesNotExist:
-            print(f"Order not found: {order_id}")
+            #print(f"Order not found: {order_id}")
             return Response(
                 {'message': 'Order not found'},
                 status=status.HTTP_404_NOT_FOUND
@@ -99,7 +99,7 @@ class PaymentSuccessView(generics.CreateAPIView):
 
         # Check if order is already paid to handle duplicate requests
         if order.payment_status == 'paid':
-            print(f"Order {order_id} already paid, session_id: {session_id}")
+            #print(f"Order {order_id} already paid, session_id: {session_id}")
             return Response(
                 {'message': 'already_paid'},
                 status=status.HTTP_200_OK
@@ -123,13 +123,13 @@ class PaymentSuccessView(generics.CreateAPIView):
 
             # Verify payment status
             payment = client.payment.fetch(session_id)
-            print(f"Razorpay payment response: {payment}")
+            #print(f"Razorpay payment response: {payment}")
             if payment['status'] == 'captured':
                 if order.payment_status in ['initiated', 'pending', 'processing']:
                     order.payment_status = 'paid'
                     order.stripe_session_id = session_id  # Store Razorpay payment ID
                     order.save()
-                    print(f"Order {order_id} updated to paid, session_id: {session_id}")
+                    #print(f"Order {order_id} updated to paid, session_id: {session_id}")
 
                     # Send Notification to customer
                     if order.buyer is not None:

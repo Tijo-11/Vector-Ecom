@@ -304,8 +304,7 @@
                                                           138
                                                         );
                                                       "
-                                                      >{{ order.full_name
-                                                      }}!</span
+                                                      >{{ order.name }}!</span
                                                     ></span
                                                   >
                                                 </span>
@@ -907,7 +906,7 @@
                                                       line-height: 150%;
                                                     "
                                                   >
-                                                    ${{o.sub_total}}
+                                                    ₹{{o.sub_total}}
                                                   </p>
                                                 </td>
                                               </tr>
@@ -1091,7 +1090,7 @@
                                                         );
                                                       "
                                                     >
-                                                      ${{ order.sub_total }}
+                                                      ₹{{ order.sub_total }}
                                                     </span>
                                                   </h1>
                                                 </th>
@@ -1162,7 +1161,7 @@
                                                         );
                                                       "
                                                     >
-                                                      ${{ order.shipping_amount
+                                                      ₹{{ order.shipping_amount
                                                       }}
                                                     </span>
                                                   </h1>
@@ -1232,7 +1231,7 @@
                                                         );
                                                       "
                                                     >
-                                                      ${{ order.tax_fee }}
+                                                      ₹{{ order.tax_fee }}
                                                     </span>
                                                   </h1>
                                                 </th>
@@ -1303,7 +1302,7 @@
                                                         );
                                                       "
                                                     >
-                                                      ${{ order.service_fee }}
+                                                      ₹{{ order.service_fee }}
                                                     </span>
                                                   </h1>
                                                 </th>
@@ -1372,7 +1371,7 @@
                                                         );
                                                       "
                                                     >
-                                                      ${{ order.total }}
+                                                      ₹{{ order.total }}
                                                     </span>
                                                   </h1>
                                                 </th>
@@ -1562,8 +1561,7 @@
                                               line-height: 150%;
                                               color: rgb(151, 88, 138);
                                             "
-                                            >Full Name: {{ order.full_name
-                                            }}</span
+                                            >Full Name: {{ order.name }}</span
                                           >
                                           <br />
                                           <span

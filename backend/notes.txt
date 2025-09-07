@@ -52,9 +52,11 @@ we will focus on is configuring the media files, because that's
 what we strictly and obviously need in the back end.
 ########################################################
 
-
+₹
 
 #########################################################################################################
 Give comments which are as explanatory as possible but as short as possible for the Django+React project 
 code lines/snippets or the doubts of code snippets I send
 #########################################################################################################
+5241 8100 0000 0000
+###########################
