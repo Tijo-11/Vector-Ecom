@@ -9,56 +9,37 @@ function PaypalButton({ order, order_id }) {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+  if (isLoading) {
+    Swal.fire({
+      icon: "info",
+      title: "Loading",
+      text: "Razorpay is still loading, please wait.",
+    });
+    return;
+  }
 
   const initialOptions = {
     "client-id": PAYPAL_CLIENT_ID,
     currency: "USD",
     intent: "capture",
   };
+  const INRtoUSD = (inrValue) => {
+    const conversionRate = 0.012; // example: 1 INR = 0.012 USD
+    return (inrValue * conversionRate).toFixed(2); // 2 decimal places
+  };
+  if (
+    order?.payment_status === "paid" ||
+    order?.payment_status === "processing"
+  ) {
+    Swal.fire({
+      icon: "warning",
+      title: "Already Paid",
+      text: "This order has already been paid. Redirecting to order status.",
+    }).then(() => {
+      navigate(`/payments-success/${order_id}`);
+    });
+  }
 
-  // const handlePaypalCheckout = async (data, actions) => {
-  //   if (isLoading) {
-  //     Swal.fire({
-  //       icon: "info",
-  //       title: "Loading",
-  //       text: "PayPal is still loading, please wait.",
-  //     });
-  //     return false; // Prevent PayPal window
-  //   }
-  //   if (order?.payment_status === "paid") {
-  //     Swal.fire({
-  //       icon: "warning",
-  //       title: "Already Paid",
-  //       text: "This order has already been paid. Redirecting to order status.",
-  //     }).then(() => {
-  //       navigate(`/payments-success/${order_id}`);
-  //     });
-  //     return false; // Prevent PayPal window
-  //   }
-  //   if (error) {
-  //     Swal.fire({
-  //       icon: "error",
-  //       title: "Error",
-  //       text: `Failed to load PayPal: ${error.message}`,
-  //     });
-  //     return false; // Prevent PayPal window
-  //   }
-
-  //   try {
-  //     setIsLoading(true);
-  //     return await actions.order.capture();
-  //   } catch (err) {
-  //     setError(err);
-  //     Swal.fire({
-  //       icon: "error",
-  //       title: "Payment Error",
-  //       text: "Failed to process PayPal payment.",
-  //     });
-  //     return false;
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
   const handlePaypalCheckout = (data, actions) => {
     if (isLoading) return actions.reject();
     if (order?.payment_status === "paid") return actions.reject();
@@ -73,7 +54,7 @@ function PaypalButton({ order, order_id }) {
           amount: {
             currency_code: "USD", //PayPal officially doesn’t support INR for direct payments in most regions.
             //If you pass "INR", it may fail silently or cause session errors.use "USD" for sandbox testing.
-            value: order.total.toString(),
+            value: INRtoUSD(order.total), // ✅ converted value
           },
         },
       ],
@@ -86,28 +67,39 @@ function PaypalButton({ order, order_id }) {
       const name = details.payer.name.given_name;
       const status = details.status;
       const paypalOrderId = data.orderID;
+      const captureId = details.purchase_units[0].payments.captures[0].id;
 
       console.log({ name, status, paypalOrderId });
 
-      const response = await fetch(`${API_BASEURL}/verify-paypal-payment`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          order_id: order_id,
-          paypal_order_id: paypalOrderId,
-        }),
-      });
+      const response = await fetch(
+        `${API_BASEURL}payment-success/${order_id}/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            order_id: order_id, // your DB order
+            paypal_order_id: data.orderID, // PayPal order ID
+            paypal_capture_id: captureId, // PayPal capture ID (needed for backend verification)
+          }),
+        }
+      );
+      //👉 The order did exist, but once you called actions.order.capture(), PayPal closed it and it can’t be queried again via /v2/checkout/orders/{id}.
+
+      //This is normal — after capture, the order ID is no longer valid for lookups. Instead, PayPal expects you to verify using the capture ID.
+      console.log("Frontend orderID:", data.orderID);
 
       const result = await response.json();
-      if (result.success && status === "COMPLETED") {
+      if ((result.success || response.ok) && status === "COMPLETED") {
         Swal.fire({
           icon: "success",
           title: "Payment Successful",
           text: `Payment completed for order #${order_id}`,
         }).then(() => {
-          navigate(`/order-success/${order_id}`);
+          navigate(
+            `/payments-success/${order_id}?paypal_capture_id=${captureId}`
+          );
         });
       } else {
         Swal.fire({

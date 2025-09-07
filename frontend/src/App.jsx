@@ -50,7 +50,7 @@ export default function App() {
           <Route path="/checkout/:order_id" element={<Checkout />} />
           {/* Payment */}
           <Route
-            path="/payments-success/:session_id"
+            path="/payments-success/:order_id"
             element={<PaymentSuccess />}
           />
           <Route

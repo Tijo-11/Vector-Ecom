@@ -1,75 +1,57 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
-import { v4 as uuidv4 } from "uuid"; // Import uuid for unique request IDs
+import { v4 as uuidv4 } from "uuid";
 
 function PaymentSuccess() {
-  const { session_id } = useParams();
+  const { order_id } = useParams();
+  const location = useLocation();
   const [order, setOrder] = useState({});
   const [status, setStatus] = useState("verifying");
-  const [hasRun, setHasRun] = useState(false); // Track if verifyPayment has run
+  const [hasRun, setHasRun] = useState(false);
 
-  // Get session_id and order_id from query parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const razorpayPaymentId = urlParams.get("session_id") || session_id || "N/A";
-  const order_id = urlParams.get("order_id") || "N/A";
+  // Detect query params
+  const urlParams = new URLSearchParams(location.search);
+  const razorpayPaymentId = urlParams.get("session_id"); // Razorpay only
+  const paypalCaptureId = urlParams.get("paypal_capture_id"); // PayPal only
 
-  // Verify payment and fetch order data
   useEffect(() => {
     const verifyPayment = async () => {
-      if (hasRun) {
-        console.log("verifyPayment already executed, skipping");
-        return;
-      }
-      if (order_id === "N/A") {
-        console.error("Order ID not found in query parameters");
-        setStatus("unpaid");
-        return;
-      }
+      if (hasRun) return;
+      setHasRun(true);
 
-      setHasRun(true); // Mark as run to prevent duplicates
-      const requestId = uuidv4(); // Generate unique request ID
+      const requestId = uuidv4();
       console.log(
-        `Initiating payment verification with request ID: ${requestId}`
+        `PaymentSuccess check (order_id=${order_id}, requestId=${requestId})`
       );
 
       try {
-        // Configure Axios with increased timeout
-        apiInstance.defaults.timeout = 30000; // 30 seconds timeout
+        if (razorpayPaymentId) {
+          // ✅ Razorpay needs server-side verification
+          const formData = new FormData();
+          formData.append("order_id", order_id);
+          formData.append("session_id", razorpayPaymentId);
 
-        // Verify payment
-        const formData = new FormData();
-        formData.append("order_id", order_id);
-        formData.append("session_id", razorpayPaymentId);
-        const verifyResponse = await apiInstance.post(
-          `/payment-success/${order_id}/`,
-          formData,
-          { headers: { "X-Request-ID": requestId } } // Add request ID header
-        );
-        console.log("Payment verification response:", verifyResponse.data);
-        setStatus(verifyResponse.data.message || "unpaid");
+          const verifyResponse = await apiInstance.post(
+            `/payment-success/${order_id}/`,
+            formData,
+            { headers: { "X-Request-ID": requestId } }
+          );
 
-        // Remove localStorage item
-        localStorage.removeItem("random_string");
+          console.log("Razorpay verification response:", verifyResponse.data);
+          setStatus(verifyResponse.data.message || "unpaid");
+        } else {
+          // ✅ PayPal already verified in backend during onApprove
+          setStatus("paid");
+        }
 
-        // Fetch order data
+        // In both cases, fetch order details
         const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
         console.log("Order response:", orderResponse.data);
         setOrder(orderResponse.data || {});
       } catch (error) {
-        console.error(
-          `Error verifying payment (Request ID: ${requestId}):`,
-          error
-        );
-        if (error.code === "ECONNABORTED") {
-          // Handle timeout specifically
-          console.log("Request timed out, retrying after 2 seconds...");
-          setTimeout(() => {
-            setHasRun(false); // Allow retry
-            verifyPayment(); // Retry once
-          }, 2000);
-        } else if (error.response?.data?.message === "already_paid") {
-          // Handle case where order is already paid
+        console.error("PaymentSuccess error:", error);
+        if (error.response?.data?.message === "already_paid") {
           setStatus("already_paid");
           const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
           setOrder(orderResponse.data || {});
@@ -80,7 +62,7 @@ function PaymentSuccess() {
     };
 
     verifyPayment();
-  }, [order_id, razorpayPaymentId, hasRun]);
+  }, [order_id, razorpayPaymentId, paypalCaptureId, hasRun]);
 
   if (status === "verifying") {
     return (
@@ -129,9 +111,16 @@ function PaymentSuccess() {
         <p className="text-gray-700 mb-2">
           Please note your order ID: <strong>#{order_id}</strong>
         </p>
-        <p className="text-gray-700 mb-2">
-          Payment ID: <strong>{razorpayPaymentId}</strong>
-        </p>
+        {razorpayPaymentId && (
+          <p className="text-gray-700 mb-2">
+            Razorpay Payment ID: <strong>{razorpayPaymentId}</strong>
+          </p>
+        )}
+        {paypalCaptureId && (
+          <p className="text-gray-700 mb-2">
+            PayPal Capture ID: <strong>{paypalCaptureId}</strong>
+          </p>
+        )}
         <p className="text-gray-700 mb-4">
           We have sent an order summary to your linked email address:{" "}
           <strong>{order.email || "N/A"}</strong>

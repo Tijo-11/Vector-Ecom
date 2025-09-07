@@ -2,11 +2,13 @@ from .common import *
 import razorpay
 import os
 from decouple import config
+import requests
 
 
 def send_notification(user=None, vendor=None, order=None, order_item=None):
     Notification.objects.create(user=user, vendor=vendor, order=order, order_item=order_item)
-
+# paypal_api_url = f"https://api.sandbox.paypal.com/v2/checkout/orders/{paypal_order_id}"
+#order-id is not used, capture id is used in paypal
 
 class RazorpayCheckoutView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
@@ -70,156 +72,142 @@ class RazorpayCheckoutView(generics.CreateAPIView):
 import time
 
 
+def get_paypal_access_token(client_id, secret_id):
+    token_url = "https://api-m.sandbox.paypal.com/v1/oauth2/token"
+    headers = {"Accept": "application/json", "Accept-Language": "en_US"}
+    data = {"grant_type": "client_credentials"}
+
+    response = requests.post(
+        token_url,
+        headers=headers,
+        data=data,
+        auth=(client_id, secret_id),
+    )
+
+    if response.status_code != 200:
+        print("⚠️ PayPal Token Error:", response.status_code, response.text)
+        raise Exception(f"PayPal auth failed: {response.text}")
+
+    return response.json().get("access_token")
+
+
+
 class PaymentSuccessView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     queryset = CartOrder.objects.all()
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        start_time = time.time()  # Log start time for performance tracking
-        order_id = self.kwargs['order_id']
-        session_id = request.data.get('session_id')
+        payload = request.data
 
-        if not order_id or not session_id:
-            print(f"Missing order_id: {order_id}, session_id: {session_id}")
+        order_id = payload.get("order_id")
+        session_id = payload.get("session_id")  # Razorpay
+        paypal_order_id = payload.get("paypal_order_id")  # PayPal order (for logs only)
+        capture_id = payload.get("paypal_capture_id")  # PayPal capture ID
+
+        print("Backend received paypal_order_id:", paypal_order_id)
+        print("Backend received paypal_capture_id:", capture_id)
+
+        if not order_id:
             return Response(
-                {'message': 'Missing order_id or session_id'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"message": "Missing order_id"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             order = CartOrder.objects.get(oid=order_id)
-            #print(f"Order found: {order_id}, current status: {order.payment_status}")
         except CartOrder.DoesNotExist:
-            #print(f"Order not found: {order_id}")
             return Response(
-                {'message': 'Order not found'},
-                status=status.HTTP_404_NOT_FOUND
+                {"message": "Order not found"},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Check if order is already paid to handle duplicate requests
-        if order.payment_status == 'paid':
-            #print(f"Order {order_id} already paid, session_id: {session_id}")
-            return Response(
-                {'message': 'already_paid'},
-                status=status.HTTP_200_OK
-            )
+        if order.payment_status == "paid":
+            return Response({"message": "already_paid"}, status=status.HTTP_200_OK)
 
         order_items = CartOrderItem.objects.filter(order=order)
 
-        # Check Razorpay API credentials
-        key_id = config('RAZORPAY_KEY_ID')
-        key_secret = config('RAZORPAY_KEY_SECRET')
-        if not key_id or not key_secret:
-            print("Razorpay API credentials missing")
-            return Response(
-                {'message': 'Razorpay API credentials are missing'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        # -------------------- PAYPAL FLOW --------------------
+        if capture_id:  # ✅ check for capture_id instead
+            access_token = get_paypal_access_token(
+                config("PAYPAL_CLIENT_ID"), config("PAYPAL_CLIENT_SECRET")
             )
+            paypal_api_url = f"https://api-m.sandbox.paypal.com/v2/payments/captures/{capture_id}"  # ✅ fixed domain
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+            }
+            print("Auth Header:", headers["Authorization"])
+            response = requests.get(paypal_api_url, headers=headers)
+            print("PayPal Debug:", response.status_code, response.text)
 
-        try:
+            if response.status_code == 200:
+                paypal_order_data = response.json()
+                paypal_payment_status = paypal_order_data.get("status")
+
+                if paypal_payment_status == "COMPLETED":
+                    if order.payment_status in ["initiated", "processing", "pending"]:
+                        order.payment_status = "paid"
+                        order.save()
+                        # 🔔 notifications & emails
+                        self.send_all_notifications(order, order_items)
+                        return Response(
+                            {"message": "payment_successful"},
+                            status=status.HTTP_200_OK,
+                        )
+                    return Response({"message": "Already Paid"}, status=status.HTTP_200_OK)
+
+                elif paypal_payment_status in ["PENDING", "IN_PROGRESS"]:
+                    # still valid, just waiting for PayPal review
+                    order.payment_status = "processing"
+                    order.save()
+                    return Response(
+                        {"message": f"Payment is {paypal_payment_status.lower()}"},
+                        status=status.HTTP_202_ACCEPTED,
+                    )
+
+                else:
+                    return Response(
+                        {"message": f"Payment failed with status: {paypal_payment_status}"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+        # -------------------- RAZORPAY FLOW --------------------
+        if session_id:
+            key_id = config("RAZORPAY_KEY_ID")
+            key_secret = config("RAZORPAY_KEY_SECRET")
             client = razorpay.Client(auth=(key_id, key_secret))
             client.set_app_details({"title": "Django", "version": "4.2"})
-
-            # Verify payment status
             payment = client.payment.fetch(session_id)
-            #print(f"Razorpay payment response: {payment}")
-            if payment['status'] == 'captured':
-                if order.payment_status in ['initiated', 'pending', 'processing']:
-                    order.payment_status = 'paid'
-                    order.stripe_session_id = session_id  # Store Razorpay payment ID
+
+            if payment["status"] == "captured":
+                if order.payment_status in ["initiated", "pending", "processing"]:
+                    order.payment_status = "paid"
+                    order.stripe_session_id = session_id
                     order.save()
-                    #print(f"Order {order_id} updated to paid, session_id: {session_id}")
-
-                    # Send Notification to customer
-                    if order.buyer is not None:
-                        try:
-                            send_notification(user=order.buyer, order=order)
-                        except Exception as e:
-                            print(f"Failed to send notification to buyer {order.buyer}: {str(e)}")
-
-                    # Send notifications to Vendor
-                    for o in order_items:
-                        try:
-                            send_notification(vendor=o.vendor, order=order, order_item=o)
-                        except Exception as e:
-                            print(f"Failed to send notification to vendor {o.vendor}: {str(e)}")
-
-                    # Send Email to Buyer
-                    try:
-                        merge_data = {
-                            'order': order,
-                            'order_items': order_items,
-                        }
-                        subject = "Order Placed Successfully"
-                        text_body = render_to_string("email/customer_order_confirmation.txt", merge_data)
-                        html_body = render_to_string("email/customer_order_confirmation.html", merge_data)
-                        msg = EmailMultiAlternatives(
-                            subject=subject,
-                            body=text_body,
-                            from_email=settings.DEFAULT_FROM_EMAIL,
-                            to=[order.email],
-                        )
-                        msg.attach_alternative(html_body, "text/html")
-                        msg.send()
-                    except Exception as e:
-                        print(f"Failed to send email to buyer {order.email}: {str(e)}")
-
-                    # Send Email to vendor
-                    for o in order_items:
-                        try:
-                            if not o.vendor:
-                                print(f"No vendor associated with order item {o.oid}")
-                                continue
-                            if not o.vendor.email:
-                                print(f"Vendor {o.vendor.name} has no email address")
-                                continue
-                            from django.core.validators import validate_email
-                            validate_email(o.vendor.email)  # Raises ValidationError if invalid
-                            merge_data = {
-                                'order': order,
-                                'order_items': order_items,
-                            }
-                            subject = "New Sale!"
-                            text_body = render_to_string("email/vendor_order_sale.txt", merge_data)
-                            html_body = render_to_string("email/vendor_order_sale.html", merge_data)
-                            msg = EmailMultiAlternatives(
-                                subject=subject,
-                                body=text_body,
-                                from_email=settings.DEFAULT_FROM_EMAIL,
-                                to=[o.vendor.email],
-                            )
-                            msg.attach_alternative(html_body, "text/html")
-                            msg.send()
-                            print(f"Email sent to vendor {o.vendor.email}")
-                        except Exception as e:
-                            print(f"Failed to send email to vendor {o.vendor.email if o.vendor else 'None'}: {str(e)}")
-
-                    print(f"Request processing time: {time.time() - start_time:.2f} seconds")
+                    # 🔔 notifications & emails
+                    self.send_all_notifications(order, order_items)
                     return Response(
-                        {'message': 'payment_successful'},
-                        status=status.HTTP_200_OK
+                        {"message": "payment_successful"},
+                        status=status.HTTP_200_OK,
                     )
-            elif payment['status'] in ['failed', 'cancelled']:
-                print(f"Payment {session_id} failed or cancelled: {payment['status']}")
-                return Response(
-                    {'message': 'cancelled'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            print(f"Payment {session_id} status: {payment['status']}")
-            return Response(
-                {'message': 'unpaid'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except razorpay.errors.BadRequestError as e:
-            print(f"Razorpay error for payment {session_id}: {str(e)}")
-            return Response(
-                {'message': f'Payment verification failed: {str(e)}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except Exception as e:
-            print(f"Unexpected error in PaymentSuccessView: {str(e)}")
-            return Response(
-                {'message': 'Server error occurred'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+                return Response({"message": "Already Paid"}, status=status.HTTP_200_OK)
+
+            elif payment["status"] in ["failed", "cancelled"]:
+                return Response({"message": "cancelled"}, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({"message": "unpaid"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # If neither PayPal nor Razorpay IDs are provided
+        return Response(
+            {"message": "Missing session_id or paypal_capture_id"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    def send_all_notifications(self, order, order_items):
+        """Helper for notifications & emails to avoid duplication"""
+        if order.buyer:
+            send_notification(user=order.buyer, order=order)
+
+        for o in order_items:
+            send_notification(vendor=o.vendor, order=order, order_item=o)
