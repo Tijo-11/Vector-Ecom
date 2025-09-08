@@ -50,7 +50,7 @@ Here’s your entire project description formatted as a **single, complete Markd
 #### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/retrorelics.git
+git clone https://github.com/Tijo-11/retrorelics.git
 cd retrorelics
 ```
 
@@ -176,4 +176,3 @@ Feel free to:
 This project is licensed under the **MIT License**.
 ```
 
-Let me know if you'd like badges, deployment instructions, or screenshots added. I’ve got your back.
