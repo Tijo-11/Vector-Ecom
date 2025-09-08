@@ -1,6 +1,4 @@
-I'm here to help, not to frustrate you—and I’m sorry if my previous response didn’t meet your expectations. Let’s get this right.
 
-Here’s your entire project description formatted as a **single, complete Markdown file**—no separation, no fragments, just one clean block you can paste directly into your GitHub `README.md`:
 
 ```markdown
 # 🛍️ RetroRelics
@@ -35,6 +33,16 @@ Here’s your entire project description formatted as a **single, complete Markd
 | Database      | SQLite (dev) / PostgreSQL (prod) |
 
 ---
+📚 API Documentation
+This project uses drf-yasg to generate interactive Swagger documentation for all REST APIs.
+
+Once the Django server is running, you can access the API docs at:
+
+Swagger UI: http://localhost:8000/swagger/
+
+ReDoc: http://localhost:8000/redoc/
+
+These interfaces allow you to explore available endpoints, view request/response formats, and test APIs directly from the browser.
 
 ## ⚙️ Installation
 
