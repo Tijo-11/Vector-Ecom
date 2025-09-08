@@ -6,6 +6,7 @@ import RelatedProducts from "./RelatedProducts";
 import UserCountry from "./UserCountry";
 import UserData from "../../plugin/UserData";
 import CartId from "./CartId";
+import Review from "./Review";
 
 export default function ProductDetail() {
   const [product, setProduct] = useState({});
@@ -114,6 +115,17 @@ export default function ProductDetail() {
 
         {/* Related Products */}
         <RelatedProducts related={product.related} />
+        {/*Review*/}
+        <div
+          className="tab-pane fade"
+          id="pills-contact"
+          role="tabpanel"
+          aria-labelledby="pills-contact-tab"
+          tabIndex={0}
+        >
+          <Review product={product} userData={userData} />
+        </div>
+        {/* Passing Props to Review component */}
       </div>
     </div>
   );

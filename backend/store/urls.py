@@ -3,6 +3,7 @@ from .views.product_category import CategoryListView, ProductListView, FeaturedP
 from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartItemDeleteAPIView
 from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView
 from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
+from .views.Review_views import ReviewListAPIView#, ReviewCreateAPIView
 
 urlpatterns = [
     path('category/', CategoryListView.as_view(), name="category"),
@@ -27,7 +28,9 @@ urlpatterns = [
     path('razorpay-checkout/<str:order_id>/', RazorpayCheckoutView.as_view(), name='razorpay-checkout'),
     path('payment-success/<str:order_id>/', PaymentSuccessView.as_view(), name='payment-success'),
     
-    #path('reviews/<product_id>/', store_views.ReviewListView.as_view(), name='create-review'),
+    #Reviews
+    path('reviews/<product_id>/', ReviewListAPIView.as_view(), name='list-review'),
+    # path('reviews/', ReviewCreateAPIView.as_view(), name='create-review'),
     # path('search/', store_views.SearchProductsAPIView.as_view(), name='search'),
 
     # Payment
