@@ -1,4 +1,9 @@
+# RetroRelics
 
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python&logoColor=white)
+![React](https://img.shields.io/badge/React-18-blue?logo=react&logoColor=white)
+![Django](https://img.shields.io/badge/Django-4.x-green?logo=django&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ```markdown
 # 🛍️ RetroRelics
