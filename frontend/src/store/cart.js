@@ -9,10 +9,10 @@ import { mountStoreDevtool } from "simple-zustand-devtools";
 import apiInstance from "../utils/axios";
 // Import apiInstance for making API calls to fetch cart items, consistent with ProductOptions.jsx
 
-import UserData from "../views/plugin/UserData";
+import UserData from "../plugin/UserData";
 // Import UserData to get user_id for logged-in users
 
-import CartId from "../views/shop/ProductDetail/CartId";
+import CartId from "../views/shop/ProductDetail/cartId";
 // Import CartId to get cart_id for non-logged-in users
 
 const useCartStore = create((set) => ({

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
-import cartID from "../ProductDetail/cartID";
+import cartID from "../ProductDetail/cartId";
 import UserCountry from "../ProductDetail/UserCountry";
 import { toast } from "../../../utils/toast";
 

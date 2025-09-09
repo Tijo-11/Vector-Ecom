@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Heart } from "lucide-react";
 import ProductsPlaceholder from "./ProductsPlaceHolder";
 import Categories from "../category/Categories";
 import apiInstance from "../../../utils/axios";
 import UserCountry from "../ProductDetail/UserCountry";
-import UserData from "../../plugin/UserData";
-import cartID from "../ProductDetail/CartId";
+import UserData from "../../../plugin/UserData";
+import cartID from "../ProductDetail/cartId";
 import Swal from "sweetalert2";
+import { CartContext } from "../../../plugin/Context";
+import CartId from "../ProductDetail/cartId.jsx";
 
 export default function Products() {
   const Toast = Swal.mixin({
@@ -26,6 +28,7 @@ export default function Products() {
   const [quantityValue, setQuantityValue] = useState({});
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [cartCount, setCartCount] = useContext(CartContext);
 
   useEffect(() => {
     setLoading(true);
@@ -79,24 +82,52 @@ export default function Products() {
   };
 
   const handleAddToCart = async (product_id, price, shipping_amount) => {
+    const qty = Number(quantityValue[product_id] || 0);
+    if (qty <= 0) return;
+
     const formData = new FormData();
     formData.append("product", product_id);
-    formData.append("user", user?.user_id);
-    formData.append("qty", quantityValue[product_id] || "0");
+    formData.append("user", user?.user_id || "");
+    formData.append("qty", qty);
     formData.append("price", price);
     formData.append("shipping_amount", shipping_amount);
-    formData.append("country", currentAddress?.country);
+    formData.append("country", currentAddress?.country || "Unknown");
     formData.append("size", selectedSizes[product_id] || "");
     formData.append("color", selectedColors[product_id] || "");
     formData.append("cart_id", cart_id);
 
-    const response = await apiInstance.post(`cart/`, formData);
-    console.log(response.data);
-    Toast.fire({
-      icon: "success",
-      title: response.data.message || "Added to cart",
-    });
+    // ✅ Optimistic update
+    setCartCount((prev) => prev + qty);
+
+    try {
+      const response = await apiInstance.post(`cart/`, formData);
+      Toast.fire({
+        icon: "success",
+        title: response.data.message || "Added to cart",
+      });
+
+      // ✅ Sync with backend
+      const url = user?.user_id
+        ? `/cart-list/${cart_id}/${user.user_id}/`
+        : `/cart-list/${cart_id}/`;
+
+      const res = await apiInstance.get(url);
+      const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
+      setCartCount(totalQty);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+
+      // ❌ Rollback optimistic update
+      setCartCount((prev) => Math.max(prev - qty, 0));
+
+      Toast.fire({
+        icon: "error",
+        title: "Failed to add to cart",
+      });
+    }
   };
+
+  //scroll to top
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "auto" }); // Instant scroll
   };

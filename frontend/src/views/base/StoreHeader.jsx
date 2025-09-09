@@ -1,15 +1,12 @@
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import React, { useMemo, useState, useRef, useEffect, useContext } from "react";
 import { useAuthStore } from "../../store/auth";
 import { Link, useNavigate } from "react-router-dom";
-import { FaShoppingCart } from "react-icons/fa";
-
-// Hypothetical cart store; replace with your actual cart state management
-import { useCartStore } from "../../store/cart";
+import { ShoppingCart } from "lucide-react"; // or Heroicons if you prefer
+import { CartContext } from "../../plugin/Context";
 
 function StoreHeader() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const user = useAuthStore((state) => state.user);
-  const cartItems = useCartStore((state) => state.cartItems); // Get cart items
 
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -19,6 +16,8 @@ function StoreHeader() {
 
   const accountRef = useRef(null);
   const vendorRef = useRef(null);
+  const [cartCount, setCartCount] = useContext(CartContext);
+  console.log(cartCount);
 
   const handleSearchChange = (event) => {
     setSearch(event.target.value);
@@ -234,13 +233,16 @@ function StoreHeader() {
                   >
                     Logout
                   </Link>
-                  <Link to="/cart" className="relative">
-                    <FaShoppingCart className="text-2xl" />
-                    {cartItems.length > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {cartItems.length}
-                      </span>
-                    )}
+                  <Link
+                    to="/cart"
+                    className="relative inline-flex items-center justify-center p-2 rounded-full bg-gray-100 hover:bg-blue-400 transition"
+                  >
+                    <ShoppingCart className="h-6 w-6 text-gray-700" />
+
+                    {/* Badge */}
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">
+                      {cartCount || 0}
+                    </span>
                   </Link>
                 </>
               ) : (
@@ -257,13 +259,16 @@ function StoreHeader() {
                   >
                     Register
                   </Link>
-                  <Link to="/cart" className="relative">
-                    <FaShoppingCart className="text-2xl" />
-                    {cartItems.length > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {cartItems.length}
-                      </span>
-                    )}
+                  <Link
+                    to="/cart"
+                    className="relative inline-flex items-center justify-center p-2 rounded-full bg-gray-100 hover:bg-blue-400 transition"
+                  >
+                    <ShoppingCart className="h-6 w-6 text-gray-700" />
+
+                    {/* Badge */}
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">
+                      {cartCount || 0}
+                    </span>
                   </Link>
                 </>
               )}

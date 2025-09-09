@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { ShoppingCart, Heart } from "lucide-react";
 import apiInstance from "../../../utils/axios";
 import Swal from "sweetalert2";
+import { CartContext } from "../../../plugin/Context";
+import CartId from "../ProductDetail/cartId.jsx";
+import UserData from "../../../plugin/UserData.js";
 
 export default function ProductOptions({
   product,
@@ -24,6 +27,9 @@ export default function ProductOptions({
   const [colorValue, setColorValue] = useState("No Color");
   const [sizeValue, setSizeValue] = useState("No Size");
   const [qtyValue, setQtyValue] = useState(1);
+  const [cartCount, setCartCount] = useContext(CartContext);
+  const cart_id = CartId();
+  const userData = UserData();
 
   useEffect(() => {
     if (product && product.id) {
@@ -54,7 +60,7 @@ export default function ProductOptions({
   const handleAddToCart = async () => {
     const formData = new FormData();
     formData.append("product", product.id);
-    formData.append("user", user || ""); /// Fix: use user directly, as it is user_id
+    formData.append("user", user || "");
     formData.append("qty", qtyValue);
     formData.append("price", product.price);
     formData.append("shipping_amount", product.shipping_amount);
@@ -63,15 +69,38 @@ export default function ProductOptions({
     formData.append("color", colorValue);
     formData.append("cart_id", cartId || "");
 
+    // ✅ Optimistic update (use qty instead of +1)
+    setCartCount((prev) => prev + Number(qtyValue));
+
     try {
       const response = await apiInstance.post("cart/", formData);
-      console.log(response.data);
       Toast.fire({
         icon: "success",
         title: response.data.message || "Added to cart",
       });
+
+      // ✅ Sync with backend
+      const cart_id = CartId();
+      const userData = UserData();
+
+      const url = userData?.user_id
+        ? `/cart-list/${cart_id}/${userData.user_id}/`
+        : `/cart-list/${cart_id}/`;
+
+      const res = await apiInstance.get(url);
+
+      const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
+      setCartCount(totalQty);
     } catch (error) {
       console.error("Error adding to cart:", error);
+
+      // ❌ Rollback optimistic update
+      setCartCount((prev) => Math.max(prev - Number(qtyValue), 0));
+
+      Toast.fire({
+        icon: "error",
+        title: "Failed to add to cart",
+      });
     }
   };
 

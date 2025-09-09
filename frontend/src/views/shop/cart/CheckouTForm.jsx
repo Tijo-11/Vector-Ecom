@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
-import cartID from "../ProductDetail/cartID";
+import cartID from "../ProductDetail/cartId";
 
 function CheckoutForm({ onSubmit }) {
   const [formData, setFormData] = useState({
