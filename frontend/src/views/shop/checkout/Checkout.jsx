@@ -36,7 +36,9 @@ function Checkout() {
         icon: response.data.icon,
         title: response.data.message,
       });
-      fetchOrderData();
+      if (response.data.icon === "success") {
+        await fetchOrderData(); // Ensure data is fetched after success
+      }
     } catch (err) {
       if (err.response) {
         Swal.fire({
@@ -116,7 +118,7 @@ function Checkout() {
                 ₹{order.service_fee || "0.00"}
               </span>
             </div>
-            {order.discount !== "0.00" && (
+            {order.saved !== "0.00" && (
               <div className="flex justify-between">
                 <span className="font-semibold text-sm uppercase text-gray-700">
                   Discount
