@@ -55,6 +55,7 @@ function PaymentSuccess() {
           setStatus("already_paid");
           const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
           setOrder(orderResponse.data || {});
+          console.log(orderResponse.data);
         } else {
           setStatus("unpaid");
         }
@@ -160,13 +161,16 @@ function PaymentSuccess() {
                 </div>
               ))
             ) : (
-              <p className="text-gray-700">No items found</p>
+              /*<p className="text-gray-700">No items found</p>*/ <div></div>
+              //Fix this logic
             )}
             <div className="mt-4 border-t pt-4">
               <div className="flex justify-between mb-2">
-                <span className="font-semibold text-gray-700">Subtotal</span>
+                <span className="font-semibold text-gray-700">
+                  Initial Total
+                </span>
                 <span className="text-gray-700">
-                  ₹{order.sub_total || "0.00"}
+                  ₹{order.initial_total || "0.00"}
                 </span>
               </div>
               <div className="flex justify-between mb-2">
@@ -189,6 +193,19 @@ function PaymentSuccess() {
                   ₹{order.service_fee || "0.00"}
                 </span>
               </div>
+              <div className="flex justify-between mb-2">
+                {order.saved !== "0.00" && (
+                  <>
+                    <span className="font-semibold text-sm uppercase text-gray-700">
+                      Discount
+                    </span>
+                    <span className="font-semibold text-sm">
+                      -₹{order.saved || "0.00"}
+                    </span>
+                  </>
+                )}
+              </div>
+
               <div className="flex justify-between font-semibold border-t pt-2">
                 <span className="text-gray-700">Total</span>
                 <span className="text-gray-700">₹{order.total || "0.00"}</span>

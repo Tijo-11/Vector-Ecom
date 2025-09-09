@@ -88,10 +88,10 @@ function Checkout() {
           <div className="space-y-4">
             <div className="flex justify-between">
               <span className="font-semibold text-sm uppercase text-gray-700">
-                Subtotal
+                Initial Total
               </span>
               <span className="font-semibold text-sm">
-                ₹{order.sub_total || "0.00"}
+                ₹{order.initial_total || "0.00"}
               </span>
             </div>
             <div className="flex justify-between">
