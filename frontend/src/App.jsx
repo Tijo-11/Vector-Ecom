@@ -23,6 +23,11 @@ import { CartContext } from "./plugin/Context.jsx";
 import CartId from "./views/shop/ProductDetail/cartId.jsx";
 import UserData from "./plugin/UserData.js";
 import apiInstance from "./utils/axios.js";
+import Account from "./views/customer/Accounts.jsx";
+import NotFund from "./layouts/NotFound.jsx";
+import Orders from "./views/customer/Orders.jsx";
+import OrderDetail from "./views/customer/OrderDetail.jsx";
+import Wishlist from "./views/customer/Wishlist.jsx";
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -81,6 +86,43 @@ export default function App() {
               path="/payments-failed/:session_id"
               element={<PaymentFailed />}
             />
+            {/*Customer Endpoints*/}
+            <Route
+              path="customer/account/"
+              element={
+                <PrivateRoute>
+                  <Account />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/customer/order/detail/:order_oid/"
+              element={
+                <PrivateRoute>
+                  <OrderDetail />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/customer/wishlist/"
+              element={
+                <PrivateRoute>
+                  <Wishlist />
+                </PrivateRoute>
+              }
+            />
+            {/* <Route path="/customer/notifications/" element={<PrivateRoute><Notifications /></PrivateRoute>} />
+                        <Route path="/customer/settings/" element={<PrivateRoute><Settings /></PrivateRoute>} /> */}
+            <Route
+              path="customer/orders/"
+              element={
+                <PrivateRoute>
+                  <Orders />
+                </PrivateRoute>
+              }
+            />
+            {/* Not Found*/}
+            <Route path="*" element={<NotFund />} />
           </Routes>
         </MainWrapper>
         <StoreFooter />

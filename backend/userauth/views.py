@@ -55,7 +55,7 @@ def getRoutes(request):
      ]
      return Response(routes)
  
-'''# This code defines another DRF View class called ProfileView, which inherits from generics.RetrieveAPIView
+# This code defines another DRF View class called ProfileView, which inherits from generics.RetrieveAPIView
 # and used to show user profile view
 class ProfileView(generics.RetrieveAPIView):
 #RetrieveAPIView is a DRF generic view for fetching a single model instance by its ID (GET /<id>/).
@@ -84,7 +84,7 @@ class ProfileView(generics.RetrieveAPIView):
 #The view is not exposing sensitive profile data, but instead using the profile lookup as part of a public OTP 
 # generation flow. it may be used in a login, registration, or password reset process—where the user isn't 
 # authenticated yet.AllowAny lets unauthenticated users access this endpoint, which is necessary if you're 
-# sending OTPs to users before login.'''
+# sending OTPs to users before login.
 
 import shortuuid
 from rest_framework import generics
@@ -170,7 +170,9 @@ class PasswordChangeView(generics.CreateAPIView):
             {"message": "Password Changed Successfully"},
             status=status.HTTP_200_OK   # ✅ return 200 instead of 201
         )
-            
+        
+#-----------------------------
+
 
         
     

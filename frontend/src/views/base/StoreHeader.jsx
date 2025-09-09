@@ -3,10 +3,12 @@ import { useAuthStore } from "../../store/auth";
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart } from "lucide-react"; // or Heroicons if you prefer
 import { CartContext } from "../../plugin/Context";
+import UseProfileData from "../../plugin/UserProfileData";
 
 function StoreHeader() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const user = useAuthStore((state) => state.user);
+  const userProfile = UseProfileData();
 
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -63,57 +65,6 @@ function StoreHeader() {
 
             <nav className="hidden md:flex space-x-6">
               {/* Account Dropdown */}
-              {null && (
-                <div className="relative" ref={accountRef}>
-                  <button
-                    onClick={toggleAccountDropdown}
-                    className="hover:text-gray-300 focus:outline-none"
-                  >
-                    Account ▾
-                  </button>
-                  <div
-                    className={`absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
-                      isAccountOpen ? "flex" : "hidden"
-                    }`}
-                  >
-                    <Link
-                      to="/customer/account/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-user"></i> Account
-                    </Link>
-                    <Link
-                      to="/customer/orders/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-shopping-cart"></i> Orders
-                    </Link>
-                    <Link
-                      to="/customer/wishlist/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-heart"></i> Wishlist
-                    </Link>
-                    <Link
-                      to="/customer/notifications/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-bell"></i> Notifications
-                    </Link>
-                    <Link
-                      to="/customer/settings/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-gear"></i> Settings
-                    </Link>
-                  </div>
-                </div>
-              )}
 
               {/* Vendor Dropdown */}
               {null && (
@@ -221,12 +172,56 @@ function StoreHeader() {
               </form>
               {isLoggedIn ? (
                 <>
-                  <Link
-                    to="/customer/account/"
-                    className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg"
-                  >
-                    Account
-                  </Link>
+                  <div className="relative" ref={accountRef}>
+                    <button
+                      onClick={toggleAccountDropdown}
+                      className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg"
+                    >
+                      Account ▾
+                    </button>
+                    <div
+                      className={`absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
+                        isAccountOpen ? "flex" : "hidden"
+                      }`}
+                    >
+                      <Link
+                        to="/customer/account/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-user"></i> Account
+                      </Link>
+                      <Link
+                        to="/customer/orders/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-shopping-cart"></i> Orders
+                      </Link>
+                      <Link
+                        to="/customer/wishlist/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-heart"></i> Wishlist
+                      </Link>
+                      <Link
+                        to="/customer/notifications/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-bell"></i> Notifications
+                      </Link>
+                      <Link
+                        to="/customer/settings/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-gear"></i> Settings
+                      </Link>
+                    </div>
+                  </div>
+
                   <Link
                     to="/logout"
                     className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg"

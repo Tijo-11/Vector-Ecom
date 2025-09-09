@@ -33,19 +33,11 @@ urlpatterns = [
     # path('reviews/', ReviewCreateAPIView.as_view(), name='create-review'),
     path('search/', SearchProductView.as_view(), name='search'),
 
-    # Payment
-    # path('stripe-checkout/<order_oid>/', store_views.StripeCheckoutView.as_view(), name='stripe-checkout'),
-    # path('payment-success/', store_views.PaymentSuccessView.as_view(), name='payment-success'),
+
     
 ]
 
- # Customer API Endpoints
-    # path('customer/orders/<user_id>/', customer_views.OrdersAPIView.as_view(), name='customer-orders'),
-    # path('customer/order/detail/<user_id>/<order_oid>/', customer_views.OrdersDetailAPIView.as_view(), name='customer-order-detail'),
-    # path('customer/wishlist/create/', customer_views.WishlistCreateAPIView.as_view(), name='customer-wishlist-create'),
-    # path('customer/wishlist/<user_id>/', customer_views.WishlistAPIView.as_view(), name='customer-wishlist'),
-    # path('customer/notification/<user_id>/', customer_views.CustomerNotificationView.as_view(), name='customer-notification'),
-    # path('customer/setting/<int:pk>/', customer_views.CustomerUpdateView.as_view(), name='customer-settings'),
+
 
     # # Vendor API Endpoints
     # path('vendor/stats/<vendor_id>/', vendor_views.DashboardStatsAPIView.as_view(), name='vendor-stats'),
