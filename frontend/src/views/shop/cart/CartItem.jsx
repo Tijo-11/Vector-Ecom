@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
 import cartID from "../ProductDetail/cartId";
 import UserCountry from "../ProductDetail/UserCountry";
 import { toast } from "../../../utils/toast";
+import { CartContext } from "../../../plugin/Context";
 
 function CartItem({ cartItems, setCart, setCartTotal }) {
-  const [product_quantities, setProductQuantities] = useState({});
+  const [productQuantities, setProductQuantities] = useState({});
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
   const currentAddress = UserCountry();
+  const [cartCount, setCartCount] = useContext(CartContext); // ✅ Added CartContext
 
   useEffect(() => {
     const initialQuantities = {};
@@ -35,10 +37,13 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     color,
     size
   ) => {
+    const qty = Number(qty_value || 0);
+    if (qty <= 0) return; // ✅ Prevent invalid quantities
+
     const formData = {
       product: product_id,
       user: user?.user_id || null,
-      qty: qty_value,
+      qty: qty,
       price: price,
       shipping_amount: shipping_amount,
       color: color || null,
@@ -46,6 +51,16 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       cart_id: cart_id,
       country: currentAddress?.country || null,
     };
+
+    // ✅ Optimistic update for CartContext
+    const previousCartCount = cartCount;
+    setCartCount(
+      (prev) =>
+        prev +
+        qty -
+        (cartItems.find((c) => c.product.id === product_id)?.qty || 0)
+    );
+
     try {
       const response = await apiInstance.post("/cart/", formData);
       console.log(response.data);
@@ -72,14 +87,31 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         service_fee: totalResponse.data.service_fee || 0,
         total: totalResponse.data.total || 0,
       });
+
+      // ✅ Sync CartContext count with backend total
+      const totalQty = cartResponse.data.reduce(
+        (sum, item) => sum + item.qty,
+        0
+      );
+      setCartCount(totalQty);
     } catch (error) {
       console.error("Error updating cart:", error);
+
+      // ❌ Rollback optimistic update
+      setCartCount(previousCartCount);
+
+      toast.fire({
+        icon: "error",
+        title: "Failed to update cart",
+      });
     }
   };
+
   const handleDeleteCartItem = async (item_id) => {
     const url = user?.user_id
       ? `/cart-delete/${cart_id}/${item_id}/${user.user_id}/`
       : `/cart-delete/${cart_id}/${item_id}/`;
+
     try {
       const response = await apiInstance.delete(url);
       console.log(response.data);
@@ -87,12 +119,14 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         icon: "success",
         title: "Item removed from cart",
       });
+
       const cartResponse = await apiInstance.get(
         user?.user_id
           ? `/cart-list/${cart_id}/${user.user_id}/`
           : `/cart-list/${cart_id}/`
       );
       setCart(cartResponse.data || []);
+
       const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
       setCartTotal({
         itemCount: cartResponse.data.length || 0,
@@ -102,8 +136,19 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         service_fee: totalResponse.data.service_fee || 0,
         total: totalResponse.data.total || 0,
       });
+
+      // ✅ Update CartContext after deletion
+      const totalQty = cartResponse.data.reduce(
+        (sum, item) => sum + item.qty,
+        0
+      );
+      setCartCount(totalQty);
     } catch (error) {
       console.error("Error deleting cart item:", error);
+      toast.fire({
+        icon: "error",
+        title: "Failed to remove item",
+      });
     }
   };
 
@@ -138,7 +183,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                 <input
                   type="number"
                   min="1"
-                  value={product_quantities[c.product.id] || c.qty}
+                  value={productQuantities[c.product.id] || c.qty}
                   onChange={(e) => handleQuantityChange(e, c.product.id)}
                   className="py-2 px-1 border border-gray-200 mr-2 w-16 focus:outline-none"
                 />
@@ -146,7 +191,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                   onClick={() =>
                     updateCart(
                       c.product.id,
-                      product_quantities[c.product.id] || c.qty,
+                      productQuantities[c.product.id] || c.qty,
                       c.product.price,
                       c.product.shipping_amount,
                       c.color,
