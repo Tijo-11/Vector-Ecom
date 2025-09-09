@@ -18,6 +18,7 @@ import Cart from "./views/shop/cart/cart";
 import Checkout from "./views/shop/checkout/Checkout";
 import PaymentSuccess from "./views/shop/checkout/PaymentSuccess";
 import PaymentFailed from "./views/shop/checkout/PaymentFailed";
+import Search from "./views/shop/Search";
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/category/:slug" element={<CategoryProducts />} />{" "}
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout/:order_id" element={<Checkout />} />
+          <Route path="/search" element={<Search />} />
           {/* Payment */}
           <Route
             path="/payments-success/:order_id"

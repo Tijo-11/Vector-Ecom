@@ -40,5 +40,20 @@ class ReviewListAPIView(generics.ListCreateAPIView):#List view and Create view t
         Review.objects.create(user=user, product=product, rating=rating, review=review)
         
         return Response({"meassage": "Review Created Successfully"}, status=status.HTTP_201_CREATED,)
+    
+#Searchview
+class SearchProductView(generics.ListCreateAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = (AllowAny,)
+    
+    def get_queryset(self):
+        query = self.request.GET.get('query')
+        if query == None:
+            return Response({"message": "Query parameter can't be none"}, status= status.HTTP_400_BAD_REQUEST)
+    #.GET accesses query parameters from the URL (e.g. ?query=searchterm). It’s part of Django’s 
+    # HttpRequest object to retrieve data sent via HTTP GET method.
+        product = Product.objects.filter(status='published', title__icontains=query)
+        return product
+        
 
     

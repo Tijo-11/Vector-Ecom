@@ -199,19 +199,27 @@ function StoreHeader() {
             </nav>
 
             <div className="flex items-center space-x-2">
-              <input
-                onChange={handleSearchChange}
-                name="search"
-                className="rounded-lg bg-white px-3 py-1 text-gray-900 focus:outline-none"
-                type="text"
-                placeholder="Search"
-              />
-              <button
-                onClick={handleSearchSubmit}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg"
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault(); // prevent page reload
+                  handleSearchSubmit();
+                }}
+                className="flex items-center space-x-2"
               >
-                Search
-              </button>
+                <input
+                  onChange={handleSearchChange}
+                  name="search"
+                  className="rounded-lg bg-white px-3 py-1 text-gray-900 focus:outline-none"
+                  type="text"
+                  placeholder="Search"
+                />
+                <button
+                  onClick={handleSearchSubmit}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg"
+                >
+                  Search
+                </button>
+              </form>
               {isLoggedIn ? (
                 <>
                   <Link
