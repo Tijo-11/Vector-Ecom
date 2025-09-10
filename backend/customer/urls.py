@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import OrdersAPIView, OrdersDetailAPIView, WishlistCreateAPIView, WishlistAPIView
-from .views import CustomerNotificationView, CustomerUpdateView
+from .views import CustomerNotificationView, CustomerUpdateView, MarkNotificationsAsSeen
 
  # Customer API Endpoints
 urlpatterns = [
@@ -8,5 +8,6 @@ urlpatterns = [
     path('customer/order/detail/<user_id>/<order_oid>/', OrdersDetailAPIView.as_view(), name='customer-order-detail'),
     path('customer/wishlist/create/', WishlistCreateAPIView.as_view(), name='customer-wishlist-create'),
     path('customer/wishlist/<user_id>/', WishlistAPIView.as_view(), name='customer-wishlist'),
-    path('customer/notification/<user_id>/', CustomerNotificationView.as_view(), name='customer-notification'),
+    path('customer/notifications/<user_id>/', CustomerNotificationView.as_view(), name='customer-notification'),
+    path('customer/notifications/<user_id>/<noti_id>', MarkNotificationsAsSeen.as_view(), name='customer-notification'),
     path('customer/setting/<int:pk>/', CustomerUpdateView.as_view(), name='customer-settings'),]

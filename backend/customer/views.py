@@ -113,7 +113,29 @@ class CustomerNotificationView(generics.ListAPIView):
     def get_queryset(self):
         user_id = self.kwargs['user_id']
         user = User.objects.get(id=user_id)
-        return Notification.objects.filter(user=user)
+        # ✅ Only return unseen notifications
+        return Notification.objects.filter(user=user, seen=False)
+
+    
+####-------
+class MarkNotificationsAsSeen(generics.RetrieveAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = (AllowAny, )
+    
+    def get_object(self):
+        user_id = self.kwargs['user_id']
+        noti_id = self.kwargs['noti_id']
+
+        user = User.objects.get(id=user_id)
+        notification = Notification.objects.get(id=noti_id, user=user)  # ✅ fix
+
+        if not notification.seen:
+            notification.seen = True
+            notification.save()
+        return notification
+        
+        
+    
 
 
 class CustomerUpdateView(generics.RetrieveUpdateAPIView):

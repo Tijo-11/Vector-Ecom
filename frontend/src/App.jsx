@@ -28,7 +28,7 @@ import NotFund from "./layouts/NotFound.jsx";
 import Orders from "./views/customer/Orders.jsx";
 import OrderDetail from "./views/customer/OrderDetail.jsx";
 import Wishlist from "./views/customer/Wishlist.jsx";
-
+import Notifications from "./views/customer/Notifications.jsx";
 export default function App() {
   const [count, setCount] = useState(0);
   const [cartCount, setCartCount] = useState(0);
@@ -111,8 +111,15 @@ export default function App() {
                 </PrivateRoute>
               }
             />
-            {/* <Route path="/customer/notifications/" element={<PrivateRoute><Notifications /></PrivateRoute>} />
-                        <Route path="/customer/settings/" element={<PrivateRoute><Settings /></PrivateRoute>} /> */}
+            <Route
+              path="/customer/notifications/"
+              element={
+                <PrivateRoute>
+                  <Notifications />
+                </PrivateRoute>
+              }
+            />
+            {/*  <Route path="/customer/settings/" element={<PrivateRoute><Settings /></PrivateRoute>} /> */}
             <Route
               path="customer/orders/"
               element={
