@@ -31,6 +31,7 @@ import Wishlist from "./views/customer/Wishlist.jsx";
 import Notifications from "./views/customer/Notifications.jsx";
 import Settings from "./views/customer/Settings.jsx";
 import ViewOrder from "./views/customer/ViewOrder.jsx";
+import Invoice from "./views/customer/Invoice.jsx";
 
 //
 export default function App() {
@@ -137,6 +138,14 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <Orders />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="customer/order/invoice/:order_oid"
+              element={
+                <PrivateRoute>
+                  <Invoice />
                 </PrivateRoute>
               }
             />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
+import { Eye, FileText } from "lucide-react";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
 import { Link } from "react-router-dom";
@@ -151,7 +152,13 @@ function Orders() {
                                 className="text-blue-600 hover:underline flex items-center gap-1"
                                 to={`/customer/order/detail/${o.oid}/`}
                               >
-                                View <i className="fas fa-eye" />
+                                View <Eye className="w-5 h-5" />
+                              </Link>
+                              <Link
+                                className="text-blue-600 hover:underline flex items-center gap-1"
+                                to={`/customer/order/invoice/${o.oid}/`}
+                              >
+                                Invoice <FileText className="w-5 h-5" />
                               </Link>
                             </td>
                           </tr>
