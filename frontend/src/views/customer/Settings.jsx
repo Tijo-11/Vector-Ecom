@@ -13,7 +13,7 @@ function Settings() {
     country: "",
     city: "",
     state: "",
-    pincode: "",
+    postal_code: "",
     address: "",
     p_image: "",
   });
@@ -36,6 +36,7 @@ function Settings() {
           country: res.data?.country || "",
           city: res.data?.city || "",
           state: res.data?.state || "",
+          postal_code: res.data?.postal_code || "",
           address: res.data?.address || "",
           p_image: res.data?.image || "",
         });
@@ -73,13 +74,13 @@ function Settings() {
         formData.append("image", profileData.p_image);
       }
 
-      // ✅ Append only defined fields
       Object.entries({
         full_name: profileData.full_name,
         about: profileData.about,
         country: profileData.country,
         city: profileData.city,
         state: profileData.state,
+        postal_code: profileData.postal_code,
         address: profileData.address,
       }).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -103,6 +104,20 @@ function Settings() {
       });
     } catch (error) {
       console.error("Error updating profile:", error);
+
+      // ✅ Show error notification
+      let errorMessage = "Something went wrong!";
+      if (error.response?.data) {
+        // Show first validation error from backend if exists
+        const errors = error.response.data;
+        errorMessage = Object.values(errors).flat().join("\n");
+      }
+
+      Swal.fire({
+        icon: "error",
+        title: "Profile update failed",
+        text: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
@@ -201,6 +216,26 @@ function Settings() {
                           name="city"
                           value={profileData?.city}
                           onChange={handleInputChange}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-2 font-medium">
+                          Pincode
+                        </label>
+                        <input
+                          type="text"
+                          name="postal_code"
+                          value={profileData?.postal_code}
+                          onChange={(e) => {
+                            const value = e.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 6);
+                            setProfileData({
+                              ...profileData,
+                              postal_code: value,
+                            });
+                          }}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300 focus:outline-none"
                         />
                       </div>

@@ -65,7 +65,7 @@ class CartOrder(models.Model):
     state = models.CharField(max_length=1000, null=True, blank=True)
     country = models.CharField(max_length=1000, null=True, blank=True)
     postal_code = models.CharField(
-        max_length=6,null=True, blank=True,
+        max_length=10,null=True, blank=True,
         validators=[RegexValidator('^[0-9]{6}$', _('Invalid postal code'))],
     )
     
