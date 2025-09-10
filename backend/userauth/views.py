@@ -185,7 +185,7 @@ class PasswordChangeView(generics.CreateAPIView):
 
 
 
-#No app level urls.py, it is in folder api in destiny's project
+
 #A couple of additional improvements
 
 # Security

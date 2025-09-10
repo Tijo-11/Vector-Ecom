@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
 import Login from "./views/auth/login";
 import Register from "./views/auth/Register";
-import Dashboard from "./views/auth/Dashboard";
 import PrivateRoute from "./layouts/PrivateRoute"; // Importing the 'PrivateRoute' component.
 //import Private from "./views/auth/private"; // Importing the 'Private' component.
 import Logout from "./views/auth/Logout";
@@ -32,6 +31,7 @@ import Notifications from "./views/customer/Notifications.jsx";
 import Settings from "./views/customer/Settings.jsx";
 import ViewOrder from "./views/customer/ViewOrder.jsx";
 import Invoice from "./views/customer/Invoice.jsx";
+import Dashboard from "./views/vendor/Dashboard.jsx";
 
 //
 export default function App() {
@@ -146,6 +146,15 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <Invoice />
+                </PrivateRoute>
+              }
+            />
+            {/* Vendor Routes */}
+            <Route
+              path="/vendor/dashboard/"
+              element={
+                <PrivateRoute>
+                  <Dashboard />
                 </PrivateRoute>
               }
             />
