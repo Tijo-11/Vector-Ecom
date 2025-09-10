@@ -14,6 +14,7 @@ function Wishlist() {
   const userData = UserData();
 
   const fetchWishlist = async () => {
+    if (!userData?.user_id) return; // ✅ prevent invalid API call
     try {
       const response = await axios.get(
         `customer/wishlist/${userData?.user_id}/`

@@ -97,13 +97,15 @@ class WishlistCreateAPIView(generics.CreateAPIView):
 class WishlistAPIView(generics.ListAPIView):
     serializer_class = WishlistSerializer
     permission_classes = (AllowAny, )
-
+##############################-defensive programming
     def get_queryset(self):
         user_id = self.kwargs['user_id']
+        if not str(user_id).isdigit():  # ✅ validate before querying to avoid getting user_id as undefined
+            return Wishlist.objects.none()
         user = User.objects.get(id=user_id)
         wishlist = Wishlist.objects.filter(user=user,)
         return wishlist
-    
+##############################    
 class CustomerNotificationView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = (AllowAny, )

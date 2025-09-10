@@ -2,36 +2,47 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import UserProfileData from "../../plugin/UserProfileData";
 import apiInstance from "../../utils/axios";
+import UserData from "../../plugin/UserData";
 
 export default function Sidebar() {
   const userProfile = UserProfileData(); //useEffect already runs in userProfileData.jsx
+  const userData = UserData();
   const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
-    if (userProfile) {
-      setLoading(false);
-      // Fetch order count dynamically
-      apiInstance
-        .get(`customer/orders/count/${userProfile?.user_id}`)
-        .then((res) => {
-          setOrderCount(res.data.count || 0);
-        })
-        .catch((error) => {
-          console.error("Error fetching order count:", error);
-        });
-      // Fetch wishlist count dynamically
-      apiInstance
-        .get(`customer/wishlist/${userProfile?.user_id}/`)
-        .then((res) => {
-          setWishlistCount(res.data.length || 0);
-        })
-        .catch((error) => {
-          console.error("Error fetching wishlist count:", error);
-        });
+    if (!userData?.user_id) {
+      setLoading(false); // no user → stop loading
+      return;
     }
-  }); //No dependency array it means the effect runs after every render, including the initial mount and every
+
+    const fetchData = async () => {
+      try {
+        const ordersRes = await apiInstance.get(
+          `customer/orders/${userData.user_id}/`
+        );
+        setOrderCount(ordersRes.data.length || 0);
+
+        const wishlistRes = await apiInstance.get(
+          `customer/wishlist/${userData.user_id}/`
+        );
+        setWishlistCount(wishlistRes.data.length || 0);
+
+        const notificationsRes = await apiInstance.get(
+          `customer/notifications/${userData.user_id}/`
+        );
+        setNotificationCount(notificationsRes.data.length || 0);
+      } catch (error) {
+        console.error("Error fetching sidebar data:", error);
+      } finally {
+        setLoading(false); // stop loading once API done
+      }
+    };
+
+    fetchData();
+  }, [userData?.user_id]); //No dependency array it means the effect runs after every render, including the initial mount and every
   // update — no matter what changed., Empty array means runs once on mount
 
   return (
@@ -89,7 +100,7 @@ export default function Sidebar() {
                 <i className="fas fa-bell mr-2 animate-bounce"></i> Notification
               </Link>
               <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                14
+                {notificationCount}
               </span>
             </li>
             <li className="flex justify-between items-center bg-white p-3 rounded shadow">
