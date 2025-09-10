@@ -1,34 +1,29 @@
 import apiInstance from "../utils/axios";
-import { useState } from "react";
 import Swal from "sweetalert2";
 
 export const addToWishlist = async (productId, userId) => {
   const axios = apiInstance;
 
   try {
-    // Create a new FormData object to send product information to the server
+    // Send POST request to add/remove from wishlist
     const formData = new FormData();
     formData.append("product_id", productId);
     formData.append("user_id", userId);
 
-    // Send a POST request to the server's 'customer/wishlist/create/' endpoint with the product information
-    const response = await axios.post("customer/wishlist/create/", formData);
-
-    // Log the response data from the server
-    console.log(response.data);
+    const response = await axios.post(`customer/wishlist/create/`, formData);
 
     Swal.fire({
       icon: "success",
-      title: response.data.message,
+      title: response.data.message || "Wishlist updated successfully",
     });
 
-    // Set the loading state to "Added To Cart" upon a successful response
-    // isAddingToWishlist(true);
+    console.log(response.data);
   } catch (error) {
-    // Log any errors that occur during the request
     console.log(error);
-
-    // Set the loading state to "An Error Occurred" in case of an error
-    // isAddingToWishlist(false);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Failed to update wishlist. Please try again.",
+    });
   }
 };

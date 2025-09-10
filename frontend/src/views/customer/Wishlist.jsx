@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
+import { ShoppingCart, Heart } from "lucide-react";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
 import { Link } from "react-router-dom";
@@ -13,8 +14,15 @@ function Wishlist() {
   const axios = apiInstance;
   const userData = UserData();
 
+  // Placeholder image for broken or missing images
+  const placeholderImage =
+    "https://via.placeholder.com/300x300.png?text=No+Image";
+
   const fetchWishlist = async () => {
-    if (!userData?.user_id) return; // ✅ prevent invalid API call
+    if (!userData?.user_id) {
+      setLoading(false); // ✅ prevent invalid API call
+      return;
+    }
     try {
       const response = await axios.get(
         `customer/wishlist/${userData?.user_id}/`
@@ -22,7 +30,7 @@ function Wishlist() {
       setWishlist(response.data);
       setLoading(false);
     } catch (error) {
-      console.log(error);
+      console.log("Error fetching wishlist:", error);
       setLoading(false);
     }
   };
@@ -33,15 +41,19 @@ function Wishlist() {
     }
   }, [userData?.user_id]);
 
-  console.log(wishlist);
+  console.log("Wishlist data:", wishlist);
 
   const handleAddToWishlist = async (product_id) => {
     try {
       await addToWishlist(product_id, userData?.user_id);
       fetchWishlist();
     } catch (error) {
-      console.log(error);
+      console.log("Error updating wishlist:", error);
     }
+  };
+
+  const handleImageError = (e) => {
+    e.target.src = placeholderImage; // Set fallback image on error
   };
 
   return (
@@ -77,38 +89,43 @@ function Wishlist() {
                                   key={index}
                                   className="bg-white rounded-lg shadow-lg overflow-hidden"
                                 >
-                                  <div className="relative group">
+                                  <div className="w-full h-64 flex items-center justify-center bg-gray-100">
                                     <img
-                                      src={w.product.image}
-                                      className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
-                                      alt={w.product.title}
+                                      src={w.product.image || placeholderImage}
+                                      alt={w.product.title || "Product Image"}
+                                      onError={handleImageError}
+                                      className="max-h-full max-w-full object-contain"
                                     />
-                                    <div className="absolute inset-0 bg-gray-100 bg-opacity-10 transition-opacity duration-300 group-hover:bg-opacity-20"></div>
-                                    <div className="absolute bottom-2 left-2">
-                                      <span className="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded">
-                                        New
-                                      </span>
-                                    </div>
                                   </div>
+
                                   <div className="p-4">
                                     <Link
-                                      to={`/detail/${w.product.slug}`}
+                                      to={`/detail/${w.product.slug || ""}`}
                                       className="text-gray-800 hover:text-blue-600"
                                     >
                                       <h6 className="text-lg font-semibold mb-2">
                                         {w.product.title.slice(0, 30)}...
                                       </h6>
                                     </Link>
-                                    <Link
-                                      to={`/brand/${w.product?.brand.slug}`}
-                                      className="text-gray-600 hover:text-blue-600"
-                                    >
-                                      <p className="text-sm mb-2">
-                                        {w.product?.brand.title}
+                                    {w.product?.brand ? (
+                                      <Link
+                                        to={`/brand/${
+                                          w.product.brand.slug || ""
+                                        }`}
+                                        className="text-gray-600 hover:text-blue-600"
+                                      >
+                                        <p className="text-sm mb-2">
+                                          {w.product.brand.title ||
+                                            "Unknown Brand"}
+                                        </p>
+                                      </Link>
+                                    ) : (
+                                      <p className="text-sm mb-2 text-gray-600">
+                                        No Brand
                                       </p>
-                                    </Link>
+                                    )}
                                     <h6 className="text-lg font-bold mb-3">
-                                      ₹{w.product.price}
+                                      ₹{w.product.price || "0.00"}
                                     </h6>
                                     <button
                                       onClick={() =>
@@ -117,7 +134,7 @@ function Wishlist() {
                                       type="button"
                                       className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
                                     >
-                                      <i className="fas fa-heart" />
+                                      <Heart size={18} />
                                     </button>
                                   </div>
                                 </div>

@@ -10,6 +10,8 @@ import cartID from "../ProductDetail/cartId";
 import Swal from "sweetalert2";
 import { CartContext } from "../../../plugin/Context";
 import CartId from "../ProductDetail/cartId.jsx";
+import { addToWishlist } from "../../../plugin/addToWishlist";
+import { useAuthStore } from "../../../store/auth";
 
 export default function Products() {
   const Toast = Swal.mixin({
@@ -29,6 +31,22 @@ export default function Products() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [cartCount, setCartCount] = useContext(CartContext);
+  const [wishlist, setWishlist] = useState([]); // Added wishlist state
+  const userData = UserData();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // Added function to fetch wishlist
+  const fetchWishlist = async () => {
+    if (!userData?.user_id) return;
+    try {
+      const response = await apiInstance.get(
+        `customer/wishlist/${userData?.user_id}/`
+      );
+      setWishlist(response.data);
+    } catch (error) {
+      console.log("Error fetching wishlist:", error);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -51,6 +69,14 @@ export default function Products() {
       setCategories(response.data);
     });
   }, []);
+
+  // Added useEffect to fetch wishlist
+  useEffect(() => {
+    if (userData?.user_id) {
+      fetchWishlist();
+    }
+  }, [userData?.user_id]);
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
@@ -124,6 +150,15 @@ export default function Products() {
         icon: "error",
         title: "Failed to add to cart",
       });
+    }
+  };
+
+  const handleAddToWishlist = async (product_id) => {
+    try {
+      await addToWishlist(product_id, userData?.user_id);
+      fetchWishlist(); // Refresh wishlist after adding/removing
+    } catch (error) {
+      console.log("Error updating wishlist:", error);
     }
   };
 
@@ -250,9 +285,23 @@ export default function Products() {
                   <ShoppingCart size={18} /> Add to Cart
                 </button>
 
-                <button className="flex items-center justify-center gap-2 w-full rounded-lg border border-gray-300 py-2 hover:bg-gray-100 transition">
-                  <Heart size={18} /> Add to Wishlist
-                </button>
+                {isLoggedIn ? (
+                  <button
+                    onClick={() => handleAddToWishlist(product.id)}
+                    className={`flex items-center justify-center gap-2 w-full rounded-lg py-2 transition ${
+                      wishlist.some((item) => item.product.id === product.id)
+                        ? "bg-gray-400 text-white hover:bg-gray-500 border-none"
+                        : "bg-red-600 text-white hover:bg-red-700 border-none"
+                    }`}
+                  >
+                    <Heart size={18} />
+                    {wishlist.some((item) => item.product.id === product.id)
+                      ? "Remove from Wishlist"
+                      : "Add to Wishlist"}
+                  </button>
+                ) : (
+                  <></>
+                )}
               </div>
             </div>
           ))}
