@@ -5,6 +5,8 @@ import Swal from "sweetalert2";
 import { CartContext } from "../../../plugin/Context";
 import CartId from "../ProductDetail/cartId.jsx";
 import UserData from "../../../plugin/UserData.js";
+import { addToWishlist } from "../../../plugin/addToWishlist";
+import { useAuthStore } from "../../../store/auth";
 
 export default function ProductOptions({
   product,
@@ -28,8 +30,23 @@ export default function ProductOptions({
   const [sizeValue, setSizeValue] = useState("No Size");
   const [qtyValue, setQtyValue] = useState(1);
   const [cartCount, setCartCount] = useContext(CartContext);
+  const [wishlist, setWishlist] = useState([]);
   const cart_id = CartId();
   const userData = UserData();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // Fetch wishlist
+  const fetchWishlist = async () => {
+    if (!userData?.user_id) return;
+    try {
+      const response = await apiInstance.get(
+        `customer/wishlist/${userData?.user_id}/`
+      );
+      setWishlist(response.data);
+    } catch (error) {
+      console.log("Error fetching wishlist:", error);
+    }
+  };
 
   useEffect(() => {
     if (product && product.id) {
@@ -38,6 +55,13 @@ export default function ProductOptions({
       setSpecification(product.specification || []);
     }
   }, [product]);
+
+  // Fetch wishlist on component mount if user is logged in
+  useEffect(() => {
+    if (userData?.user_id) {
+      fetchWishlist();
+    }
+  }, [userData?.user_id]);
 
   const handleColorButtonClick = (colorName, colorImage) => {
     setColorValue(colorName);
@@ -69,7 +93,7 @@ export default function ProductOptions({
     formData.append("color", colorValue);
     formData.append("cart_id", cartId || "");
 
-    // ✅ Optimistic update (use qty instead of +1)
+    // Optimistic update
     setCartCount((prev) => prev + Number(qtyValue));
 
     try {
@@ -79,7 +103,7 @@ export default function ProductOptions({
         title: response.data.message || "Added to cart",
       });
 
-      // ✅ Sync with backend
+      // Sync with backend
       const cart_id = CartId();
       const userData = UserData();
 
@@ -94,13 +118,22 @@ export default function ProductOptions({
     } catch (error) {
       console.error("Error adding to cart:", error);
 
-      // ❌ Rollback optimistic update
+      // Rollback optimistic update
       setCartCount((prev) => Math.max(prev - Number(qtyValue), 0));
 
       Toast.fire({
         icon: "error",
         title: "Failed to add to cart",
       });
+    }
+  };
+
+  const handleAddToWishlist = async (product_id) => {
+    try {
+      await addToWishlist(product_id, userData?.user_id);
+      fetchWishlist(); // Refresh wishlist after adding/removing
+    } catch (error) {
+      console.log("Error updating wishlist:", error);
     }
   };
 
@@ -182,9 +215,21 @@ export default function ProductOptions({
         >
           <ShoppingCart size={16} /> Add
         </button>
-        <button className="flex items-center justify-center gap-2 w-2/5 rounded-lg border border-gray-300 py-1.5 hover:bg-gray-100 transition">
-          <Heart size={16} /> Wishlist
-        </button>
+        {isLoggedIn ? (
+          <button
+            onClick={() => handleAddToWishlist(product.id)}
+            className={`flex items-center justify-center gap-2 w-2/5 rounded-lg py-1.5 transition ${
+              wishlist.some((item) => item.product.id === product.id)
+                ? "bg-gray-400 text-white hover:bg-gray-500 border-none"
+                : "bg-red-600 text-white hover:bg-red-700 border-none"
+            }`}
+          >
+            <Heart size={16} />
+            {wishlist.some((item) => item.product.id === product.id)
+              ? "Remove from Wishlist"
+              : "Add to Wishlist"}
+          </button>
+        ) : null}
       </div>
 
       <h3 className="text-lg font-semibold mb-2">Description:</h3>
