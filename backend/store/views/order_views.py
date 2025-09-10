@@ -14,6 +14,7 @@ class CreateOrderView(generics.CreateAPIView):
         country = payload['country']
         mobile = payload['mobile']
         state = payload['state']
+        postal_code = payload['pincode']
         cart_id = payload['cart_id']
         user_id = payload.get('user_id')  # Use .get() to avoid KeyError
         
@@ -48,7 +49,7 @@ class CreateOrderView(generics.CreateAPIView):
             address=address,
             country=country,
             mobile=mobile,
-            state=state,
+            state=state,postal_code=postal_code,
             buyer=user  # Assign user (None if no valid user)
         )
         

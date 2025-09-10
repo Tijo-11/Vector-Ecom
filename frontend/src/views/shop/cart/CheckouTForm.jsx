@@ -14,6 +14,7 @@ function CheckoutForm({ onSubmit }) {
     city: "",
     state: "",
     country: "",
+    pincode: "",
   });
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -33,7 +34,8 @@ function CheckoutForm({ onSubmit }) {
       !formData.address ||
       !formData.city ||
       !formData.state ||
-      !formData.country
+      !formData.country ||
+      !formData.pincode
     ) {
       Swal.fire({
         icon: "error",
@@ -51,6 +53,7 @@ function CheckoutForm({ onSubmit }) {
     data.append("city", formData.city);
     data.append("state", formData.state);
     data.append("country", formData.country);
+    data.append("pincode", formData.pincode);
     data.append("cart_id", cart_id);
     data.append("user_id", user?.user_id || "0");
 
@@ -100,7 +103,7 @@ function CheckoutForm({ onSubmit }) {
       <h1 className="font-semibold text-2xl border-b pb-4 mt-6">
         Shipping Details
       </h1>
-      {["address", "city", "state", "country"].map((field) => (
+      {["address", "city", "state", "country", "pincode"].map((field) => (
         <div className="mt-4" key={field}>
           <label className="font-medium block mb-1 text-sm uppercase text-gray-700">
             {field.charAt(0).toUpperCase() + field.slice(1)}
@@ -109,7 +112,14 @@ function CheckoutForm({ onSubmit }) {
             type="text"
             name={field}
             value={formData[field]}
-            onChange={handleChange}
+            onChange={(e) => {
+              let value = e.target.value;
+              if (field === "pincode") {
+                // Allow only digits and max 6 characters
+                value = value.replace(/\D/g, "").slice(0, 6);
+              }
+              handleChange({ target: { name: field, value } });
+            }}
             placeholder={`Enter your ${field}`}
             className="p-2 text-sm w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />

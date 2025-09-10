@@ -13,6 +13,7 @@ function Settings() {
     country: "",
     city: "",
     state: "",
+    pincode: "",
     address: "",
     p_image: "",
   });

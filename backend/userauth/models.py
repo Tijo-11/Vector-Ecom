@@ -18,6 +18,8 @@ from django.db.models.signals import post_save#This line imports the post_save s
 from django.utils.html import mark_safe#It’s used to explicitly mark a string as safe for HTML rendering,
 #bypassing Django’s automatic escaping. This is useful when you want to render raw HTML 
 # (like <strong>text</strong>) in templates or admin fields.
+from django.core.validators import RegexValidator
+from django.utils.text import gettext_lazy as _
 '''
 AbstractBaseUser
 
@@ -159,6 +161,10 @@ class Profile(models.Model):
     city = models.CharField(max_length=500, null=True, blank=True)
     state = models.CharField(max_length=500, null=True, blank=True)
     address = models.CharField(max_length=1000, null=True, blank=True)
+    postal_code = models.CharField(
+        max_length=6,null=True, blank=True,
+        validators=[RegexValidator('^[0-9]{6}$', _('Invalid postal code'))],
+    )
     newsletter = models.BooleanField(default=False)
     # wishlist = models.ManyToManyField("store.Product", blank=True)
     type = models.CharField(max_length=500, choices=GENDER, null=True, blank=True)
