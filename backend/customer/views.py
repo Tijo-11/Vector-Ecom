@@ -136,9 +136,16 @@ class MarkNotificationsAsSeen(generics.RetrieveAPIView):
         
         
     
-
+#Needs to fix error handling
 
 class CustomerUpdateView(generics.RetrieveUpdateAPIView):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
     permission_classes = (AllowAny, )
+    
+    def get_object(self):
+        user_id = self.kwargs['user_id']
+        
+        user = User.objects.get(id=user_id)
+        profile = Profile.objects.get(user=user)
+        return profile

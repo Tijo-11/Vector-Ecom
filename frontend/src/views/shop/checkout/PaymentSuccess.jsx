@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { v4 as uuidv4 } from "uuid";
 
@@ -9,6 +9,7 @@ function PaymentSuccess() {
   const [order, setOrder] = useState({});
   const [status, setStatus] = useState("verifying");
   const [hasRun, setHasRun] = useState(false);
+  const navigate = useNavigate();
 
   // Detect query params
   const urlParams = new URLSearchParams(location.search);
@@ -215,7 +216,7 @@ function PaymentSuccess() {
         </div>
         <div className="mt-6 flex flex-col sm:flex-row justify-center gap-2">
           <button
-            onClick={() => alert("View Order functionality to be implemented")}
+            onClick={() => navigate(`/view-order/${order_id}/`)}
             className="bg-blue-500 text-white py-2 px-4 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition m-2"
           >
             View Order

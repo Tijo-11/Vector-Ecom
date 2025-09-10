@@ -29,6 +29,10 @@ import Orders from "./views/customer/Orders.jsx";
 import OrderDetail from "./views/customer/OrderDetail.jsx";
 import Wishlist from "./views/customer/Wishlist.jsx";
 import Notifications from "./views/customer/Notifications.jsx";
+import Settings from "./views/customer/Settings.jsx";
+import ViewOrder from "./views/customer/ViewOrder.jsx";
+
+//
 export default function App() {
   const [count, setCount] = useState(0);
   const [cartCount, setCartCount] = useState(0);
@@ -86,6 +90,7 @@ export default function App() {
               path="/payments-failed/:session_id"
               element={<PaymentFailed />}
             />
+            <Route path="/view-order/:order_oid/" element={<ViewOrder />} />
             {/*Customer Endpoints*/}
             <Route
               path="customer/account/"
@@ -119,7 +124,14 @@ export default function App() {
                 </PrivateRoute>
               }
             />
-            {/*  <Route path="/customer/settings/" element={<PrivateRoute><Settings /></PrivateRoute>} /> */}
+            <Route
+              path="/customer/settings/"
+              element={
+                <PrivateRoute>
+                  <Settings />
+                </PrivateRoute>
+              }
+            />
             <Route
               path="customer/orders/"
               element={

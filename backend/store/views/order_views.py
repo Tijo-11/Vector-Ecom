@@ -161,7 +161,18 @@ class CouponAPIView(generics.CreateAPIView):
             status=status.HTTP_200_OK
         )
         
-        
+#------------
+class OrdersDetailAPIView(generics.RetrieveAPIView):
+    serializer_class = CartOrderSerializer
+    permission_classes = (AllowAny,)
+
+    def get_object(self):
+        order_id = self.kwargs['order_id']
+        order = CartOrder.objects.get(
+    Q(payment_status="paid") | Q(payment_status="processing"),
+    oid=order_id
+)
+        return order
         
         
     

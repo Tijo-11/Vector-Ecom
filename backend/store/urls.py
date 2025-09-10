@@ -1,7 +1,7 @@
 from django.urls import path
 from .views.product_category import CategoryListView, ProductListView, FeaturedProductListView, ProductDetailView
 from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartItemDeleteAPIView
-from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView
+from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView, OrdersDetailAPIView
 from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
 from .views.Review_views import ReviewListAPIView, SearchProductView     #, ReviewCreateAPIView
 
@@ -32,9 +32,8 @@ urlpatterns = [
     path('reviews/<product_id>/', ReviewListAPIView.as_view(), name='list-review'),
     # path('reviews/', ReviewCreateAPIView.as_view(), name='create-review'),
     path('search/', SearchProductView.as_view(), name='search'),
-
-
-    
+    #view-order
+    path('view-order/<order_id>/',  OrdersDetailAPIView.as_view(), name='Order-Detail'),    
 ]
 
 

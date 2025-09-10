@@ -10,4 +10,4 @@ urlpatterns = [
     path('customer/wishlist/<user_id>/', WishlistAPIView.as_view(), name='customer-wishlist'),
     path('customer/notifications/<user_id>/', CustomerNotificationView.as_view(), name='customer-notification'),
     path('customer/notifications/<user_id>/<noti_id>', MarkNotificationsAsSeen.as_view(), name='customer-notification'),
-    path('customer/setting/<int:pk>/', CustomerUpdateView.as_view(), name='customer-settings'),]
+    path('customer/setting/<int:user_id>/', CustomerUpdateView.as_view(), name='customer-settings'),]
