@@ -25,4 +25,55 @@ class DashboardStatsAPIView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+######Monthly -order views
+@api_view(('GET',))
+def MonthlyOrderChartAPIFBV(request, vendor_id):
+    vendor = get_object_or_404(Vendor,id=vendor_id)
+    orders = CartOrder.objects.filter(vendor=vendor)
+    orders_by_month = orders.annotate(month=ExtractMonth("date")).values(
+        "month").annotate(orders=models.Count("id")).order_by("month")
+    return Response(orders_by_month)
+######-----Monthly Product
+@api_view(('GET',))
+def MonthlyProductsChartAPIFBV(request, vendor_id):
+    vendor = get_object_or_404(Vendor, id=vendor_id)
+    products = Product.objects.filter(vendor=vendor)
+    products_by_month = products.annotate(month=ExtractMonth("date")).values(
+        "month").annotate(orders=models.Count("id")).order_by("month")
+    return Response(products_by_month)
+
+#Products
+class ProductsAPIView(generics.ListAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = (AllowAny,)
+
+    def get_queryset(self):
+        vendor_id = self.kwargs['vendor_id']
+        vendor = get_object_or_404(Vendor, id=vendor_id)
+        products = Product.objects.filter(vendor=vendor)
+        return products
+    
+#Orders
+class OrdersAPIView(generics.ListAPIView):
+    serializer_class = CartOrderSerializer
+    permission_classes = (AllowAny,)
+
+    def get_queryset(self):
+        vendor_id = self.kwargs['vendor_id']
+        vendor = get_object_or_404(Vendor,id=vendor_id)
+        orders = CartOrder.objects.filter(vendor=vendor, payment_status="paid")
+        return orders
+    
+#Revenue
+class RevenueAPIView(generics.ListAPIView):
+    serializer_class = CartOrderItemSerializer
+    permission_classes = (AllowAny,)
+
+    def get_queryset(self):
+        vendor_id = self.kwargs['vendor_id']
+        vendor = get_object_or_404(Vendor,id=vendor_id)
+        revenue = CartOrderItem.objects.filter(vendor=vendor, order__payment_status="paid").aggregate(
+            total_revenue=models.Sum(models.F('sub_total') + models.F('shipping_amount')))['total_revenue'] or 0
+        return revenue
     

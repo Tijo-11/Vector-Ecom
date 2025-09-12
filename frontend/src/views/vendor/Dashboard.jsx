@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Grid,
   ShoppingCart,
@@ -6,10 +7,67 @@ import {
   Eye,
   Edit,
   Trash,
+  LineChart,
 } from "lucide-react";
 import VendorSidebar from "./Sidebar";
-
+import apiInstance from "../../utils/axios";
+import UserData from "../../plugin/UserData";
+import { Line, Bar } from "react-chartjs-2";
+import { Chart } from "chart.js/auto";
 export default function Dashboard() {
+  const [stats, setStats] = useState(null);
+  const [orderChartData, setOrderChartData] = useState([]);
+  const [productsChartData, setProductsChartData] = useState([]);
+
+  useEffect(() => {
+    apiInstance.get(`/vendor/stats/${UserData()?.vendor_id}/`).then((res) => {
+      setStats(res.data[0]);
+    });
+  }, []);
+  const fetchChartData = async () => {
+    const order_response = await apiInstance.get(
+      `vendor-orders-report-chart/${UserData()?.vendor_id}/`
+    );
+    const product_response = await apiInstance.get(
+      `vendor-products-report-chart/${UserData()?.vendor_id}/`
+    );
+    setOrderChartData(order_response?.data);
+    setProductsChartData(product_response?.data);
+  };
+  useEffect(() => {
+    fetchChartData();
+  }, []);
+  const order_months = orderChartData?.map((item) => item.month);
+  const order_count = orderChartData?.map((item) => item.orders);
+
+  const products_months = productsChartData?.map((item) => item.month);
+  const products_counts = productsChartData?.map((item) => item.orders);
+
+  const order_data = {
+    labels: order_months,
+    datasets: [
+      {
+        label: "Total Orders",
+        data: order_count,
+        fill: true,
+        backgroundColor: "green",
+        borderColor: "blue",
+      },
+    ],
+  };
+  const product_data = {
+    labels: products_months,
+    datasets: [
+      {
+        label: "Total Productss",
+        data: products_counts,
+        fill: true,
+        backgroundColor: "green",
+        borderColor: "blue",
+      },
+    ],
+  };
+
   return (
     <div className="w-full px-4" id="main">
       <div className="flex flex-row h-full">
@@ -24,7 +82,7 @@ export default function Dashboard() {
                     <Grid size={64} />
                   </div>
                   <h6 className="uppercase tracking-wide text-sm">Products</h6>
-                  <h1 className="text-4xl font-bold">134</h1>
+                  <h1 className="text-4xl font-bold">{stats?.products}</h1>
                 </div>
 
                 <div className="bg-red-500 text-white rounded-xl shadow p-4 flex flex-col items-start">
@@ -32,7 +90,7 @@ export default function Dashboard() {
                     <ShoppingCart size={64} />
                   </div>
                   <h6 className="uppercase tracking-wide text-sm">Orders</h6>
-                  <h1 className="text-4xl font-bold">87</h1>
+                  <h1 className="text-4xl font-bold">{stats?.orders}</h1>
                 </div>
 
                 <div className="bg-sky-500 text-white rounded-xl shadow p-4 flex flex-col items-start">
@@ -48,7 +106,7 @@ export default function Dashboard() {
                     <IndianRupee size={24} />
                   </div>
                   <h6 className="uppercase tracking-wide text-sm">Revenue</h6>
-                  <h1 className="text-4xl font-bold">₹36</h1>
+                  <h1 className="text-4xl font-bold">₹{stats?.revenue}</h1>
                 </div>
               </div>
 
@@ -56,11 +114,14 @@ export default function Dashboard() {
 
               {/* Chart Section */}
               <div className="mb-6">
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex justify-center items-center mb-3">
                   <h4 className="text-lg font-semibold">Chart Analytics</h4>
                 </div>
-                <div className="bg-white rounded-xl shadow p-4">
-                  <canvas id="line-chart" className="w-full h-64" />
+                <div className="bg-white rounded-xl shadow p-4 h-[75%] w-[75%] mx-auto my-4 border-2-red">
+                  <Bar data={order_data} />
+                </div>
+                <div className="bg-white rounded-xl shadow p-4 h-[75%] w-[75%] mx-auto my-4 border-red-700">
+                  <Bar data={product_data} />
                 </div>
               </div>
 
