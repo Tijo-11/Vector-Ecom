@@ -5,7 +5,7 @@ class DashboardStatsAPIView(generics.ListAPIView):
     def get_queryset(self):
 
         vendor_id = self.kwargs['vendor_id']
-        vendor = Vendor.objects.get(id=vendor_id)
+        vendor = get_object_or_404(Vendor, id=vendor_id)
 
         # Calculate summary values
         product_count = Product.objects.filter(vendor=vendor).count()
@@ -25,3 +25,4 @@ class DashboardStatsAPIView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+    

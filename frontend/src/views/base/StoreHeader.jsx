@@ -6,9 +6,10 @@ import { CartContext } from "../../plugin/Context";
 import UseProfileData from "../../plugin/UserProfileData";
 
 function StoreHeader() {
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
-  const user = useAuthStore((state) => state.user);
+  const { user, isLoggedIn } = useAuthStore();
+  const { isVendor } = useAuthStore();
   const userProfile = UseProfileData();
+  console.log("user.vendor_id", user?.vendor_id);
 
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -53,40 +54,41 @@ function StoreHeader() {
   return (
     <>
       <header className="bg-gray-900 text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link
-              to="/"
-              className="text-xl font-bold text-white hover:text-gray-300"
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex justify-between items-center py-4">
+      {/* Left Section: Logo */}
+      <Link
+        to="/"
+        className="text-xl font-bold text-white hover:text-gray-300"
+      >
+        RetroRelics{" "}
+        <p className="text-xs">Shop stories, not just stuff.</p>
+      </Link>
+
+      {/* Right Section: Vendor + Search + Account + Logout */}
+      <div className="flex items-center space-x-4">
+        {/* Vendor Dropdown */}
+        {isVendor && (
+          <div className="relative" ref={vendorRef}>
+            <button
+              onClick={toggleVendorDropdown}
+              className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg"
             >
-              RetroRelics{" "}
-              <p className="text-xs">Shop stories, not just stuff.</p>
-            </Link>
-
-            <nav className="hidden md:flex space-x-6">
-              {/* Account Dropdown */}
-
-              {/* Vendor Dropdown */}
-              {null && (
-                <div className="relative" ref={vendorRef}>
-                  <button
-                    onClick={toggleVendorDropdown}
-                    className="hover:text-gray-300 focus:outline-none"
-                  >
-                    Vendor ▾
-                  </button>
-                  <div
-                    className={`absolute left-0 mt-2 w-56 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
-                      isVendorOpen ? "flex" : "hidden"
-                    }`}
-                  >
-                    <Link
-                      to="/vendor/dashboard/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsVendorOpen(false)}
-                    >
-                      <i className="fas fa-user"></i> Dashboard
-                    </Link>
+              Vendor ▾
+            </button>
+            <div
+              className={`absolute left-0 mt-2 w-56 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
+                isVendorOpen ? "flex" : "hidden"
+              }`}
+            >
+              {/* Vendor dropdown links */}
+              <Link
+                to="/vendor/dashboard/"
+                className="block px-4 py-2 hover:bg-gray-100"
+                onClick={() => setIsVendorOpen(false)}
+              >
+                <i className="fas fa-user"></i> Dashboard
+              </Link>
                     <Link
                       to="/vendor/products/"
                       className="block px-4 py-2 hover:bg-gray-100"
@@ -146,9 +148,9 @@ function StoreHeader() {
                   </div>
                 </div>
               )}
-            </nav>
+            
 
-            <div className="flex items-center space-x-2">
+            
               <form
                 onSubmit={(e) => {
                   e.preventDefault(); // prevent page reload
