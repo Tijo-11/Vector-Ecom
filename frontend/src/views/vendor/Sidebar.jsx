@@ -10,9 +10,18 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 export default function VendorSidebar() {
+  const location = useLocation();
+  const nonActiveLink =
+    "flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors";
+  const activeLink =
+    "flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors";
+
+  const isActiveLink = (currentPath, LinkPath) => {
+    return currentPath.includes(LinkPath);
+  };
   return (
     <div
       id="sidebar"
@@ -23,7 +32,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/dashboard/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/dashboard/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <Gauge size={18} /> <span>Dashboard</span>
           </Link>
@@ -31,7 +44,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/products/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/products/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <Grid size={18} /> <span>Products</span>
           </Link>
@@ -39,7 +56,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/orders/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/orders/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <ShoppingCart size={18} /> <span>Orders</span>
           </Link>
@@ -47,7 +68,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/earning/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/earning/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <IndianRupee size={18} /> <span>Earning</span>
           </Link>
@@ -55,7 +80,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/reviews/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/reviews/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <Star size={18} /> <span>Reviews</span>
           </Link>
@@ -63,7 +92,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/product/new/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/product/new/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <PlusCircle size={18} /> <span>Add Product</span>
           </Link>
@@ -71,7 +104,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/coupon/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/coupon/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <Tag size={18} /> <span>Coupon & Discount</span>
           </Link>
@@ -79,7 +116,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/notifications/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/notifications/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <Bell size={18} /> <span>Notifications</span>
           </Link>
@@ -87,7 +128,11 @@ export default function VendorSidebar() {
         <li>
           <Link
             to="/vendor/settings/"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className={
+              isActiveLink(location.pathname, "/vendor/settings/")
+                ? activeLink
+                : nonActiveLink
+            }
           >
             <Settings size={18} /> <span>Settings</span>
           </Link>

@@ -91,3 +91,131 @@ class OrderDetailAPIView(generics.RetrieveAPIView):
             vendor=vendor, payment_status="paid", oid=order_oid)
         return order
     
+##------Earning
+class Earning(generics.ListAPIView):
+    serializer_class = EarningSummarySerializer
+
+    def get_queryset(self):
+
+        vendor_id = self.kwargs['vendor_id']
+        vendor = Vendor.objects.get(id=vendor_id)
+
+        one_month_ago = datetime.today() - timedelta(days=30)
+        monthly_revenue = CartOrderItem.objects.filter(vendor=vendor, order__payment_status="paid", date__gte=one_month_ago).aggregate(
+            total_revenue=models.Sum(models.F('sub_total') + models.F('shipping_amount')))['total_revenue'] or 0
+        total_revenue = CartOrderItem.objects.filter(vendor=vendor, order__payment_status="paid").aggregate(
+            total_revenue=models.Sum(models.F('sub_total') + models.F('shipping_amount')))['total_revenue'] or 0
+
+        return [{
+            'monthly_revenue': monthly_revenue,
+            'total_revenue': total_revenue,
+        }]
+# Handles GET requests to list all objects
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()# Fetches filtered queryset 
+        serializer = self.get_serializer(queryset, many=True)# Serializes multiple objects
+        return Response(serializer.data) # Returns serialized data as JSON response
+
+
+@api_view(('GET',))
+def MonthlyEarningTracker(request, vendor_id):
+    vendor = Vendor.objects.get(id=vendor_id)
+    monthly_earning_tracker = (
+        CartOrderItem.objects
+        .filter(vendor=vendor, order__payment_status="paid")
+        .annotate(
+            month=ExtractMonth("date")
+        )
+        .values("month")
+        .annotate(
+            sales_count=models.Sum("qty"),
+            total_earning=models.Sum(
+                models.F('sub_total') + models.F('shipping_amount'))
+        )
+        .order_by("-month")
+    )
+    return Response(monthly_earning_tracker)
+
+
+##-------- Reviews
+
+class ReviewsListAPIView(generics.ListAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = (AllowAny,)
+
+    def get_queryset(self):
+        vendor_id = self.kwargs['vendor_id']
+        vendor = Vendor.objects.get(id=vendor_id)
+        reviews = Review.objects.filter(product__vendor=vendor)
+        return reviews
+
+
+class ReviewsDetailAPIView(generics.RetrieveUpdateAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = (AllowAny,)
+
+    def get_object(self):
+        vendor_id = self.kwargs['vendor_id']
+        review_id = self.kwargs['review_id']
+
+        vendor = Vendor.objects.get(id=vendor_id)
+        review = Review.objects.get(product__vendor=vendor, id=review_id)
+        return review
+    
+class YearlyOrderReportChartAPIView(generics.ListAPIView):
+    serializer_class = CartOrderItemSerializer
+    permission_classes = (AllowAny,)
+
+    def get_queryset(self):
+        vendor_id = self.kwargs['vendor_id']
+        vendor = Vendor.objects.get(id=vendor_id)
+
+        # Include the 'product' field in the queryset
+        report = CartOrderItem.objects.filter(
+            vendor=vendor,
+            order__payment_status="paid"
+        ).select_related('product').values(
+            'order__date', 'product'
+        ).annotate(models.Count('id'))
+
+        return report
+    
+####Order filter
+class FilterOrderAPIView(generics.ListAPIView):
+    serializer_class = CartOrderSerializer
+    permission_classes = (IsAuthenticated)
+    
+    def get_queryset(self):
+        vendor_id = self.kwargs['vendor_id']
+        vendor = Vendor.objects.get(id=vendor_id)
+        
+        filter = self.request.GET.get("filter")
+        if filter == 'paid':
+            orders = CartOrder.objects.filter(vendor=vendor, payment_status = "paid").order_by("-id")
+        elif filter == 'pending':
+            orders = CartOrder.objects.filter(vendor=vendor, payment_status = "pending").order_by("-id")
+        elif filter == 'processing':
+            orders = CartOrder.objects.filter(vendor=vendor, payment_status = "processing").order_by("-id")
+        elif filter == 'cancelled':
+            orders = CartOrder.objects.filter(vendor=vendor, payment_status = "cancelled").order_by("-id")
+        elif filter == 'latest':
+            orders = CartOrder.objects.filter(vendor=vendor).order_by("-id")
+        elif filter == 'oldest':
+            orders = CartOrder.objects.filter(vendor=vendor).order_by("id")
+        elif filter == 'Fulfilled':
+            orders = CartOrder.objects.filter(vendor=vendor,payment_status = "paid", order_status="Fulfilled").order_by("-id")
+        elif filter == 'Cancelled':
+            orders = CartOrder.objects.filter(vendor=vendor,payment_status = "paid", order_status="Cancelled").order_by("-id")
+        elif filter == 'Pending':
+            orders = CartOrder.objects.filter(vendor=vendor,payment_status = "paid", order_status="Pending").order_by("-id")
+        else:
+            orders = CartOrder.objects.filter(vendor=vendor).order_by("id")
+        return orders
+            
+        
+    
+    
+
+
+
+    

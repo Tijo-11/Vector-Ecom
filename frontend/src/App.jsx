@@ -32,6 +32,10 @@ import Settings from "./views/customer/Settings.jsx";
 import ViewOrder from "./views/customer/ViewOrder.jsx";
 import Invoice from "./views/customer/Invoice.jsx";
 import Dashboard from "./views/vendor/Dashboard.jsx";
+import ProductsVendor from "./views/vendor/ProductsVendor";
+import VendorOrders from "./views/vendor/VendorOrders.jsx";
+import VendorOrderDetail from "./views/vendor/VendorOrderDetail.jsx";
+import VendorOrderItem from "./views/vendor/VendorOrderItemDetail.jsx";
 
 //
 export default function App() {
@@ -157,6 +161,34 @@ export default function App() {
                   <Dashboard />
                 </PrivateRoute>
               }
+            />
+            <Route
+              path="/vendor/products/"
+              element={
+                <PrivateRoute>
+                  <ProductsVendor />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/orders/"
+              element={
+                <PrivateRoute>
+                  <VendorOrders />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/orders/:oid/"
+              element={
+                <PrivateRoute>
+                  <VendorOrderDetail />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/orders/:oid/:id/"
+              element={<VendorOrderItem />}
             />
             {/* Not Found*/}
             <Route path="*" element={<NotFund />} />
