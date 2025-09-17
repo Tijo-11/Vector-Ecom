@@ -14,6 +14,10 @@ import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import { Line, Bar } from "react-chartjs-2";
 import { Chart } from "chart.js/auto";
+import zoomPlugin from "chartjs-plugin-zoom";
+import "chartjs-adapter-date-fns";
+Chart.register(zoomPlugin);
+
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [orderChartData, setOrderChartData] = useState([]);
@@ -42,6 +46,45 @@ export default function Dashboard() {
 
   const products_months = productsChartData?.map((item) => item.month);
   const products_counts = productsChartData?.map((item) => item.orders);
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        type: "time", // enables time-based zooming
+        time: {
+          unit: "month", // default view
+        },
+        title: {
+          display: true,
+          text: "Timeline",
+        },
+      },
+      y: {
+        beginAtZero: true,
+      },
+    },
+    plugins: {
+      zoom: {
+        zoom: {
+          wheel: {
+            enabled: true, // Zoom with mouse wheel
+          },
+          pinch: {
+            enabled: true, // Zoom with pinch on touch devices
+          },
+          mode: "x", // Zoom only on X axis
+          limits: {
+            x: { min: "day", max: "year" }, // zoom boundaries
+          },
+        },
+        pan: {
+          enabled: true,
+          mode: "x", // Pan horizontally
+        },
+      },
+    },
+  };
 
   const order_data = {
     labels: order_months,
@@ -115,13 +158,14 @@ export default function Dashboard() {
               {/* Chart Section */}
               <div className="mb-6">
                 <div className="flex justify-center items-center mb-3">
-                  <h4 className="text-lg font-semibold">Chart Analytics</h4>
+                  <h2 className="text-lg font-semibold">Chart Analytics</h2>
                 </div>
-                <div className="bg-white rounded-xl shadow p-4 h-[75%] w-[75%] mx-auto my-4 border-2-red">
-                  <Bar data={order_data} />
+                <div className="bg-white rounded-xl shadow p-4 h-[350px] w-[75%] mx-auto my-4">
+                  <Bar data={order_data} options={commonOptions} />
                 </div>
-                <div className="bg-white rounded-xl shadow p-4 h-[75%] w-[75%] mx-auto my-4 border-red-700">
-                  <Bar data={product_data} />
+
+                <div className="bg-white rounded-xl shadow p-4 h-[350px] w-[75%] mx-auto my-4">
+                  <Bar data={product_data} options={commonOptions} />
                 </div>
               </div>
 

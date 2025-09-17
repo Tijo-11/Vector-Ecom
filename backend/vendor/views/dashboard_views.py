@@ -77,3 +77,17 @@ class RevenueAPIView(generics.ListAPIView):
             total_revenue=models.Sum(models.F('sub_total') + models.F('shipping_amount')))['total_revenue'] or 0
         return revenue
     
+#OrderDetail
+class OrderDetailAPIView(generics.RetrieveAPIView):
+    serializer_class = CartOrderSerializer
+    permission_classes = (AllowAny,)
+
+    def get_object(self):
+        vendor_id = self.kwargs['vendor_id']
+        order_oid = self.kwargs['order_oid']
+
+        vendor = Vendor.objects.get(id=vendor_id)
+        order = CartOrder.objects.get(
+            vendor=vendor, payment_status="paid", oid=order_oid)
+        return order
+    
