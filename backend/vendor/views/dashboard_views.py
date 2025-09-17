@@ -1,4 +1,6 @@
 from .common import *
+from rest_framework.exceptions import ValidationError
+from django.http import Http404
 class DashboardStatsAPIView(generics.ListAPIView):
     serializer_class = SummarySerializer
 
@@ -85,6 +87,12 @@ class OrderDetailAPIView(generics.RetrieveAPIView):
     def get_object(self):
         vendor_id = self.kwargs['vendor_id']
         order_oid = self.kwargs['order_oid']
+        try:
+            return Vendor.objects.get(id=int(vendor_id))
+        except (ValueError, TypeError):
+            raise ValidationError("Invalid vendor ID provided.")
+        except Vendor.DoesNotExist:
+            raise Http404("Vendor not found.")
 
         vendor = Vendor.objects.get(id=vendor_id)
         order = CartOrder.objects.get(
@@ -183,7 +191,7 @@ class YearlyOrderReportChartAPIView(generics.ListAPIView):
 ####Order filter
 class FilterOrderAPIView(generics.ListAPIView):
     serializer_class = CartOrderSerializer
-    permission_classes = (IsAuthenticated)
+    permission_classes = (AllowAny,)
     
     def get_queryset(self):
         vendor_id = self.kwargs['vendor_id']

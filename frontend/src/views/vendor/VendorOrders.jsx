@@ -9,6 +9,7 @@ import Sidebar from "./Sidebar";
 
 function Orders() {
   const [orders, setOrders] = useState([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false); // 👈 dropdown state
 
   const axios = apiInstance;
   const userData = UserData();
@@ -32,6 +33,18 @@ function Orders() {
     fetchData();
   }, []);
 
+  const handleFilterOrders = async (param) => {
+    try {
+      const response = await axios.get(
+        `vendor/orders-filter/${userData?.vendor_id}?filter=${param}`
+      );
+      setOrders(response.data);
+      setIsFilterOpen(false); // 👈 close dropdown after choosing
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4" id="main">
       <div className="flex flex-col md:flex-row h-full">
@@ -41,7 +54,107 @@ function Orders() {
             <h4 className="flex items-center text-xl font-semibold mb-4">
               <ShoppingCart className="text-blue-600 mr-2" /> All Orders
             </h4>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 relative py-4">
+              {/* Filter Dropdown */}
+              <div className="relative">
+                <button
+                  className="bg-gray-600 text-white px-12 py-2 mx-2 rounded-md hover:bg-gray-700 flex items-center mt-3 mb-3 md:mt-0 md:mb-0"
+                  type="button"
+                  onClick={() => setIsFilterOpen((prev) => !prev)} // 👈 toggle
+                >
+                  Filter
+                  <i className="fas fa-sliders ml-4 " />
+                </button>
 
+                {isFilterOpen && (
+                  <ul className="absolute left-0 mt-1 bg-white shadow-lg rounded-md z-10 w-40">
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("no-filter")}
+                      >
+                        No Filter
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("pending")}
+                      >
+                        Payment Status: Pending
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("paid")}
+                      >
+                        Payment Status: Paid
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("processing")}
+                      >
+                        Payment Status: Processing
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("cancelled")}
+                      >
+                        Payment Status: Cancelled
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("Fulfilled")}
+                      >
+                        Order Status: Fulfilled
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("Cancelled")}
+                      >
+                        Order Status: Cancelled
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("Pending")}
+                      >
+                        Order Status: Pending
+                      </button>
+                    </li>
+                    <hr />
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("latest")}
+                      >
+                        Date: Latest
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => handleFilterOrders("oldest")}
+                      >
+                        Date: Oldest
+                      </button>
+                    </li>
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* Orders Table */}
             <div className="overflow-x-auto rounded-lg shadow">
               <table className="w-full border-collapse">
                 <thead className="bg-gray-800 text-white">

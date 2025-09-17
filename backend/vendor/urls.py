@@ -1,8 +1,8 @@
 from django.urls import path
 from .views.dashboard_views import DashboardStatsAPIView, MonthlyOrderChartAPIFBV, MonthlyProductsChartAPIFBV
-from .views.dashboard_views import ProductsAPIView, OrdersAPIView, RevenueAPIView, OrderDetailAPIView
+from .views.dashboard_views import ProductsAPIView, OrdersAPIView, RevenueAPIView, OrderDetailAPIView, FilterOrderAPIView
 from .views.dashboard_views import Earning, MonthlyEarningTracker, ReviewsListAPIView, ReviewsDetailAPIView, YearlyOrderReportChartAPIView
-from .views.coupon_views import CouponListAPIView, CouponStats, CouponDetailAPIView, CouponCreateAPIView, FilterOrderAPIView
+from .views.coupon_views import CouponListAPIView, CouponStats, CouponDetailAPIView, CouponCreateAPIView
 #dashboard view contains yearly revenue
 from .views.notification_views import *
 from .views.shop_views import * #Both Vendor, Shop and Courier
@@ -14,9 +14,9 @@ urlpatterns=[
     path('vendor/orders/<vendor_id>/', OrdersAPIView.as_view(), name='vendor-orders'),
     path('vendor/orders/<vendor_id>/<order_oid>/', OrderDetailAPIView.as_view(), name='vendor-order-detail'),
     path('vendor/order-item-detail/<int:pk>/', OrderItemDetailAPIView.as_view()),
-    path('vendor/orders/filter/<int:pk>/', FilterOrderAPIView.as_view()),
+    path('vendor/orders-filter/<vendor_id>/', FilterOrderAPIView.as_view()),
     ###
-    
+
     path('vendor/yearly-report/<vendor_id>/', YearlyOrderReportChartAPIView.as_view(), name='vendor-yearly-report'),
     path('vendor-orders-report-chart/<vendor_id>/', MonthlyOrderChartAPIFBV, name='vendor-orders-report-chart'),
     ####

@@ -32,7 +32,7 @@ import Settings from "./views/customer/Settings.jsx";
 import ViewOrder from "./views/customer/ViewOrder.jsx";
 import Invoice from "./views/customer/Invoice.jsx";
 import Dashboard from "./views/vendor/Dashboard.jsx";
-import ProductsVendor from "./views/vendor/ProductsVendor";
+import VendorProducts from "./views/vendor/VendorProducts.jsx";
 import VendorOrders from "./views/vendor/VendorOrders.jsx";
 import VendorOrderDetail from "./views/vendor/VendorOrderDetail.jsx";
 import VendorOrderItem from "./views/vendor/VendorOrderItemDetail.jsx";
@@ -166,7 +166,7 @@ export default function App() {
               path="/vendor/products/"
               element={
                 <PrivateRoute>
-                  <ProductsVendor />
+                  <VendorProducts />
                 </PrivateRoute>
               }
             />
