@@ -39,6 +39,13 @@ import AddTracking from "./views/vendor/AddTracking.jsx";
 import Earning from "./views/vendor/Earning";
 import Reviews from "./views/vendor/Reviews";
 import ReviewDetail from "./views/vendor/ReviewDetail";
+import Coupon from "./views/vendor/Coupon";
+import EditCoupon from "./views/vendor/EditCoupon";
+import VendorNotifications from "./views/vendor/Notifications";
+// import VendorSettings from './views/vendor/Settings';
+// import Shop from './views/vendor/Shop';
+import VendorRegister from "./views/vendor/VendorRegister";
+// import Shop from './views/vendor/Shop';
 
 //
 export default function App() {
@@ -224,6 +231,44 @@ export default function App() {
               }
             />
             <Route path="/detail/:slug" element={<ProductDetail />} />
+            <Route
+              path="/vendor/coupon/"
+              element={
+                <PrivateRoute>
+                  {" "}
+                  <Coupon />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/coupon/:id/"
+              element={
+                <PrivateRoute>
+                  {" "}
+                  <EditCoupon />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/notifications/"
+              element={
+                <PrivateRoute>
+                  {" "}
+                  <VendorNotifications />
+                </PrivateRoute>
+              }
+            />
+            {/* <Route
+              path="/vendor/settings/"
+              element={
+                <PrivateRoute>
+                  {" "}
+                  <VendorSettings />
+                </PrivateRoute>
+              }
+            /> */}
+            {/* <Route path="/vendor/:slug/" element={<Shop />} /> */}
+            <Route path="/vendor/register/" element={<VendorRegister />} />
             {/* Not Found*/}
             <Route path="*" element={<NotFund />} />
           </Routes>

@@ -4,7 +4,7 @@ from .common import *
 class CouponListAPIView(generics.ListAPIView):
     serializer_class = CouponSerializer
     queryset = Coupon.objects.all()
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (AllowAny, )
 
     def get_queryset(self):
         vendor_id = self.kwargs['vendor_id']
