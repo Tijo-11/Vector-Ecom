@@ -15,7 +15,7 @@ urlpatterns=[
     path('vendor/orders/<vendor_id>/<order_oid>/', OrderDetailAPIView.as_view(), name='vendor-order-detail'),
     path('vendor/order-item-detail/<int:pk>/', OrderItemDetailAPIView.as_view()),
     path('vendor/orders-filter/<vendor_id>/', FilterOrderAPIView.as_view()),
-    ###
+    # ###
 
     path('vendor/yearly-report/<vendor_id>/', YearlyOrderReportChartAPIView.as_view(), name='vendor-yearly-report'),
     path('vendor-orders-report-chart/<vendor_id>/', MonthlyOrderChartAPIFBV, name='vendor-orders-report-chart'),
@@ -25,7 +25,7 @@ urlpatterns=[
     path('vendor-product-edit/<vendor_id>/<product_pid>/', ProductUpdateAPIView.as_view(), name='vendor-product-edit'),
     path('vendor-product-delete/<vendor_id>/<product_pid>/', ProductDeleteAPIView.as_view(), name='vendor-product-delete'),
     path('vendor-product-filter/<vendor_id>', FilterProductsAPIView.as_view(), name='vendor-product-filter'),
-    ###
+    # ###
     path('vendor-earning/<vendor_id>/', Earning.as_view(), name='vendor-product-filter'),
     path('vendor-monthly-earning/<vendor_id>/', MonthlyEarningTracker, name='vendor-product-filter'),
     path('vendor-reviews/<vendor_id>/', ReviewsListAPIView.as_view(), name='vendor-reviews'),
@@ -34,6 +34,7 @@ urlpatterns=[
     path('vendor-coupon-stats/<vendor_id>/', CouponStats.as_view(), name='vendor-coupon-stats'),
     path('vendor-coupon-detail/<vendor_id>/<coupon_id>/', CouponDetailAPIView.as_view(), name='vendor-coupon-detail'),
     path('vendor-coupon-create/<vendor_id>/', CouponCreateAPIView.as_view(), name='vendor-coupon-create'),
+    ##########
     path('vendor-notifications-unseen/<vendor_id>/', NotificationUnSeenListAPIView.as_view(), name='vendor-notifications-list'),
     path('vendor-notifications-seen/<vendor_id>/', NotificationSeenListAPIView.as_view(), name='vendor-notifications-list'),
     path('vendor-notifications-summary/<vendor_id>/', NotificationSummaryAPIView.as_view(), name='vendor-notifications-summary'),
