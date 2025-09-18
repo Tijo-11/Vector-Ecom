@@ -36,6 +36,9 @@ import VendorProducts from "./views/vendor/VendorProducts.jsx";
 import VendorOrders from "./views/vendor/VendorOrders.jsx";
 import VendorOrderDetail from "./views/vendor/VendorOrderDetail.jsx";
 import AddTracking from "./views/vendor/AddTracking.jsx";
+import Earning from "./views/vendor/Earning";
+import Reviews from "./views/vendor/Reviews";
+import ReviewDetail from "./views/vendor/ReviewDetail";
 
 //
 export default function App() {
@@ -191,6 +194,32 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <AddTracking />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/earning/"
+              element={
+                <PrivateRoute>
+                  <Earning />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/reviews/"
+              element={
+                <PrivateRoute>
+                  {" "}
+                  <Reviews />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/reviews/:id/"
+              element={
+                <PrivateRoute>
+                  {" "}
+                  <ReviewDetail />
                 </PrivateRoute>
               }
             />
