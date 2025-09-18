@@ -35,7 +35,7 @@ import Dashboard from "./views/vendor/Dashboard.jsx";
 import VendorProducts from "./views/vendor/VendorProducts.jsx";
 import VendorOrders from "./views/vendor/VendorOrders.jsx";
 import VendorOrderDetail from "./views/vendor/VendorOrderDetail.jsx";
-import VendorOrderItem from "./views/vendor/VendorOrderItemDetail.jsx";
+import AddTracking from "./views/vendor/AddTracking.jsx";
 
 //
 export default function App() {
@@ -188,8 +188,13 @@ export default function App() {
             />
             <Route
               path="/vendor/orders/:oid/:id/"
-              element={<VendorOrderItem />}
+              element={
+                <PrivateRoute>
+                  <AddTracking />
+                </PrivateRoute>
+              }
             />
+            <Route path="/detail/:slug" element={<ProductDetail />} />
             {/* Not Found*/}
             <Route path="*" element={<NotFund />} />
           </Routes>

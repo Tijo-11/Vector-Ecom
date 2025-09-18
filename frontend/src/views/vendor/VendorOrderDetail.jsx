@@ -112,8 +112,8 @@ function OrderDetail() {
                               className="w-20 h-20 object-cover rounded-lg"
                             />
                             <Link
-                              to={`/orders/${item.product.slug}`}
-                              className="ml-3 font-medium text-gray-800 hover:underline"
+                              to={`/detail/${item.product.slug}`}
+                              className="fw-bold text-dark ms-2 mb-0"
                             >
                               {item?.product?.title}
                             </Link>
@@ -129,7 +129,7 @@ function OrderDetail() {
                           {item.tracking_id == null ||
                           item.tracking_id === "undefined" ? (
                             <Link
-                              to={`/vendor/orders/${param.oid}/${item.id}/`}
+                              to={`/vendor/orders/${param.oid}/${item.id}/`} // Fixed to use item.id
                               className="flex items-center bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700"
                             >
                               <Plus className="w-4 h-4 mr-1" /> Add Tracking
