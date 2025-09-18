@@ -87,16 +87,19 @@ class OrderDetailAPIView(generics.RetrieveAPIView):
     def get_object(self):
         vendor_id = self.kwargs['vendor_id']
         order_oid = self.kwargs['order_oid']
+        
         try:
-            return Vendor.objects.get(id=int(vendor_id))
+            vendor = Vendor.objects.get(id=int(vendor_id))
         except (ValueError, TypeError):
             raise ValidationError("Invalid vendor ID provided.")
         except Vendor.DoesNotExist:
             raise Http404("Vendor not found.")
-
-        vendor = Vendor.objects.get(id=vendor_id)
-        order = CartOrder.objects.get(
-            vendor=vendor, payment_status="paid", oid=order_oid)
+        
+        try:
+            order = CartOrder.objects.get(vendor=vendor, payment_status="paid", oid=order_oid)
+        except CartOrder.DoesNotExist:
+            raise Http404("Order not found.")
+        
         return order
     
 ##------Earning
