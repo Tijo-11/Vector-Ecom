@@ -42,10 +42,9 @@ import ReviewDetail from "./views/vendor/ReviewDetail";
 import Coupon from "./views/vendor/Coupon";
 import EditCoupon from "./views/vendor/EditCoupon";
 import VendorNotifications from "./views/vendor/Notifications";
-// import VendorSettings from './views/vendor/Settings';
-// import Shop from './views/vendor/Shop';
+import VendorSettings from "./views/vendor/Settings";
+import Shop from "./views/vendor/Shop";
 import VendorRegister from "./views/vendor/VendorRegister";
-// import Shop from './views/vendor/Shop';
 
 //
 export default function App() {
@@ -216,7 +215,6 @@ export default function App() {
               path="/vendor/reviews/"
               element={
                 <PrivateRoute>
-                  {" "}
                   <Reviews />
                 </PrivateRoute>
               }
@@ -225,7 +223,6 @@ export default function App() {
               path="/vendor/reviews/:id/"
               element={
                 <PrivateRoute>
-                  {" "}
                   <ReviewDetail />
                 </PrivateRoute>
               }
@@ -235,7 +232,6 @@ export default function App() {
               path="/vendor/coupon/"
               element={
                 <PrivateRoute>
-                  {" "}
                   <Coupon />
                 </PrivateRoute>
               }
@@ -258,7 +254,7 @@ export default function App() {
                 </PrivateRoute>
               }
             />
-            {/* <Route
+            <Route
               path="/vendor/settings/"
               element={
                 <PrivateRoute>
@@ -266,8 +262,8 @@ export default function App() {
                   <VendorSettings />
                 </PrivateRoute>
               }
-            /> */}
-            {/* <Route path="/vendor/:slug/" element={<Shop />} /> */}
+            />
+            <Route path="/vendor/:slug/" element={<Shop />} />
             <Route path="/vendor/register/" element={<VendorRegister />} />
             {/* Not Found*/}
             <Route path="*" element={<NotFund />} />
