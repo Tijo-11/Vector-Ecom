@@ -122,6 +122,7 @@ function AddProduct() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    // Validate only required fields
     if (
       product.title === "" ||
       product.description === "" ||
@@ -135,8 +136,8 @@ function AddProduct() {
       setIsLoading(false);
       Swal.fire({
         icon: "warning",
-        title: "Missing Fields!",
-        text: "All fields are required to create a product",
+        title: "Missing Required Fields!",
+        text: "Title, description, price, category, shipping amount, stock quantity, and thumbnail are required.",
       });
       return;
     }
@@ -152,13 +153,21 @@ function AddProduct() {
         }
       });
 
-      specifications.forEach((specification, index) => {
+      // Only include specifications with non-empty title or content
+      const validSpecifications = specifications.filter(
+        (spec) => spec.title?.trim() || spec.content?.trim()
+      );
+      validSpecifications.forEach((specification, index) => {
         Object.entries(specification).forEach(([key, value]) => {
-          formData.append(`specifications[${index}][${key}]`, value);
+          if (value) formData.append(`specifications[${index}][${key}]`, value);
         });
       });
 
-      colors.forEach((color, index) => {
+      // Only include colors with at least one non-empty field
+      const validColors = colors.filter(
+        (color) => color.name?.trim() || color.color_code?.trim() || color.image
+      );
+      validColors.forEach((color, index) => {
         Object.entries(color).forEach(([key, value]) => {
           if (
             key === "image" &&
@@ -171,20 +180,25 @@ function AddProduct() {
               value.file,
               value.file.name
             );
-          } else {
+          } else if (value) {
             formData.append(`colors[${index}][${key}]`, String(value));
           }
         });
       });
 
-      sizes.forEach((size, index) => {
+      // Only include sizes with non-empty name or price
+      const validSizes = sizes.filter(
+        (size) => size.name?.trim() || size.price
+      );
+      validSizes.forEach((size, index) => {
         Object.entries(size).forEach(([key, value]) => {
-          formData.append(`sizes[${index}][${key}]`, value);
+          if (value) formData.append(`sizes[${index}][${key}]`, value);
         });
       });
 
+      // Include gallery images if present
       gallery.forEach((item, index) => {
-        if (item.image) {
+        if (item.image && item.image.file) {
           formData.append(`gallery[${index}][image]`, item.image.file);
         }
       });
@@ -209,6 +223,11 @@ function AddProduct() {
     } catch (error) {
       console.error("Error submitting form:", error);
       setIsLoading(false);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to create product. Please try again.",
+      });
     }
   };
 
@@ -219,6 +238,10 @@ function AddProduct() {
           <Sidebar />
           <div className="md:w-3/4 lg:w-4/5 mt-6">
             <form onSubmit={handleSubmit} encType="multipart/form-data">
+              <div className="mb-4 text-center text-sm text-gray-600">
+                Note: Specifications, Sizes, Colors, and Gallery images are
+                optional.
+              </div>
               <div className="flex justify-center mb-6 space-x-4">
                 <button
                   type="button"
