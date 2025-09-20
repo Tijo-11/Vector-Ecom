@@ -12,6 +12,7 @@ import { CartContext } from "../../../plugin/Context";
 import CartId from "../ProductDetail/cartId.jsx";
 import { addToWishlist } from "../../../plugin/addToWishlist";
 import { useAuthStore } from "../../../store/auth";
+import StarRating from "./StarRating";
 
 export default function Products() {
   const Toast = Swal.mixin({
@@ -203,11 +204,12 @@ export default function Products() {
                   ₹{product.price}
                 </p>
               </div>
-              {product.rating && (
+              {/* {product.rating && (
                 <p className="mt-2 text-yellow-500 text-sm">
                   ⭐ {product.rating}
                 </p>
-              )}
+              )} */}
+              <StarRating rating={product.rating} />
               {product.category && (
                 <p className="text-sm text-gray-500">
                   Category: {product.category.title}
