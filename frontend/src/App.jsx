@@ -46,6 +46,7 @@ import VendorSettings from "./views/vendor/Settings";
 import Shop from "./views/vendor/Shop";
 import VendorRegister from "./views/vendor/VendorRegister";
 import AddProduct from "./views/vendor/AddProduct";
+import UpdateProduct from "./views/vendor/UpdateProduct.jsx";
 
 //
 export default function App() {
@@ -268,6 +269,14 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <AddProduct />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/product/update/:product_pid/"
+              element={
+                <PrivateRoute>
+                  <UpdateProduct />
                 </PrivateRoute>
               }
             />
