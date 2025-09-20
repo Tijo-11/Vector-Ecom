@@ -45,6 +45,7 @@ import VendorNotifications from "./views/vendor/Notifications";
 import VendorSettings from "./views/vendor/Settings";
 import Shop from "./views/vendor/Shop";
 import VendorRegister from "./views/vendor/VendorRegister";
+import AddProduct from "./views/vendor/AddProduct";
 
 //
 export default function App() {
@@ -258,8 +259,15 @@ export default function App() {
               path="/vendor/settings/"
               element={
                 <PrivateRoute>
-                  {" "}
                   <VendorSettings />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/product/new/"
+              element={
+                <PrivateRoute>
+                  <AddProduct />
                 </PrivateRoute>
               }
             />
