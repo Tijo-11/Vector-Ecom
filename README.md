@@ -5,7 +5,7 @@
 ![Django](https://img.shields.io/badge/Django-4.x-green?logo=django&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-```markdown
+
 # 🛍️ RetroRelics
 
 **RetroRelics** is a multivendor e-commerce platform designed for buying and selling retro, vintage, and antique products. Built as a web development learning project, it leverages modern technologies to provide a seamless experience for users and vendors, with features like secure payments, dashboards, and email notifications.
@@ -63,7 +63,7 @@ These interfaces allow you to explore available endpoints, view request/response
 #### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Tijo-11/retrorelics.git
+git clone https://github.com/Tijo-11/Vector-Ecom
 cd retrorelics
 ```
 
@@ -166,7 +166,7 @@ retrorelics/
 
 ## 🔮 Future Improvements
 
-- Product search and filtering
+- Order cancellation and Refund
 - User reviews and ratings
 - Vendor analytics and sales reports
 - Additional payment gateways
@@ -187,5 +187,5 @@ Feel free to:
 ## 📄 License
 
 This project is licensed under the **MIT License**.
-```
+
 
