@@ -1,7 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { ShoppingCart, Heart } from "lucide-react";
 import apiInstance from "../../../utils/axios";
 import Swal from "sweetalert2";
+import { CartContext } from "../../../plugin/Context";
+import CartId from "../ProductDetail/cartId.jsx";
+import UserData from "../../../plugin/UserData.js";
+import { addToWishlist } from "../../../plugin/addToWishlist";
+import { useAuthStore } from "../../../store/auth";
 
 export default function ProductOptions({
   product,
@@ -24,6 +29,24 @@ export default function ProductOptions({
   const [colorValue, setColorValue] = useState("No Color");
   const [sizeValue, setSizeValue] = useState("No Size");
   const [qtyValue, setQtyValue] = useState(1);
+  const [cartCount, setCartCount] = useContext(CartContext);
+  const [wishlist, setWishlist] = useState([]);
+  const cart_id = CartId();
+  const userData = UserData();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // Fetch wishlist
+  const fetchWishlist = async () => {
+    if (!userData?.user_id) return;
+    try {
+      const response = await apiInstance.get(
+        `customer/wishlist/${userData?.user_id}/`
+      );
+      setWishlist(response.data);
+    } catch (error) {
+      console.log("Error fetching wishlist:", error);
+    }
+  };
 
   useEffect(() => {
     if (product && product.id) {
@@ -32,6 +55,13 @@ export default function ProductOptions({
       setSpecification(product.specification || []);
     }
   }, [product]);
+
+  // Fetch wishlist on component mount if user is logged in
+  useEffect(() => {
+    if (userData?.user_id) {
+      fetchWishlist();
+    }
+  }, [userData?.user_id]);
 
   const handleColorButtonClick = (colorName, colorImage) => {
     setColorValue(colorName);
@@ -54,7 +84,7 @@ export default function ProductOptions({
   const handleAddToCart = async () => {
     const formData = new FormData();
     formData.append("product", product.id);
-    formData.append("user", user || ""); /// Fix: use user directly, as it is user_id
+    formData.append("user", user || "");
     formData.append("qty", qtyValue);
     formData.append("price", product.price);
     formData.append("shipping_amount", product.shipping_amount);
@@ -63,15 +93,47 @@ export default function ProductOptions({
     formData.append("color", colorValue);
     formData.append("cart_id", cartId || "");
 
+    // Optimistic update
+    setCartCount((prev) => prev + Number(qtyValue));
+
     try {
       const response = await apiInstance.post("cart/", formData);
-      console.log(response.data);
       Toast.fire({
         icon: "success",
         title: response.data.message || "Added to cart",
       });
+
+      // Sync with backend
+      const cart_id = CartId();
+      const userData = UserData();
+
+      const url = userData?.user_id
+        ? `/cart-list/${cart_id}/${userData.user_id}/`
+        : `/cart-list/${cart_id}/`;
+
+      const res = await apiInstance.get(url);
+
+      const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
+      setCartCount(totalQty);
     } catch (error) {
       console.error("Error adding to cart:", error);
+
+      // Rollback optimistic update
+      setCartCount((prev) => Math.max(prev - Number(qtyValue), 0));
+
+      Toast.fire({
+        icon: "error",
+        title: "Failed to add to cart",
+      });
+    }
+  };
+
+  const handleAddToWishlist = async (product_id) => {
+    try {
+      await addToWishlist(product_id, userData?.user_id);
+      fetchWishlist(); // Refresh wishlist after adding/removing
+    } catch (error) {
+      console.log("Error updating wishlist:", error);
     }
   };
 
@@ -153,9 +215,21 @@ export default function ProductOptions({
         >
           <ShoppingCart size={16} /> Add
         </button>
-        <button className="flex items-center justify-center gap-2 w-2/5 rounded-lg border border-gray-300 py-1.5 hover:bg-gray-100 transition">
-          <Heart size={16} /> Wishlist
-        </button>
+        {isLoggedIn ? (
+          <button
+            onClick={() => handleAddToWishlist(product.id)}
+            className={`flex items-center justify-center gap-2 w-2/5 rounded-lg py-1.5 transition ${
+              wishlist.some((item) => item.product.id === product.id)
+                ? "bg-gray-400 text-white hover:bg-gray-500 border-none"
+                : "bg-red-600 text-white hover:bg-red-700 border-none"
+            }`}
+          >
+            <Heart size={16} />
+            {wishlist.some((item) => item.product.id === product.id)
+              ? "Remove from Wishlist"
+              : "Add to Wishlist"}
+          </button>
+        ) : null}
       </div>
 
       <h3 className="text-lg font-semibold mb-2">Description:</h3>

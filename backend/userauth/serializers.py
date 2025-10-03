@@ -120,7 +120,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
 class ProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = UserSerializer(read_only=True)  # Mark as read-only for responses
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), source='user', write_only=True, required=False
+    )  # Allow updating user via ID
     class Meta:
         model = Profile
         fields = "__all__"

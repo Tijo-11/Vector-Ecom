@@ -6,7 +6,7 @@ import { mountStoreDevtool } from "simple-zustand-devtools";
 // simple-zustand-devtools is a handy utility that lets you inspect and debug your Zustand store right
 // from the browser’s developer tools. It helps track state changes and actions for easier debugging.
 
-const useAuthStore = create((set) => ({
+const useAuthStore = create((set, get) => ({
   // allUserData: Stores the full decoded user information (e.g., user_id, username) from the JWT.
   allUserData: null,
 
@@ -28,9 +28,11 @@ const useAuthStore = create((set) => ({
         ? {
             user_id: user.user_id || null,
             username: user.username || null,
+            vendor_id: user.vendor_id || null,
           }
         : null,
       isLoggedIn: !!user,
+      isVendor: user?.vendor_id > 0,   // To check vendor
     }),
 
   // setLoading: Updates the loading state during API calls (true while waiting, false after response).

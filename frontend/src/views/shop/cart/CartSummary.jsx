@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
-import cartID from "../ProductDetail/cartID";
+import cartID from "../ProductDetail/cartId";
 import CheckoutForm from "./CheckoutForm";
 
 function CartSummary({ cartItems, setCartTotal }) {

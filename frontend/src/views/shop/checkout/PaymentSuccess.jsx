@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { v4 as uuidv4 } from "uuid";
 
@@ -9,6 +9,7 @@ function PaymentSuccess() {
   const [order, setOrder] = useState({});
   const [status, setStatus] = useState("verifying");
   const [hasRun, setHasRun] = useState(false);
+  const navigate = useNavigate();
 
   // Detect query params
   const urlParams = new URLSearchParams(location.search);
@@ -55,6 +56,7 @@ function PaymentSuccess() {
           setStatus("already_paid");
           const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
           setOrder(orderResponse.data || {});
+          console.log(orderResponse.data);
         } else {
           setStatus("unpaid");
         }
@@ -160,13 +162,16 @@ function PaymentSuccess() {
                 </div>
               ))
             ) : (
-              <p className="text-gray-700">No items found</p>
+              /*<p className="text-gray-700">No items found</p>*/ <div></div>
+              //Fix this logic
             )}
             <div className="mt-4 border-t pt-4">
               <div className="flex justify-between mb-2">
-                <span className="font-semibold text-gray-700">Subtotal</span>
+                <span className="font-semibold text-gray-700">
+                  Initial Total
+                </span>
                 <span className="text-gray-700">
-                  ₹{order.sub_total || "0.00"}
+                  ₹{order.initial_total || "0.00"}
                 </span>
               </div>
               <div className="flex justify-between mb-2">
@@ -189,6 +194,19 @@ function PaymentSuccess() {
                   ₹{order.service_fee || "0.00"}
                 </span>
               </div>
+              <div className="flex justify-between mb-2">
+                {order.saved !== "0.00" && (
+                  <>
+                    <span className="font-semibold text-sm uppercase text-gray-700">
+                      Discount
+                    </span>
+                    <span className="font-semibold text-sm">
+                      -₹{order.saved || "0.00"}
+                    </span>
+                  </>
+                )}
+              </div>
+
               <div className="flex justify-between font-semibold border-t pt-2">
                 <span className="text-gray-700">Total</span>
                 <span className="text-gray-700">₹{order.total || "0.00"}</span>
@@ -198,7 +216,7 @@ function PaymentSuccess() {
         </div>
         <div className="mt-6 flex flex-col sm:flex-row justify-center gap-2">
           <button
-            onClick={() => alert("View Order functionality to be implemented")}
+            onClick={() => navigate(`/view-order/${order_id}/`)}
             className="bg-blue-500 text-white py-2 px-4 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition m-2"
           >
             View Order

@@ -2,6 +2,8 @@
 from .common import *
 from .product import Product
 from .choices import *
+from django.core.validators import RegexValidator
+from django.utils.text import gettext_lazy as _
 
 
 
@@ -59,9 +61,13 @@ class CartOrder(models.Model):
     
     # Shipping Address
     address = models.CharField(max_length=1000, null=True, blank=True)
-    city = models.CharField(max_length=1000, null=True, blank=True)
+    city = models.CharField(max_length=1000, null=True, blank=True) # use it instead of zip_code
     state = models.CharField(max_length=1000, null=True, blank=True)
     country = models.CharField(max_length=1000, null=True, blank=True)
+    postal_code = models.CharField(
+        max_length=10,null=True, blank=True,
+        validators=[RegexValidator('^[0-9]{6}$', _('Invalid postal code'))],
+    )
     
     coupons = models.ManyToManyField('store.Coupon', blank=True)
     #Changing stripe_session_id to razorpay_session_id in models.py and running migrations could cause issues 

@@ -1,13 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Heart } from "lucide-react";
 import ProductsPlaceholder from "./ProductsPlaceHolder";
 import Categories from "../category/Categories";
 import apiInstance from "../../../utils/axios";
 import UserCountry from "../ProductDetail/UserCountry";
-import UserData from "../../plugin/UserData";
-import cartID from "../ProductDetail/CartId";
+import UserData from "../../../plugin/UserData";
+import cartID from "../ProductDetail/cartId";
 import Swal from "sweetalert2";
+import { CartContext } from "../../../plugin/Context";
+import CartId from "../ProductDetail/cartId.jsx";
+import { addToWishlist } from "../../../plugin/addToWishlist";
+import { useAuthStore } from "../../../store/auth";
+import StarRating from "./StarRating";
 
 export default function Products() {
   const Toast = Swal.mixin({
@@ -26,6 +31,23 @@ export default function Products() {
   const [quantityValue, setQuantityValue] = useState({});
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [cartCount, setCartCount] = useContext(CartContext);
+  const [wishlist, setWishlist] = useState([]); // Added wishlist state
+  const userData = UserData();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // Added function to fetch wishlist
+  const fetchWishlist = async () => {
+    if (!userData?.user_id) return;
+    try {
+      const response = await apiInstance.get(
+        `customer/wishlist/${userData?.user_id}/`
+      );
+      setWishlist(response.data);
+    } catch (error) {
+      console.log("Error fetching wishlist:", error);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -48,6 +70,14 @@ export default function Products() {
       setCategories(response.data);
     });
   }, []);
+
+  // Added useEffect to fetch wishlist
+  useEffect(() => {
+    if (userData?.user_id) {
+      fetchWishlist();
+    }
+  }, [userData?.user_id]);
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
@@ -79,24 +109,61 @@ export default function Products() {
   };
 
   const handleAddToCart = async (product_id, price, shipping_amount) => {
+    const qty = Number(quantityValue[product_id] || 0);
+    if (qty <= 0) return;
+
     const formData = new FormData();
     formData.append("product", product_id);
-    formData.append("user", user?.user_id);
-    formData.append("qty", quantityValue[product_id] || "0");
+    formData.append("user", user?.user_id || "");
+    formData.append("qty", qty);
     formData.append("price", price);
     formData.append("shipping_amount", shipping_amount);
-    formData.append("country", currentAddress?.country);
+    formData.append("country", currentAddress?.country || "Unknown");
     formData.append("size", selectedSizes[product_id] || "");
     formData.append("color", selectedColors[product_id] || "");
     formData.append("cart_id", cart_id);
 
-    const response = await apiInstance.post(`cart/`, formData);
-    console.log(response.data);
-    Toast.fire({
-      icon: "success",
-      title: response.data.message || "Added to cart",
-    });
+    // ✅ Optimistic update
+    setCartCount((prev) => prev + qty);
+
+    try {
+      const response = await apiInstance.post(`cart/`, formData);
+      Toast.fire({
+        icon: "success",
+        title: response.data.message || "Added to cart",
+      });
+
+      // ✅ Sync with backend
+      const url = user?.user_id
+        ? `/cart-list/${cart_id}/${user.user_id}/`
+        : `/cart-list/${cart_id}/`;
+
+      const res = await apiInstance.get(url);
+      const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
+      setCartCount(totalQty);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+
+      // ❌ Rollback optimistic update
+      setCartCount((prev) => Math.max(prev - qty, 0));
+
+      Toast.fire({
+        icon: "error",
+        title: "Failed to add to cart",
+      });
+    }
   };
+
+  const handleAddToWishlist = async (product_id) => {
+    try {
+      await addToWishlist(product_id, userData?.user_id);
+      fetchWishlist(); // Refresh wishlist after adding/removing
+    } catch (error) {
+      console.log("Error updating wishlist:", error);
+    }
+  };
+
+  //scroll to top
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "auto" }); // Instant scroll
   };
@@ -137,11 +204,12 @@ export default function Products() {
                   ₹{product.price}
                 </p>
               </div>
-              {product.rating && (
+              {/* {product.rating && (
                 <p className="mt-2 text-yellow-500 text-sm">
                   ⭐ {product.rating}
                 </p>
-              )}
+              )} */}
+              <StarRating rating={product.rating} />
               {product.category && (
                 <p className="text-sm text-gray-500">
                   Category: {product.category.title}
@@ -219,9 +287,23 @@ export default function Products() {
                   <ShoppingCart size={18} /> Add to Cart
                 </button>
 
-                <button className="flex items-center justify-center gap-2 w-full rounded-lg border border-gray-300 py-2 hover:bg-gray-100 transition">
-                  <Heart size={18} /> Add to Wishlist
-                </button>
+                {isLoggedIn ? (
+                  <button
+                    onClick={() => handleAddToWishlist(product.id)}
+                    className={`flex items-center justify-center gap-2 w-full rounded-lg py-2 transition ${
+                      wishlist.some((item) => item.product.id === product.id)
+                        ? "bg-gray-400 text-white hover:bg-gray-500 border-none"
+                        : "bg-red-600 text-white hover:bg-red-700 border-none"
+                    }`}
+                  >
+                    <Heart size={18} />
+                    {wishlist.some((item) => item.product.id === product.id)
+                      ? "Remove from Wishlist"
+                      : "Add to Wishlist"}
+                  </button>
+                ) : (
+                  <></>
+                )}
               </div>
             </div>
           ))}

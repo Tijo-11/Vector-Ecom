@@ -14,6 +14,7 @@ class CreateOrderView(generics.CreateAPIView):
         country = payload['country']
         mobile = payload['mobile']
         state = payload['state']
+        postal_code = payload['pincode']
         cart_id = payload['cart_id']
         user_id = payload.get('user_id')  # Use .get() to avoid KeyError
         
@@ -48,7 +49,7 @@ class CreateOrderView(generics.CreateAPIView):
             address=address,
             country=country,
             mobile=mobile,
-            state=state,
+            state=state,postal_code=postal_code,
             buyer=user  # Assign user (None if no valid user)
         )
         
@@ -105,59 +106,74 @@ class CouponAPIView(generics.CreateAPIView):
     serializer_class = CouponSerializer
     queryset = Coupon.objects.all()
     permission_classes = (AllowAny,)
-    
+
     def create(self, request):
         payload = request.data
         order_oid = payload['order_oid']
         coupon_code = payload['coupon_code']
-        
+
         try:
             order = CartOrder.objects.get(oid=order_oid)
         except CartOrder.DoesNotExist:
-            return Response({"message": "Order not found", "icon":"warning"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Order not found", "icon": "warning"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             coupon = Coupon.objects.get(code=coupon_code)
         except Coupon.DoesNotExist:
-            return Response({"message": "Invalid Coupon", "icon":"warning"}, status=status.HTTP_400_BAD_REQUEST)
-        # 🚨 Check if order already has any coupon applied
+            return Response(
+                {"message": "Invalid Coupon", "icon": "warning"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if order already has any coupon applied
         already_applied = CartOrderItem.objects.filter(order=order, coupon__isnull=False).exists()
         if already_applied:
-            return Response({"message": "A coupon is already applied to this order", "icon": "warning"}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "A coupon is already applied to this order", "icon": "warning"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order_items = CartOrderItem.objects.filter(order=order, vendor=coupon.vendor)
+        if not order_items.exists():
+            return Response(
+                {"message": "No items from this vendor in the order", "icon": "warning"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        for item in order_items:
+            if not item.coupon.filter(id=coupon.id).exists():
+                discount = item.total * coupon.discount / 100
+                item.total -= discount
+                item.sub_total -= discount
+                item.coupon.add(coupon)
+                item.saved += discount
+                item.save()
+
+                order.total -= discount
+                order.sub_total -= discount
+                order.saved += discount
+
+        order.save()
+        return Response(
+            {"message": "Coupon Applied Successfully", "icon": "success"},
+            status=status.HTTP_200_OK
+        )
         
-        if coupon:
-            order_items = CartOrderItem.objects.filter(order=order, vendor = coupon.vendor)
-            #vendors offer discounts
-            if order_items:
-                for i in order_items:
-                    if not i.coupon.filter(id=coupon.id).exists(): # check to prevent coupon re-apply
-#coupon in i.coupon.all() loads all coupons into memory → not efficient and sometimes unreliable in detecting 
-# duplicates if objects are reloaded.
-# .filter(...).exists() runs a direct DB check → ensures you never allow the same coupon twice.
-                        discount = i.total *coupon.discount/100
-                        
-                        i.total -= discount
-                        i.sub_total -= discount
-                        i.coupon.add(coupon)# add coupon to list so that user will not reapply it
-                        i.saved += discount #amount the user saved
-                        
-                        order.total -= discount
-                        order.sub_total -= discount
-                        order.saved += discount
-                        i.save()
-                        order.save()
-                        
-                        return Response({"message": "Coupon Applied Successfully", "icon": "success"}, status=status.HTTP_200_OK)
-                    else:
-                        return Response({"message": "Coupon Already Applied", "icon": "warning"}, status=status.HTTP_200_OK)
-                else:
-                    return Response({"message": "Order Item Does Not Exist", "icon": "error"}, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "Invalid Coupon", "icon": "error"}, status=status.HTTP_200_OK)
-                
-    
-        
-        
+#------------
+class OrdersDetailAPIView(generics.RetrieveAPIView):
+    serializer_class = CartOrderSerializer
+    permission_classes = (AllowAny,)
+
+    def get_object(self):
+        order_id = self.kwargs['order_id']
+        order = CartOrder.objects.get(
+    Q(payment_status="paid") | Q(payment_status="processing"),
+    oid=order_id
+)
+        return order
         
         
     

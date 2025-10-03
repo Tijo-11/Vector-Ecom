@@ -5,8 +5,8 @@ import ProductsPlaceholder from "../Products/ProductsPlaceHolder";
 import Categories from "../category/Categories";
 import apiInstance from "../../../utils/axios";
 import UserCountry from "../ProductDetail/UserCountry";
-import UserData from "../../plugin/UserData";
-import cartID from "../ProductDetail/CartId";
+import UserData from "../../../plugin/UserData";
+import cartID from "../ProductDetail/cartId";
 import Swal from "sweetalert2";
 
 export default function CategoryProducts() {

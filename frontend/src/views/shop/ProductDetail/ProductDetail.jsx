@@ -4,8 +4,8 @@ import apiInstance from "../../../utils/axios";
 import ProductOptions from "./ProductOptions";
 import RelatedProducts from "./RelatedProducts";
 import UserCountry from "./UserCountry";
-import UserData from "../../plugin/UserData";
-import CartId from "./CartId";
+import UserData from "../../../plugin/UserData";
+import CartId from "./cartId";
 import Review from "./Review";
 
 export default function ProductDetail() {

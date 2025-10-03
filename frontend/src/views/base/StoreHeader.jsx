@@ -1,15 +1,15 @@
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import React, { useMemo, useState, useRef, useEffect, useContext } from "react";
 import { useAuthStore } from "../../store/auth";
 import { Link, useNavigate } from "react-router-dom";
-import { FaShoppingCart } from "react-icons/fa";
-
-// Hypothetical cart store; replace with your actual cart state management
-import { useCartStore } from "../../store/cart";
+import { ShoppingCart } from "lucide-react"; // or Heroicons if you prefer
+import { CartContext } from "../../plugin/Context";
+import UseProfileData from "../../plugin/UserProfileData";
 
 function StoreHeader() {
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
-  const user = useAuthStore((state) => state.user);
-  const cartItems = useCartStore((state) => state.cartItems); // Get cart items
+  const { user, isLoggedIn } = useAuthStore();
+  const { isVendor } = useAuthStore();
+  const userProfile = UseProfileData();
+  console.log("user.vendor_id", user?.vendor_id);
 
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -19,6 +19,8 @@ function StoreHeader() {
 
   const accountRef = useRef(null);
   const vendorRef = useRef(null);
+  const [cartCount, setCartCount] = useContext(CartContext);
+  console.log(cartCount);
 
   const handleSearchChange = (event) => {
     setSearch(event.target.value);
@@ -52,91 +54,41 @@ function StoreHeader() {
   return (
     <>
       <header className="bg-gray-900 text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link
-              to="/"
-              className="text-xl font-bold text-white hover:text-gray-300"
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex justify-between items-center py-4">
+      {/* Left Section: Logo */}
+      <Link
+        to="/"
+        className="text-xl font-bold text-white hover:text-gray-300"
+      >
+        RetroRelics{" "}
+        <p className="text-xs">Shop stories, not just stuff.</p>
+      </Link>
+
+      {/* Right Section: Vendor + Search + Account + Logout */}
+      <div className="flex items-center space-x-4">
+        {/* Vendor Dropdown */}
+        {isVendor && (
+          <div className="relative" ref={vendorRef}>
+            <button
+              onClick={toggleVendorDropdown}
+              className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg"
             >
-              RetroRelics{" "}
-              <p className="text-xs">Shop stories, not just stuff.</p>
-            </Link>
-
-            <nav className="hidden md:flex space-x-6">
-              {/* Account Dropdown */}
-              {null && (
-                <div className="relative" ref={accountRef}>
-                  <button
-                    onClick={toggleAccountDropdown}
-                    className="hover:text-gray-300 focus:outline-none"
-                  >
-                    Account ▾
-                  </button>
-                  <div
-                    className={`absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
-                      isAccountOpen ? "flex" : "hidden"
-                    }`}
-                  >
-                    <Link
-                      to="/customer/account/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-user"></i> Account
-                    </Link>
-                    <Link
-                      to="/customer/orders/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-shopping-cart"></i> Orders
-                    </Link>
-                    <Link
-                      to="/customer/wishlist/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-heart"></i> Wishlist
-                    </Link>
-                    <Link
-                      to="/customer/notifications/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-bell"></i> Notifications
-                    </Link>
-                    <Link
-                      to="/customer/settings/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsAccountOpen(false)}
-                    >
-                      <i className="fas fa-gear"></i> Settings
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* Vendor Dropdown */}
-              {null && (
-                <div className="relative" ref={vendorRef}>
-                  <button
-                    onClick={toggleVendorDropdown}
-                    className="hover:text-gray-300 focus:outline-none"
-                  >
-                    Vendor ▾
-                  </button>
-                  <div
-                    className={`absolute left-0 mt-2 w-56 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
-                      isVendorOpen ? "flex" : "hidden"
-                    }`}
-                  >
-                    <Link
-                      to="/vendor/dashboard/"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setIsVendorOpen(false)}
-                    >
-                      <i className="fas fa-user"></i> Dashboard
-                    </Link>
+              Vendor ▾
+            </button>
+            <div
+              className={`absolute left-0 mt-2 w-56 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
+                isVendorOpen ? "flex" : "hidden"
+              }`}
+            >
+              {/* Vendor dropdown links */}
+              <Link
+                to="/vendor/dashboard/"
+                className="block px-4 py-2 hover:bg-gray-100"
+                onClick={() => setIsVendorOpen(false)}
+              >
+                <i className="fas fa-user"></i> Dashboard
+              </Link>
                     <Link
                       to="/vendor/products/"
                       className="block px-4 py-2 hover:bg-gray-100"
@@ -196,43 +148,98 @@ function StoreHeader() {
                   </div>
                 </div>
               )}
-            </nav>
+            
 
-            <div className="flex items-center space-x-2">
-              <input
-                onChange={handleSearchChange}
-                name="search"
-                className="rounded-lg bg-white px-3 py-1 text-gray-900 focus:outline-none"
-                type="text"
-                placeholder="Search"
-              />
-              <button
-                onClick={handleSearchSubmit}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg"
+            
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault(); // prevent page reload
+                  handleSearchSubmit();
+                }}
+                className="flex items-center space-x-2"
               >
-                Search
-              </button>
+                <input
+                  onChange={handleSearchChange}
+                  name="search"
+                  className="rounded-lg bg-white px-3 py-1 text-gray-900 focus:outline-none"
+                  type="text"
+                  placeholder="Search"
+                />
+                <button
+                  onClick={handleSearchSubmit}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg"
+                >
+                  Search
+                </button>
+              </form>
               {isLoggedIn ? (
                 <>
-                  <Link
-                    to="/customer/account/"
-                    className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg"
-                  >
-                    Account
-                  </Link>
+                  <div className="relative" ref={accountRef}>
+                    <button
+                      onClick={toggleAccountDropdown}
+                      className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg"
+                    >
+                      Account ▾
+                    </button>
+                    <div
+                      className={`absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
+                        isAccountOpen ? "flex" : "hidden"
+                      }`}
+                    >
+                      <Link
+                        to="/customer/account/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-user"></i> Account
+                      </Link>
+                      <Link
+                        to="/customer/orders/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-shopping-cart"></i> Orders
+                      </Link>
+                      <Link
+                        to="/customer/wishlist/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-heart"></i> Wishlist
+                      </Link>
+                      <Link
+                        to="/customer/notifications/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-bell"></i> Notifications
+                      </Link>
+                      <Link
+                        to="/customer/settings/"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setIsAccountOpen(false)}
+                      >
+                        <i className="fas fa-gear"></i> Settings
+                      </Link>
+                    </div>
+                  </div>
+
                   <Link
                     to="/logout"
                     className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg"
                   >
                     Logout
                   </Link>
-                  <Link to="/cart" className="relative">
-                    <FaShoppingCart className="text-2xl" />
-                    {cartItems.length > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {cartItems.length}
-                      </span>
-                    )}
+                  <Link
+                    to="/cart"
+                    className="relative inline-flex items-center justify-center p-2 rounded-full bg-gray-100 hover:bg-blue-400 transition"
+                  >
+                    <ShoppingCart className="h-6 w-6 text-gray-700" />
+
+                    {/* Badge */}
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">
+                      {cartCount || 0}
+                    </span>
                   </Link>
                 </>
               ) : (
@@ -249,13 +256,16 @@ function StoreHeader() {
                   >
                     Register
                   </Link>
-                  <Link to="/cart" className="relative">
-                    <FaShoppingCart className="text-2xl" />
-                    {cartItems.length > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {cartItems.length}
-                      </span>
-                    )}
+                  <Link
+                    to="/cart"
+                    className="relative inline-flex items-center justify-center p-2 rounded-full bg-gray-100 hover:bg-blue-400 transition"
+                  >
+                    <ShoppingCart className="h-6 w-6 text-gray-700" />
+
+                    {/* Badge */}
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">
+                      {cartCount || 0}
+                    </span>
                   </Link>
                 </>
               )}

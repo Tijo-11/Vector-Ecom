@@ -4,7 +4,7 @@ import CartSummary from "./CartSummary";
 import { Link } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
-import cartID from "../ProductDetail/cartID";
+import cartID from "../ProductDetail/cartId";
 
 function Cart() {
   const [cart, setCart] = useState([]);
