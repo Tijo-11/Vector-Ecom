@@ -95,16 +95,14 @@ export const logout = () => {
   });
 };
 
-// Function to set the authenticated user on page load
 export const setUser = async () => {
-  // Retrieving access and refresh tokens from cookies
   const accessToken = Cookies.get("access_token");
   const refreshToken = Cookies.get("refresh_token");
-  // Checking if tokens are present
+
   if (!accessToken || !refreshToken) {
     return;
   }
-  // If access token is expired, refresh it; otherwise, set the authenticated user
+
   if (isAccessTokenExpired(accessToken)) {
     const response = await getRefreshToken(refreshToken);
     setAuthUser(response.access, response.refresh);
@@ -113,13 +111,10 @@ export const setUser = async () => {
   }
 };
 
-// Function to set the authenticated user and update user state
 export const setAuthUser = (access_token, refresh_token) => {
-  //Retrieving access and refresh tokens from cookies
   Cookies.set("access_token", access_token, { expires: 1, secure: true }); //expires: 1 means the cookie will expire in 1 day.
   Cookies.set("refresh_token", refresh_token, { expires: 7, secure: true });
-  //secure: true ensures the cookie is only sent over HTTPS — great for production environments.
-  // Decoding access token to get user information
+
   const user = jwtDecode(access_token) || null;
   // If user information is present, update user state; otherwise, set loading state to false
   if (user) {
@@ -130,7 +125,6 @@ export const setAuthUser = (access_token, refresh_token) => {
 
 // Function to refresh the access token using the refresh token
 export const getRefreshToken = async (refresh_token) => {
-  // Retrieving refresh token from cookies and making a POST request to refresh the access token
   const response = await apiInstance.post("user/token/refresh/", {
     refresh: refresh_token,
   });
@@ -149,22 +143,3 @@ export const isAccessTokenExpired = (accessToken) => {
     return true;
   }
 };
-/********************************************************************* */
-/*
-🍪 js-cookie is a lightweight JavaScript library that simplifies working with cookies in the browser. It’s perfect for storing tokens, user preferences, or session data without diving into the messy details of cookie syntax.
-
-Here’s a quick example:
-
-js
-import Cookies from 'js-cookie';
-
-// Set a cookie
-Cookies.set('token', 'abc123', { expires: 7 }); // Expires in 7 days
-
-// Get a cookie
-const token = Cookies.get('token');
-
-// Remove a cookie
-Cookies.remove('token');
-You can also store JSON objects by stringifying them, or set secure flags for HTTPS-only cookies. 
-*/

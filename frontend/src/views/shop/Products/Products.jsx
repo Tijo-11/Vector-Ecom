@@ -203,6 +203,13 @@ export default function Products() {
                 <p className="mt-1 text-lg font-medium text-gray-900">
                   ₹{product.price}
                 </p>
+                {product.stock_qty === 0 || !product.in_stock ? (
+                  <p className="text-red-600 font-semibold mt-2">
+                    Out of Stock
+                  </p>
+                ) : (
+                  <p className="text-green-600 font-semibold mt-2">In Stock</p>
+                )}
               </div>
               {/* {product.rating && (
                 <p className="mt-2 text-yellow-500 text-sm">
@@ -270,21 +277,50 @@ export default function Products() {
               </div>
               <div className="mt-auto flex flex-col gap-2">
                 <button
-                  disabled={!Number(quantityValue[product.id])}
-                  onClick={() =>
+                  onClick={() => {
+                    if (product.stock_qty === 0 || !product.in_stock) {
+                      Swal.fire({
+                        icon: "warning",
+                        title: "Out of Stock",
+                        text: "This product is currently out of stock. Please check back later.",
+                        confirmButtonColor: "#2563eb", // blue
+                      });
+                      return;
+                    }
+
+                    if (!Number(quantityValue[product.id])) {
+                      Swal.fire({
+                        icon: "info",
+                        title: "Select Quantity",
+                        text: "Please enter a quantity before adding to cart.",
+                        confirmButtonColor: "#2563eb",
+                      });
+                      return;
+                    }
+
                     handleAddToCart(
                       product.id,
                       product.price,
                       product.shipping_amount
-                    )
+                    );
+                  }}
+                  disabled={
+                    product.stock_qty === 0 ||
+                    !product.in_stock ||
+                    !Number(quantityValue[product.id])
                   }
                   className={`flex items-center justify-center gap-2 w-full rounded-lg py-2 transition ${
-                    !Number(quantityValue[product.id])
+                    product.stock_qty === 0 || !product.in_stock
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : !Number(quantityValue[product.id])
                       ? "bg-gray-400 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                 >
-                  <ShoppingCart size={18} /> Add to Cart
+                  <ShoppingCart size={18} />
+                  {product.stock_qty === 0 || !product.in_stock
+                    ? "Out of Stock"
+                    : "Add to Cart"}
                 </button>
 
                 {isLoggedIn ? (
