@@ -317,4 +317,3 @@ class PaymentSuccessView(generics.CreateAPIView):
             status=status.HTTP_400_BAD_REQUEST
         )
         
-#git commit -m " EMail not being sent to other email ids, may be google blocked that as I have sent email to unknown email id, needs to check"

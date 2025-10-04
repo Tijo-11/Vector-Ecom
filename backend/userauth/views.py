@@ -171,7 +171,7 @@ class PasswordChangeView(generics.CreateAPIView):
             status=status.HTTP_200_OK   # ✅ return 200 instead of 201
         )
         
-#-----------------------------
+
 
 
         
@@ -186,14 +186,4 @@ class PasswordChangeView(generics.CreateAPIView):
 
 
 
-#A couple of additional improvements
 
-# Security
-
-# Right now you’re exposing the raw user pk (uidb64 = user.pk). Normally, Django uses urlsafe_base64_encode to 
-# encode it safely.
-
-# from django.utils.http import urlsafe_base64_encode
-# from django.utils.encoding import force_bytes
-
-# uidb64 = urlsafe_base64_encode(force_bytes(user.pk))

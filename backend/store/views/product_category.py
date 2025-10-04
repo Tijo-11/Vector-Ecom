@@ -13,8 +13,7 @@ class ProductListView(generics.ListAPIView):
     
 
 class FeaturedProductListView(generics.ListAPIView):
-#Defines a read-only API view that returns a list of featured products. Uses Django REST Framework’s ListAPIView,
-# which handles GET requests and automatically serializes queryset results.
+
     serializer_class = ProductSerializer
     queryset = Product.objects.filter(status="published", featured=True)[:3]
     permission_classes = (AllowAny,)
@@ -28,7 +27,7 @@ class ProductDetailView(generics.RetrieveAPIView):
     def get_object(self):
         # Retrieve the product using the provided slug from the URL
         slug = self.kwargs.get('slug')
-#in Django class-based views like RetrieveAPIView, URL parameters (like <slug>) are passed into the view instance 
+# URL parameters (like <slug>) are passed into the view instance 
 # via self.kwargs. So self.kwargs.get('slug') fetches the value from the URL pattern.
         return Product.objects.get(slug=slug)
     

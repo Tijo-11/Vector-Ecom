@@ -6,14 +6,8 @@ from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
-from django.db import transaction#Imports Django's transaction management API — lets you control database 
-#operations atomically (all-or-nothing), useful for rollback on errors.
-from django.urls import reverse#Generates URL from view name — lets you build URLs dynamically using the view’s 
-#name and optional args/kwargs, avoiding hardcoding paths.
-#reverse() is a Django utility that builds a URL string from a view name.
-# 🔹 Instead of hardcoding URLs like "/blog/42/", you use reverse("blog-detail", args=[42]) — this ensures 
-# your links stay valid even if URL patterns change.
-# 🔹 It’s especially useful in templates, redirects, and APIs to keep routing dynamic and maintainable.
+from django.db import transaction# control database operations atomically (all-or-nothing), useful for rollback on errors.
+from django.urls import reverse
 
 # Restframework Packages
 from rest_framework.decorators import api_view

@@ -46,49 +46,21 @@ email = EmailMultiAlternatives(
 email.attach_alternative('<p>HTML body</p>', 'text/html')
 email.send()'''
 from django.template.loader import render_to_string
-## Import render_to_string to generate HTML or text content from Django templates
-#This is your go-to tool when you want to dynamically generate email bodies, web content, or any string-based
-# output using Django templates.
-#context = {'username': 'Arjun', 'activation_link': 'https://example.com/activate'}
-# html_content = render_to_string('emails/welcome.html', context)
-#This will load the welcome.html template from your templates/emails/ directory and fill in the placeholders
-# using the context dictionary.
-'''
-You can then plug html_content into an EmailMultiAlternatives message like this:
 
-python
-email = EmailMultiAlternatives(
-    subject='Welcome to Our Site!',
-    body='Thanks for joining us!',
-    from_email='noreply@example.com',
-    to=['arjun@example.com'],
-)
-email.attach_alternative(html_content, 'text/html')
-email.send()'''
 
 
 # Restframework Packages
 from rest_framework.decorators import api_view
-## Import the api_view decorator to define function-based views in Django REST Framework
-#This decorator lets you specify which HTTP methods your view should respond to—like GET, POST, PUT, 
-# etc.—and automatically wraps your function in Django REST Framework’s request/response handling.
+
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics,status
-# Import generic class-based views from Django REST Framework
-#This gives you access to powerful, ready-made views like ListAPIView, CreateAPIView,
-# RetrieveUpdateDestroyAPIView, and more—perfect for building RESTful endpoints with minimal boilerplate.
-#Saves time: No need to write repetitive logic, Built-in support for pagination, filtering, permissions,
-#Easy to customize with mixins or method overrides
+
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import  permission_classes
-## Import the permission_classes decorator to apply permission rules to function-based views
-#This decorator is used alongside @api_view to enforce access control on function-based views in Django REST 
-# Framework. It lets you specify which user roles or authentication levels are allowed to access the endpoint.
+
 from rest_framework.views import APIView
-## Import APIView to create custom class-based views in Django REST Framework
-#APIView is your gateway to building fully customized class-based views in Django REST Framework.
-# Unlike generic views, it gives you complete control over request handling, authentication, permissions, and response formatting.
+
 
 # Serializers
 from userauth.serializers import MyTokenObtainPairSerializer, RegisterSerializer

@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-uq)3&7se87@l!4$10p&9qwwh*k$w55mwff3hp6tw8)otf9ye@m'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -135,12 +135,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/' #URL prefix for serving static files like CSS, JS, and images.
-STATICFILES_DIRS = [BASE_DIR / 'static'] #Tells Django where to find additional static files during development.
-STATIC_ROOT = BASE_DIR / 'staticfiles' #Directory where Django collects all static files for production (collectstatic
-#Create folder staticfiles in the root directory, here inside project level backend
-MEDIA_URL = 'media/' #URL prefix for serving uploaded media files (e.g. user images, documents).
-MEDIA_ROOT = BASE_DIR / 'media' #Files uploaded by users are stored here on the server.
+STATIC_URL = 'static/' 
+STATICFILES_DIRS = [BASE_DIR / 'static'] 
+STATIC_ROOT = BASE_DIR / 'staticfiles' 
+
+MEDIA_URL = 'media/' 
+MEDIA_ROOT = BASE_DIR / 'media' 
 
 
 AUTH_USER_MODEL = 'userauth.User' #Note it is included as string
@@ -166,18 +166,11 @@ SIMPLE_JWT= {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=50),
     'ROTATE_REFRESH_TOKENS' : True,
-#'ROTATE_REFRESH_TOKENS': True ensures that a new refresh token is issued every time the user gets a new 
-# access token using the old refresh token.This helps prevent token reuse and makes it easier to revoke 
-# compromised tokens.
+
     'BLACKLIST_AFTER_ROTATION' :True,
-#ensures that old refresh tokens are invalidated (blacklisted) after a new one is issued during rotation.
-#This setting works hand-in-hand with 'ROTATE_REFRESH_TOKENS': True to enforce strict token hygiene—making
-# sure that once a refresh token is rotated, the previous one can't be used again. It's a smart move for apps
-# that prioritize security and want to reduce the risk of token theft or replay attacks.
+
     'UPDATE_LAST_LOGIN' :True
-#ensures that the user's last_login field is updated every time they log in, even if it's not their first time.
-#This is useful for tracking user activity, monitoring engagement, or implementing features like login history,
-# session analytics, or security alerts.
+
 }
 # Optional if you're using cookies with JWT
 CORS_ALLOW_METHODS = ['GET', 'POST', 'OPTIONS','PUT', 'PATCH', 'DELETE']

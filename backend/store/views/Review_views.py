@@ -48,10 +48,9 @@ class SearchProductView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         query = self.request.GET.get('query')
-        if query == None:
+        if query is None:
             return Response({"message": "Query parameter can't be none"}, status= status.HTTP_400_BAD_REQUEST)
-    #.GET accesses query parameters from the URL (e.g. ?query=searchterm). It’s part of Django’s 
-    # HttpRequest object to retrieve data sent via HTTP GET method.
+    
         product = Product.objects.filter(status='published', title__icontains=query)
         return product
         

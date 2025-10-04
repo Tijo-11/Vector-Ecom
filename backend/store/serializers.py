@@ -121,9 +121,7 @@ class ProductSerializer(serializers.ModelSerializer):
         else:
             # For other methods, set serialization depth to 3.
             self.Meta.depth = 3 # Deep serialization for read/update
-#Note: Modifying self.Meta.depth dynamically like this won’t work as expected — Meta is a static inner class.
-# Instead, use self.fields to control nested depth or override to_representation
-# Define a serializer for the ProductFaq model
+
 class ProductFaqSerializer(serializers.ModelSerializer):
     # Serialize the related Product model
     product = ProductSerializer()
@@ -142,13 +140,7 @@ class ProductFaqSerializer(serializers.ModelSerializer):
         else:
             # For other methods, set serialization depth to 3.
             self.Meta.depth = 3
-#Meta.depth in Django REST Framework controls how deeply related models are serialized.
-# 🔍 Quick Explanation:
-# It tells the serializer how many levels of nested relationships to include.
-# For example, if a model has a ForeignKey to another model, and that model has another ForeignKey, depth=2 
-# will serialize both levels.
-#It uses default serializers for related models, so you lose control over customization.
-#Better to use explicit nested serializers if you need fine-grained control.
+
 
 # Define a serializer for the CartOrderItem model
 class CartSerializer(serializers.ModelSerializer):
