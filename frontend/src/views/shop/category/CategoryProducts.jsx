@@ -17,6 +17,7 @@ export default function CategoryProducts() {
     timer: 1500,
     timerProgressBar: true,
   });
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -50,7 +51,6 @@ export default function CategoryProducts() {
           }),
           {}
         );
-        // Filter products by category slug if present, and check for category existence
         const filteredProducts = slug
           ? response.data.filter((product) => product.category?.slug === slug)
           : response.data;
@@ -62,17 +62,13 @@ export default function CategoryProducts() {
         console.error("Error fetching products:", error);
         setLoading(false);
       });
-  }, [slug]); // Re-run when slug changes
+  }, [slug]);
 
   useEffect(() => {
     apiInstance
       .get(`category/`)
-      .then((response) => {
-        setCategories(response.data);
-      })
-      .catch((error) => {
-        console.error("Error fetching categories:", error);
-      });
+      .then((response) => setCategories(response.data))
+      .catch((error) => console.error("Error fetching categories:", error));
   }, []);
 
   const currentAddress = UserCountry();
@@ -95,26 +91,32 @@ export default function CategoryProducts() {
   };
 
   const handleAddToCart = async (product_id, price, shipping_amount) => {
+    const qty = Number(quantityValue[product_id] || 0);
+    if (qty <= 0) return;
+
     const formData = new FormData();
     formData.append("product", product_id);
-    formData.append("user", user?.user_id);
-    formData.append("qty", quantityValue[product_id] || "0");
+    formData.append("user", user?.user_id || "");
+    formData.append("qty", qty);
     formData.append("price", price);
     formData.append("shipping_amount", shipping_amount);
-    formData.append("country", currentAddress?.country);
+    formData.append("country", currentAddress?.country || "Unknown");
     formData.append("size", selectedSizes[product_id] || "");
     formData.append("color", selectedColors[product_id] || "");
     formData.append("cart_id", cart_id);
 
     try {
       const response = await apiInstance.post(`cart/`, formData);
-      console.log(response.data);
       Toast.fire({
         icon: "success",
         title: response.data.message || "Added to cart",
       });
     } catch (error) {
       console.error("Error adding to cart:", error);
+      Toast.fire({
+        icon: "error",
+        title: "Failed to add to cart",
+      });
     }
   };
 
@@ -158,17 +160,21 @@ export default function CategoryProducts() {
                 <p className="mt-1 text-lg font-medium text-gray-900">
                   ₹{product.price}
                 </p>
+                {product.stock_qty === 0 || !product.in_stock ? (
+                  <p className="text-red-600 font-semibold mt-2">
+                    Out of Stock
+                  </p>
+                ) : (
+                  <p className="text-green-600 font-semibold mt-2">In Stock</p>
+                )}
               </div>
-              {product.rating && (
-                <p className="mt-2 text-yellow-500 text-sm">
-                  ⭐ {product.rating}
-                </p>
-              )}
+
               {product.category && (
                 <p className="text-sm text-gray-500">
                   Category: {product.category.title}
                 </p>
               )}
+
               <div className="mt-2">
                 {product.size?.length > 0 && (
                   <div>
@@ -210,9 +216,7 @@ export default function CategoryProducts() {
                   </div>
                 )}
                 <div>
-                  <div>
-                    <label>Quantity:</label>
-                  </div>
+                  <label>Quantity:</label>
                   <input
                     type="number"
                     value={quantityValue[product.id] || "0"}
@@ -222,23 +226,53 @@ export default function CategoryProducts() {
                   />
                 </div>
               </div>
+
               <div className="mt-auto flex flex-col gap-2">
                 <button
-                  disabled={!Number(quantityValue[product.id])}
-                  onClick={() =>
+                  onClick={() => {
+                    if (product.stock_qty === 0 || !product.in_stock) {
+                      Swal.fire({
+                        icon: "warning",
+                        title: "Out of Stock",
+                        text: "This product is currently out of stock.",
+                        confirmButtonColor: "#2563eb",
+                      });
+                      return;
+                    }
+
+                    if (!Number(quantityValue[product.id])) {
+                      Swal.fire({
+                        icon: "info",
+                        title: "Select Quantity",
+                        text: "Please enter a quantity before adding to cart.",
+                        confirmButtonColor: "#2563eb",
+                      });
+                      return;
+                    }
+
                     handleAddToCart(
                       product.id,
                       product.price,
                       product.shipping_amount
-                    )
+                    );
+                  }}
+                  disabled={
+                    product.stock_qty === 0 ||
+                    !product.in_stock ||
+                    !Number(quantityValue[product.id])
                   }
                   className={`flex items-center justify-center gap-2 w-full rounded-lg py-2 transition ${
-                    !Number(quantityValue[product.id])
+                    product.stock_qty === 0 || !product.in_stock
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : !Number(quantityValue[product.id])
                       ? "bg-gray-400 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                 >
-                  <ShoppingCart size={18} /> Add to Cart
+                  <ShoppingCart size={18} />
+                  {product.stock_qty === 0 || !product.in_stock
+                    ? "Out of Stock"
+                    : "Add to Cart"}
                 </button>
 
                 <button className="flex items-center justify-center gap-2 w-full rounded-lg border border-gray-300 py-2 hover:bg-gray-100 transition">
@@ -249,6 +283,7 @@ export default function CategoryProducts() {
           ))}
         </div>
       </div>
+
       {categories && categories.length > 0 ? (
         <Categories categories={categories} />
       ) : null}
