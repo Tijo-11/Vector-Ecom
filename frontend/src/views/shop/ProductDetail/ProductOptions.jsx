@@ -14,6 +14,7 @@ export default function ProductOptions({
   country,
   user,
   cartId,
+  isOutOfStock, // ✅ from ProductDetail
 }) {
   const Toast = Swal.mixin({
     toast: true,
@@ -56,7 +57,6 @@ export default function ProductOptions({
     }
   }, [product]);
 
-  // Fetch wishlist on component mount if user is logged in
   useEffect(() => {
     if (userData?.user_id) {
       fetchWishlist();
@@ -65,16 +65,12 @@ export default function ProductOptions({
 
   const handleColorButtonClick = (colorName, colorImage) => {
     setColorValue(colorName);
-    if (colorImage) {
-      setMainImage(colorImage);
-    }
+    if (colorImage) setMainImage(colorImage);
   };
 
   const handleSizeButtonClick = (sizeName, sizeImage) => {
     setSizeValue(sizeName);
-    if (sizeImage) {
-      setMainImage(sizeImage);
-    }
+    if (sizeImage) setMainImage(sizeImage);
   };
 
   const handleQuantityChange = (event) => {
@@ -82,6 +78,17 @@ export default function ProductOptions({
   };
 
   const handleAddToCart = async () => {
+    // 🔒 Prevent adding to cart if product is out of stock
+    if (isOutOfStock) {
+      Swal.fire({
+        icon: "info",
+        title: "Out of Stock",
+        text: "This product is currently unavailable.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append("product", product.id);
     formData.append("user", user || "");
@@ -106,21 +113,16 @@ export default function ProductOptions({
       // Sync with backend
       const cart_id = CartId();
       const userData = UserData();
-
       const url = userData?.user_id
         ? `/cart-list/${cart_id}/${userData.user_id}/`
         : `/cart-list/${cart_id}/`;
 
       const res = await apiInstance.get(url);
-
       const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
       setCartCount(totalQty);
     } catch (error) {
       console.error("Error adding to cart:", error);
-
-      // Rollback optimistic update
       setCartCount((prev) => Math.max(prev - Number(qtyValue), 0));
-
       Toast.fire({
         icon: "error",
         title: "Failed to add to cart",
@@ -131,7 +133,7 @@ export default function ProductOptions({
   const handleAddToWishlist = async (product_id) => {
     try {
       await addToWishlist(product_id, userData?.user_id);
-      fetchWishlist(); // Refresh wishlist after adding/removing
+      fetchWishlist();
     } catch (error) {
       console.log("Error updating wishlist:", error);
     }
@@ -139,7 +141,7 @@ export default function ProductOptions({
 
   return (
     <div>
-      {/* Features (Specifications) */}
+      {/* Features */}
       <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
       <ul className="list-disc list-inside text-gray-700">
         {specification.length > 0 ? (
@@ -153,7 +155,7 @@ export default function ProductOptions({
         )}
       </ul>
 
-      {/* Color Selection */}
+      {/* Color */}
       {color.length > 0 && (
         <>
           <h6 className="text-lg font-semibold mb-2">
@@ -175,7 +177,7 @@ export default function ProductOptions({
         </>
       )}
 
-      {/* Size Selection */}
+      {/* Size */}
       {size.length > 0 && (
         <>
           <h6 className="text-lg font-semibold mb-2">
@@ -196,7 +198,7 @@ export default function ProductOptions({
         </>
       )}
 
-      {/* Quantity Input */}
+      {/* Quantity */}
       <div className="mb-4">
         <label className="text-lg font-semibold mb-2">Quantity:</label>
         <input
@@ -204,35 +206,48 @@ export default function ProductOptions({
           min="1"
           value={qtyValue}
           onChange={handleQuantityChange}
-          className="w-20 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={isOutOfStock}
+          className={`w-20 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            isOutOfStock ? "bg-gray-100 cursor-not-allowed" : ""
+          }`}
         />
       </div>
 
+      {/* Buttons */}
       <div className="mt-4 flex flex-col gap-2">
         <button
-          className="flex items-center justify-center gap-2 w-2/5 rounded-lg bg-blue-600 text-white py-1.5 hover:bg-blue-700 transition"
+          className={`flex items-center justify-center gap-2 w-2/5 rounded-lg py-1.5 transition ${
+            isOutOfStock
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
           onClick={handleAddToCart}
+          disabled={isOutOfStock}
         >
-          <ShoppingCart size={16} /> Add
+          <ShoppingCart size={16} />
+          {isOutOfStock ? "Out of Stock" : "Add to Cart"}
         </button>
-        {isLoggedIn ? (
+
+        {isLoggedIn && (
           <button
             onClick={() => handleAddToWishlist(product.id)}
+            disabled={isOutOfStock}
             className={`flex items-center justify-center gap-2 w-2/5 rounded-lg py-1.5 transition ${
               wishlist.some((item) => item.product.id === product.id)
-                ? "bg-gray-400 text-white hover:bg-gray-500 border-none"
-                : "bg-red-600 text-white hover:bg-red-700 border-none"
-            }`}
+                ? "bg-gray-400 text-white hover:bg-gray-500"
+                : "bg-red-600 text-white hover:bg-red-700"
+            } ${isOutOfStock ? "opacity-60 cursor-not-allowed" : ""}`}
           >
             <Heart size={16} />
             {wishlist.some((item) => item.product.id === product.id)
               ? "Remove from Wishlist"
               : "Add to Wishlist"}
           </button>
-        ) : null}
+        )}
       </div>
 
-      <h3 className="text-lg font-semibold mb-2">Description:</h3>
+      {/* Description */}
+      <h3 className="text-lg font-semibold mb-2 mt-4">Description:</h3>
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 max-w-full overflow-auto">
         {product.description ? (
           <p className="text-gray-700 whitespace-pre-line">

@@ -7,6 +7,7 @@ import UserCountry from "./UserCountry";
 import UserData from "../../../plugin/UserData";
 import CartId from "./cartId";
 import Review from "./Review";
+import Swal from "sweetalert2";
 
 export default function ProductDetail() {
   const [product, setProduct] = useState({});
@@ -14,7 +15,7 @@ export default function ProductDetail() {
   const param = useParams();
   const currentAddress = UserCountry();
   const userData = UserData();
-  const cartId = CartId(); // Get cart ID from CartId component
+  const cartId = CartId();
 
   useEffect(() => {
     apiInstance.get(`products/${param.slug}/`).then((response) => {
@@ -22,12 +23,31 @@ export default function ProductDetail() {
       setMainImage(response.data.image);
       console.log(response.data);
     });
-  }, []);
+  }, [param.slug]);
 
   const allImages = [
     { id: "main", image: product.image },
     ...(product?.gallery || []),
   ];
+
+  // Check if product is out of stock
+  const isOutOfStock = product.stock_qty === 0 || !product.in_stock;
+
+  // Show an alert if the product is out of stock
+  useEffect(() => {
+    if (isOutOfStock && product.id) {
+      Swal.fire({
+        icon: "info",
+        title: "Out of Stock",
+        text: "This product is presently out of stock. Please check back later.",
+        confirmButtonColor: "#2563eb",
+        timer: 3000,
+        timerProgressBar: true,
+        toast: true,
+        position: "top-end",
+      });
+    }
+  }, [isOutOfStock, product.id]);
 
   return (
     <div className="bg-gray-100">
@@ -38,7 +58,7 @@ export default function ProductDetail() {
             {mainImage && (
               <img
                 src={mainImage}
-                alt="Product"
+                alt={product.title || "Product"}
                 className="w-full h-auto rounded-lg shadow-md mb-4"
               />
             )}
@@ -61,12 +81,23 @@ export default function ProductDetail() {
           <div className="w-full md:w-1/2 px-4">
             <h2 className="text-3xl font-bold mb-2">{product.title}</h2>
             <p className="text-gray-600 mb-4">SKU: {product.sku}</p>
+
             <div className="mb-4">
               <span className="text-2xl font-bold mr-2">₹{product.price}</span>
-              <span className="text-gray-500 line-through">
-                ₹{product.old_price}
-              </span>
+              {product.old_price && (
+                <span className="text-gray-500 line-through">
+                  ₹{product.old_price}
+                </span>
+              )}
             </div>
+
+            {/* Out of Stock Badge */}
+            {isOutOfStock && (
+              <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm font-medium">
+                Out of Stock — This product is presently unavailable. Please
+                check back later.
+              </div>
+            )}
 
             {/* Rating */}
             <div className="flex items-center mb-4">
@@ -76,7 +107,9 @@ export default function ProductDetail() {
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
                   fill={
-                    i < Math.floor(product.rating) ? "currentColor" : "none"
+                    i < Math.floor(product.rating || 0)
+                      ? "currentColor"
+                      : "none"
                   }
                   stroke="currentColor"
                   className="size-6 text-yellow-500"
@@ -102,20 +135,32 @@ export default function ProductDetail() {
 
             <p className="text-gray-700 mb-6">{product.brand}</p>
 
-            {/* Product Options */}
+            {/* Product Options & Add to Cart */}
             <ProductOptions
               product={product}
               setMainImage={setMainImage}
               country={currentAddress.country}
               user={userData.user_id}
               cartId={cartId}
+              isOutOfStock={isOutOfStock}
             />
+
+            {/* Disabled Out of Stock Button */}
+            {isOutOfStock && (
+              <button
+                disabled
+                className="w-full py-3 mt-4 rounded-lg bg-gray-400 text-white font-semibold cursor-not-allowed"
+              >
+                Out of Stock
+              </button>
+            )}
           </div>
         </div>
 
         {/* Related Products */}
         <RelatedProducts related={product.related} />
-        {/*Review*/}
+
+        {/* Review Section */}
         <div
           className="tab-pane fade"
           id="pills-contact"
@@ -125,7 +170,6 @@ export default function ProductDetail() {
         >
           <Review product={product} userData={userData} />
         </div>
-        {/* Passing Props to Review component */}
       </div>
     </div>
   );

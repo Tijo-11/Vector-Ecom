@@ -1,4 +1,6 @@
 from .common import *
+from django.db import transaction  # Add this import for atomic transaction
+from decimal import Decimal
 
 class CreateOrderView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
@@ -35,58 +37,74 @@ class CreateOrderView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        total_shipping = Decimal(0.00)
-        total_tax = Decimal(0.00)
-        total_service_fee = Decimal(0.00)
-        total_subtotal = Decimal(0.00)
-        total_initial_total = Decimal(0.00)
-        total_total = Decimal(0.00)  # After applying coupon
-        
-        order = CartOrder.objects.create(
-            full_name=full_name,
-            email=email,
-            city=city,
-            address=address,
-            country=country,
-            mobile=mobile,
-            state=state,postal_code=postal_code,
-            buyer=user  # Assign user (None if no valid user)
-        )
-        
-        for c in cart_items:
-            CartOrderItem.objects.create(  # Fixed typo: 'object' to 'objects'
-                order=order,
-                product=c.product,
-                vendor=c.product.vendor,
-                qty=c.qty,
-                color=c.color,
-                size=c.size,
-                price=c.price,
-                sub_total=c.sub_total,
-                shipping_amount=c.shipping_amount,
-                service_fee=c.service_fee,
-                total=c.total,
-                tax_fee=c.tax_fee,
-                initial_total=c.total
+        # Use a database transaction to ensure stock updates are atomic with order creation
+        with transaction.atomic():
+            total_shipping = Decimal(0.00)
+            total_tax = Decimal(0.00)
+            total_service_fee = Decimal(0.00)
+            total_subtotal = Decimal(0.00)
+            total_initial_total = Decimal(0.00)
+            total_total = Decimal(0.00)  # After applying coupon
+            
+            order = CartOrder.objects.create(
+                full_name=full_name,
+                email=email,
+                city=city,
+                address=address,
+                country=country,
+                mobile=mobile,
+                state=state,
+                postal_code=postal_code,
+                buyer=user  # Assign user (None if no valid user)
             )
             
-            total_shipping += Decimal(c.shipping_amount)
-            total_tax += Decimal(c.tax_fee)
-            total_service_fee += Decimal(c.service_fee)
-            total_subtotal += Decimal(c.sub_total)
-            total_initial_total += Decimal(c.total)
-            total_total += Decimal(c.total)  # After applying coupon
+            for c in cart_items:
+                CartOrderItem.objects.create(  # Fixed typo: 'object' to 'objects'
+                    order=order,
+                    product=c.product,
+                    vendor=c.product.vendor,
+                    qty=c.qty,
+                    color=c.color,
+                    size=c.size,
+                    price=c.price,
+                    sub_total=c.sub_total,
+                    shipping_amount=c.shipping_amount,
+                    service_fee=c.service_fee,
+                    total=c.total,
+                    tax_fee=c.tax_fee,
+                    initial_total=c.total
+                )
+                
+                total_shipping += Decimal(c.shipping_amount)
+                total_tax += Decimal(c.tax_fee)
+                total_service_fee += Decimal(c.service_fee)
+                total_subtotal += Decimal(c.sub_total)
+                total_initial_total += Decimal(c.total)
+                total_total += Decimal(c.total)  # After applying coupon
+                
+                order.vendor.add(c.product.vendor)
+                
+                # Update product stock after creating the order item
+                # This ensures stock is decreased only on successful order placement
+                product = c.product
+                if product.stock_qty >= c.qty:
+                    product.stock_qty -= c.qty
+                    product.save()  # This will also update in_stock via the model's save method
+                else:
+                    # If stock is insufficient, you might want to handle this (e.g., rollback or error)
+                    # For now, we'll assume validation happened earlier; adjust as needed
+                    raise ValueError(f"Insufficient stock for product {product.title}: {c.qty} requested, {product.stock_qty} available")
             
-            order.vendor.add(c.product.vendor)
+            order.sub_total = total_subtotal
+            order.shipping_amount = total_shipping
+            order.tax_fee = total_tax
+            order.service_fee = total_service_fee
+            order.initial_total = total_initial_total
+            order.total = total_total
+            
+            order.save()
         
-        order.sub_total = total_subtotal
-        order.shipping_amount = total_shipping
-        order.tax_fee = total_tax
-        order.service_fee = total_service_fee
-        order.initial_total = total_initial_total
-        order.total = total_total
-        
-        order.save()
+        # Transaction commits here on success; rolls back on any exception (e.g., stock issues)
         return Response(
             {"message": "Order Created Successfully", "order_oid": order.oid},
             status=status.HTTP_201_CREATED
@@ -174,9 +192,3 @@ class OrdersDetailAPIView(generics.RetrieveAPIView):
     oid=order_id
 )
         return order
-        
-        
-    
-        
-        
-        
