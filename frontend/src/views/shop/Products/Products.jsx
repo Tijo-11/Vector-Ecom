@@ -25,7 +25,6 @@ export default function Products() {
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState([]);
   const [selectedColors, setSelectedColors] = useState({});
   const [selectedSizes, setSelectedSizes] = useState({});
   const [quantityValue, setQuantityValue] = useState({});
@@ -62,12 +61,6 @@ export default function Products() {
       setProducts(response.data);
       setQuantityValue(initialQuantities);
       setLoading(false);
-    });
-  }, []);
-
-  useEffect(() => {
-    apiInstance.get(`category/`).then((response) => {
-      setCategories(response.data);
     });
   }, []);
 
@@ -345,9 +338,7 @@ export default function Products() {
           ))}
         </div>
       </div>
-      {categories && categories.length > 0 ? (
-        <Categories categories={categories} />
-      ) : null}
+
       {showScrollTop && (
         <button
           onClick={scrollToTop}

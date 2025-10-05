@@ -3,6 +3,7 @@ import { Routes, Route, BrowserRouter } from "react-router-dom";
 import Login from "./views/auth/login";
 import Register from "./views/auth/Register";
 import PrivateRoute from "./layouts/PrivateRoute"; // Importing the 'PrivateRoute' component.
+import CartInitializer from "./utils/CartInitializer";
 //import Private from "./views/auth/private"; // Importing the 'Private' component.
 import Logout from "./views/auth/Logout";
 import ForgotPassword from "./views/auth/ForgotPassword";
@@ -47,40 +48,24 @@ import Shop from "./views/vendor/Shop";
 import VendorRegister from "./views/vendor/VendorRegister";
 import AddProduct from "./views/vendor/AddProduct";
 import UpdateProduct from "./views/vendor/UpdateProduct.jsx";
+///////---------------
+import AdminDashboard from "./views/admin/AdminDashboard.jsx";
+import ProductManagement from "./views/admin/ProductManagement.jsx";
+import OrderManagement from "./views/admin/OrderManagement.jsx";
+import ServiceFees from "./views/admin/ServiceFees.jsx";
+import Reports from "./views/admin/Reports.jsx";
+import AdminNotifications from "./views/admin/AdminNotifications.jsx";
+import AdminSettings from "./views/admin/AdminSettings.jsx";
+import VendorManagement from "./views/admin/VendorManagement.jsx";
 
-//
 export default function App() {
-  const [count, setCount] = useState(0);
   const [cartCount, setCartCount] = useState(0);
-
-  const cart_id = CartId();
-  const userData = UserData();
-
-  useEffect(() => {
-    const url = userData?.user_id
-      ? `/cart-list/${cart_id}/${userData?.user_id}/`
-      : `/cart-list/${cart_id}/`;
-    apiInstance.get(url).then((res) => {
-      const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
-      setCartCount(totalQty);
-    });
-  }, [cart_id, userData?.user_id]);
-
   return (
     <CartContext.Provider value={[cartCount, setCartCount]}>
       <BrowserRouter>
         <StoreHeader />
         <MainWrapper>
           <Routes>
-            {/* <Route // Define a specific route.
-            path="/private" // Set the route path to "/private".
-            element={
-              // Render the element when this route matches.
-              <PrivateRoute>
-                <Private />
-              </PrivateRoute>
-            }
-          /> */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -282,6 +267,18 @@ export default function App() {
             />
             <Route path="/vendor/:slug/" element={<Shop />} />
             <Route path="/vendor/register/" element={<VendorRegister />} />
+            {/*Admin Routes*/}
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/vendors" element={<VendorManagement />} />
+            <Route path="/admin/products" element={<ProductManagement />} />
+            <Route path="/admin/orders" element={<OrderManagement />} />
+            <Route path="/admin/service-fees" element={<ServiceFees />} />
+            <Route path="/admin/reports" element={<Reports />} />
+            <Route
+              path="/admin/notifications"
+              element={<AdminNotifications />}
+            />
+            <Route path="/admin/settings" element={<AdminSettings />} />
             {/* Not Found*/}
             <Route path="*" element={<NotFund />} />
           </Routes>

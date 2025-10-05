@@ -1,16 +1,30 @@
+import { useState, useEffect } from "react";
 import {
   FaFacebookF,
   FaPinterestP,
   FaYoutube,
   FaInstagram,
 } from "react-icons/fa";
+import apiInstance from "../../utils/axios";
 import { Link } from "react-router-dom";
 import { FaXTwitter } from "react-icons/fa6"; // Twitter → X logo
+import Categories from "../shop/category/Categories";
 
 function StoreFooter() {
+  const [categories, setCategories] = useState([]);
+  useEffect(() => {
+    apiInstance.get(`category/`).then((response) => {
+      setCategories(response.data);
+    });
+  }, []);
   return (
     <footer className="bg-gray-100 text-gray-800">
       {/* Top Section */}
+      {/*Categories*/}
+      {categories && categories.length > 0 ? (
+        <Categories categories={categories} />
+      ) : null}
+
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Social Row */}
         <div className="flex flex-col md:flex-row items-center justify-between border-b border-gray-300 pb-6 mb-6">
