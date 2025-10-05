@@ -5,14 +5,14 @@ import cartID from "../ProductDetail/cartId";
 import UserCountry from "../ProductDetail/UserCountry";
 import { toast } from "../../../utils/toast";
 import { CartContext } from "../../../plugin/Context";
-import Swal from "sweetalert2"; // ✅ Add this import
+import Swal from "sweetalert2";
 
 function CartItem({ cartItems, setCart, setCartTotal }) {
   const [productQuantities, setProductQuantities] = useState({});
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
   const currentAddress = UserCountry();
-  const [cartCount, setCartCount] = useContext(CartContext); // ✅ Added CartContext
+  const [cartCount, setCartCount] = useContext(CartContext);
 
   useEffect(() => {
     const initialQuantities = {};
@@ -29,6 +29,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       [product_id]: quantity,
     }));
   };
+
   const updateCart = async (
     product_id,
     qty_value,
@@ -85,11 +86,11 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
       setCartTotal({
         itemCount: updatedCart.data.length || 0,
-        sub_total: totalResponse.data.sub_total || 0,
-        shipping: totalResponse.data.shipping || 0,
-        tax: totalResponse.data.tax || 0,
-        service_fee: totalResponse.data.service_fee || 0,
-        total: totalResponse.data.total || 0,
+        sub_total: totalResponse.data?.sub_total || 0, // ✅ Fallback for safety
+        shipping: totalResponse.data?.shipping || 0,
+        tax: totalResponse.data?.tax || 0,
+        service_fee: totalResponse.data?.service_fee || 0,
+        total: totalResponse.data?.total || 0,
       });
 
       // Sync CartContext
@@ -100,61 +101,73 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       setCartCount(totalQty);
     } catch (error) {
       console.error("Error updating cart:", error);
-      setCartCount(previousCartCount);
-      toast.fire({ icon: "error", title: "Failed to update cart" });
-
-      // ❌ Rollback optimistic update
-      setCartCount(previousCartCount);
-
-      toast.fire({
-        icon: "error",
-        title: "Failed to update cart",
-      });
+      setCartCount(previousCartCount); // Rollback optimistic update
+      toast.fire({ icon: "error", title: "Failed to update cart" }); // ✅ Single toast
     }
   };
 
   const handleDeleteCartItem = async (item_id) => {
+    const previousCart = [...cartItems];
+    const previousCartCount = cartCount;
+
     const url = user?.user_id
       ? `/cart-delete/${cart_id}/${item_id}/${user.user_id}/`
       : `/cart-delete/${cart_id}/${item_id}/`;
 
     try {
+      // DELETE first
       const response = await apiInstance.delete(url);
       console.log(response.data);
-      toast.fire({
-        icon: "success",
-        title: "Item removed from cart",
-      });
 
-      const cartResponse = await apiInstance.get(
-        user?.user_id
-          ? `/cart-list/${cart_id}/${user.user_id}/`
-          : `/cart-list/${cart_id}/`
-      );
+      // Then fetch updated cart (critical: do this regardless of totals)
+      const cartUrl = user?.user_id
+        ? `/cart-list/${cart_id}/${user.user_id}/`
+        : `/cart-list/${cart_id}/`;
+      const cartResponse = await apiInstance.get(cartUrl);
+
+      // Update cart & count immediately (since these succeed)
       setCart(cartResponse.data || []);
-
-      const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
-      setCartTotal({
-        itemCount: cartResponse.data.length || 0,
-        sub_total: totalResponse.data.sub_total || 0,
-        shipping: totalResponse.data.shipping || 0,
-        tax: totalResponse.data.tax || 0,
-        service_fee: totalResponse.data.service_fee || 0,
-        total: totalResponse.data.total || 0,
-      });
-
-      // ✅ Update CartContext after deletion
       const totalQty = cartResponse.data.reduce(
         (sum, item) => sum + item.qty,
         0
       );
       setCartCount(totalQty);
+
+      // Now try to fetch/update totals (non-blocking)
+      try {
+        const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
+        setCartTotal({
+          itemCount: cartResponse.data.length || 0,
+          sub_total: totalResponse.data?.sub_total || 0, // ✅ Fallbacks
+          shipping: totalResponse.data?.shipping || 0,
+          tax: totalResponse.data?.tax || 0,
+          service_fee: totalResponse.data?.service_fee || 0,
+          total: totalResponse.data?.total || 0,
+        });
+      } catch (totalError) {
+        console.warn(
+          "Totals fetch failed after delete (non-critical):",
+          totalError
+        );
+        // Fallback to zeroed totals or current state—don't rollback cart!
+        setCartTotal({
+          itemCount: cartResponse.data.length || 0,
+          sub_total: 0,
+          shipping: 0,
+          tax: 0,
+          service_fee: 0,
+          total: 0,
+        });
+      }
+
+      // Success! (DELETE + cart update worked)
+      toast.fire({ icon: "success", title: "Item removed from cart" });
     } catch (error) {
-      console.error("Error deleting cart item:", error);
-      toast.fire({
-        icon: "error",
-        title: "Failed to remove item",
-      });
+      console.error("Critical error in delete (DELETE or cart fetch):", error);
+      // Only rollback if core ops fail
+      setCart(previousCart);
+      setCartCount(previousCartCount);
+      toast.fire({ icon: "error", title: "Failed to remove item" });
     }
   };
 
