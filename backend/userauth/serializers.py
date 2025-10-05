@@ -82,7 +82,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         
     def to_representation(self, instance):# Overrides default output format of serializer
         response = super().to_representation(instance)## Adds nested 'user' data using UserSerializer
-        response['user'] = UserSerializer(instance.user).data
+        response['user'] = UserSerializer(instance).data
         return response
 
 

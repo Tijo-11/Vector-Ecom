@@ -1,4 +1,3 @@
-// src/utils/CartInitializer.jsx
 import { useEffect, useContext, useState } from "react";
 import { CartContext } from "../plugin/Context";
 import { useAuthStore } from "../store/auth";
@@ -24,30 +23,33 @@ const CartInitializer = () => {
       let currentCartId = CartId();
 
       if (isLoggedIn && user?.user_id) {
-        const anonymousCartId = localStorage.getItem("random_string");
+        const userCartKey = `cart_id_user_${user.user_id}`;
 
         try {
+          // CRITICAL: Don't send any anonymous cart_id - just fetch user's cart from backend
           const mergeResponse = await apiInstance.post("/cart-merge/", {
             user_id: user.user_id,
-            cart_id: anonymousCartId || currentCartId || null,
+            cart_id: null, // Never send anonymous cart
           });
 
           const { cart_id, cart_count, start_new } = mergeResponse.data;
 
           if (start_new || !cart_id) {
-            // No active cart or placed → start new
+            // No active cart → start new
             currentCartId = generateRandomString();
-            localStorage.setItem(`cart_id_user_${user.user_id}`, currentCartId);
+            localStorage.setItem(userCartKey, currentCartId);
             setCartCount(0);
           } else {
+            // Use cart from backend
             currentCartId = cart_id;
-            localStorage.setItem(`cart_id_user_${user.user_id}`, currentCartId);
-            if (anonymousCartId && cart_id !== anonymousCartId) {
-              localStorage.removeItem("random_string");
-            }
+            localStorage.setItem(userCartKey, currentCartId);
             setCartCount(cart_count || 0);
           }
-          console.log("Cart merged/loaded:", {
+
+          // Clean up any anonymous cart reference
+          localStorage.removeItem("random_string");
+
+          console.log("User cart loaded:", {
             cart_id: currentCartId,
             cart_count,
           });
@@ -56,12 +58,12 @@ const CartInitializer = () => {
           // Fallback: Generate new if error
           if (!currentCartId) {
             currentCartId = generateRandomString();
-            localStorage.setItem(`cart_id_user_${user.user_id}`, currentCartId);
+            localStorage.setItem(userCartKey, currentCartId);
           }
           setCartCount(0);
         }
       } else {
-        // Anonymous
+        // Anonymous user
         if (!currentCartId) {
           currentCartId = generateRandomString();
           localStorage.setItem("random_string", currentCartId);

@@ -1,4 +1,3 @@
-// src/views/shop/ProductDetail/cartId.js
 export const generateRandomString = () => {
   const length = 30;
   const characters = "abcdefghijklmnopqrstuvwxyz";
@@ -18,12 +17,14 @@ export default function CartId() {
     let userCartId = localStorage.getItem(userCartKey);
 
     if (!userCartId) {
+      // Will be set by CartInitializer after fetching from backend
       userCartId = generateRandomString();
       localStorage.setItem(userCartKey, userCartId);
     }
 
     return userCartId;
   } else {
+    // Anonymous user
     let existingRandomString = localStorage.getItem("random_string");
 
     if (!existingRandomString) {

@@ -177,7 +177,6 @@ class CartMergeAPIView(APIView):
     def post(self, request):
         try:
             user_id = request.data.get('user_id')
-            anonymous_cart_id = request.data.get('cart_id')
             
             if not user_id:
                 return Response({"error": "user_id required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -188,75 +187,26 @@ class CartMergeAPIView(APIView):
             except (ValueError, User.DoesNotExist):
                 return Response({"error": "Invalid or not found user"}, status=status.HTTP_404_NOT_FOUND)
             
-            # Get user's active cart_id
+            # Get user's active cart_id from backend
             user_cart_id = get_active_user_cart(user)
             
             if user_cart_id:
-                # Merge anonymous into user's active cart
-                if anonymous_cart_id:
-                    anonymous_items = Cart.objects.filter(cart_id=anonymous_cart_id, user__isnull=True, is_active=True)
-                    for anon_item in anonymous_items:
-                        existing_item = Cart.objects.filter(
-                            cart_id=user_cart_id, user=user, product=anon_item.product,
-                            size=anon_item.size, color=anon_item.color, is_active=True
-                        ).first()
-                        
-                        if existing_item:
-                            # Merge qty
-                            existing_item.qty += anon_item.qty
-                            existing_item.sub_total = existing_item.price * existing_item.qty
-                            existing_item.shipping_amount = (anon_item.shipping_amount or Decimal('0')) * existing_item.qty
-                            
-                            # Recalc tax/fee (reuse country from existing or anon)
-                            country = existing_item.country or anon_item.country
-                            tax_obj = Tax.objects.filter(country=country).first()
-                            tax_rate = (tax_obj.rate / 100) if tax_obj else Decimal('0.05')
-                            existing_item.tax_fee = existing_item.sub_total * tax_rate
-                            existing_item.service_fee = existing_item.sub_total * Decimal('0.02')
-                            existing_item.total = (existing_item.sub_total + existing_item.shipping_amount +
-                                                   existing_item.service_fee + existing_item.tax_fee)
-                            existing_item.save()
-                            
-                            # Deactivate anon
-                            anon_item.is_active = False
-                            anon_item.save()
-                        else:
-                            # Move to user cart
-                            anon_item.cart_id = user_cart_id
-                            anon_item.user = user
-                            anon_item.save()
-                    
-                    # Deactivate remaining anon cart
-                    Cart.objects.filter(cart_id=anonymous_cart_id, is_active=True).update(is_active=False)
-                
+                # User has an active cart - return it
                 count = Cart.objects.filter(cart_id=user_cart_id, user=user, is_active=True).count()
                 return Response({
                     "cart_id": user_cart_id,
-                    "message": "Active user cart loaded/merged",
-                    "start_new": False,  # Signal for frontend
+                    "message": "User cart loaded",
+                    "start_new": False,
                     "cart_count": count
                 }, status=status.HTTP_200_OK)
-            
             else:
-                # No active user cart → associate anonymous or signal new
-                if anonymous_cart_id:
-                    # Move all to user (keep cart_id)
-                    Cart.objects.filter(cart_id=anonymous_cart_id, is_active=True).update(user=user)
-                    count = Cart.objects.filter(cart_id=anonymous_cart_id, user=user, is_active=True).count()
-                    return Response({
-                        "cart_id": anonymous_cart_id,
-                        "message": "Anonymous cart associated with user",
-                        "start_new": False,
-                        "cart_count": count
-                    }, status=status.HTTP_200_OK)
-                else:
-                    # No cart at all → start fresh (frontend generates new cart_id)
-                    return Response({
-                        "cart_id": None,
-                        "message": "No active cart; start new",
-                        "start_new": True,
-                        "cart_count": 0
-                    }, status=status.HTTP_200_OK)
+                # No active cart - signal to start new
+                return Response({
+                    "cart_id": None,
+                    "message": "No active cart; start new",
+                    "start_new": True,
+                    "cart_count": 0
+                }, status=status.HTTP_200_OK)
         
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
