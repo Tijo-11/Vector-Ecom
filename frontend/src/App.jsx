@@ -47,8 +47,16 @@ import Shop from "./views/vendor/Shop";
 import VendorRegister from "./views/vendor/VendorRegister";
 import AddProduct from "./views/vendor/AddProduct";
 import UpdateProduct from "./views/vendor/UpdateProduct.jsx";
+///////---------------
+import AdminDashboard from "./views/admin/AdminDashboard.jsx";
+import ProductManagement from "./views/admin/ProductManagement.jsx";
+import OrderManagement from "./views/admin/OrderManagement.jsx";
+import ServiceFees from "./views/admin/ServiceFees.jsx";
+import Reports from "./views/admin/Reports.jsx";
+import AdminNotifications from "./views/admin/AdminNotifications.jsx";
+import AdminSettings from "./views/admin/AdminSettings.jsx";
+import VendorManagement from "./views/admin/VendorManagement.jsx";
 
-//
 export default function App() {
   const [count, setCount] = useState(0);
   const [cartCount, setCartCount] = useState(0);
@@ -70,9 +78,9 @@ export default function App() {
     <CartContext.Provider value={[cartCount, setCartCount]}>
       <BrowserRouter>
         <StoreHeader />
-        <MainWrapper>
-          <Routes>
-            {/* <Route // Define a specific route.
+        {/* <MainWrapper> */}
+        <Routes>
+          {/* <Route // Define a specific route.
             path="/private" // Set the route path to "/private".
             element={
               // Render the element when this route matches.
@@ -81,211 +89,217 @@ export default function App() {
               </PrivateRoute>
             }
           /> */}
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/logout" element={<Logout />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route
-              path="/create-new-password"
-              element={<CreateNewPassword />}
-            />
-            {/* Shop */}
-            <Route path="/" element={<Products />} />
-            <Route path="/product/:slug" element={<ProductDetail />} />
-            <Route path="/category/:slug" element={<CategoryProducts />} />{" "}
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout/:order_id" element={<Checkout />} />
-            <Route path="/search" element={<Search />} />
-            {/* Payment */}
-            <Route
-              path="/payments-success/:order_id"
-              element={<PaymentSuccess />}
-            />
-            <Route
-              path="/payments-failed/:session_id"
-              element={<PaymentFailed />}
-            />
-            <Route path="/view-order/:order_oid/" element={<ViewOrder />} />
-            {/*Customer Endpoints*/}
-            <Route
-              path="customer/account/"
-              element={
-                <PrivateRoute>
-                  <Account />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/customer/order/detail/:order_oid/"
-              element={
-                <PrivateRoute>
-                  <OrderDetail />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/customer/wishlist/"
-              element={
-                <PrivateRoute>
-                  <Wishlist />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/customer/notifications/"
-              element={
-                <PrivateRoute>
-                  <Notifications />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/customer/settings/"
-              element={
-                <PrivateRoute>
-                  <Settings />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="customer/orders/"
-              element={
-                <PrivateRoute>
-                  <Orders />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="customer/order/invoice/:order_oid"
-              element={
-                <PrivateRoute>
-                  <Invoice />
-                </PrivateRoute>
-              }
-            />
-            {/* Vendor Routes */}
-            <Route
-              path="/vendor/dashboard/"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/products/"
-              element={
-                <PrivateRoute>
-                  <VendorProducts />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/orders/"
-              element={
-                <PrivateRoute>
-                  <VendorOrders />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/orders/:oid/"
-              element={
-                <PrivateRoute>
-                  <VendorOrderDetail />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/orders/:oid/:id/"
-              element={
-                <PrivateRoute>
-                  <AddTracking />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/earning/"
-              element={
-                <PrivateRoute>
-                  <Earning />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/reviews/"
-              element={
-                <PrivateRoute>
-                  <Reviews />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/reviews/:id/"
-              element={
-                <PrivateRoute>
-                  <ReviewDetail />
-                </PrivateRoute>
-              }
-            />
-            <Route path="/detail/:slug" element={<ProductDetail />} />
-            <Route
-              path="/vendor/coupon/"
-              element={
-                <PrivateRoute>
-                  <Coupon />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/coupon/:id/"
-              element={
-                <PrivateRoute>
-                  {" "}
-                  <EditCoupon />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/notifications/"
-              element={
-                <PrivateRoute>
-                  {" "}
-                  <VendorNotifications />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/settings/"
-              element={
-                <PrivateRoute>
-                  <VendorSettings />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/product/new/"
-              element={
-                <PrivateRoute>
-                  <AddProduct />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/vendor/product/update/:product_pid/"
-              element={
-                <PrivateRoute>
-                  <UpdateProduct />
-                </PrivateRoute>
-              }
-            />
-            <Route path="/vendor/:slug/" element={<Shop />} />
-            <Route path="/vendor/register/" element={<VendorRegister />} />
-            {/* Not Found*/}
-            <Route path="*" element={<NotFund />} />
-          </Routes>
-        </MainWrapper>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/logout" element={<Logout />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/create-new-password" element={<CreateNewPassword />} />
+          {/* Shop */}
+          {/* <Route path="/" element={<Products />} /> */}
+          <Route path="/product/:slug" element={<ProductDetail />} />
+          <Route path="/category/:slug" element={<CategoryProducts />} />{" "}
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout/:order_id" element={<Checkout />} />
+          <Route path="/search" element={<Search />} />
+          {/* Payment */}
+          <Route
+            path="/payments-success/:order_id"
+            element={<PaymentSuccess />}
+          />
+          <Route
+            path="/payments-failed/:session_id"
+            element={<PaymentFailed />}
+          />
+          <Route path="/view-order/:order_oid/" element={<ViewOrder />} />
+          {/*Customer Endpoints*/}
+          <Route
+            path="customer/account/"
+            element={
+              <PrivateRoute>
+                <Account />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/customer/order/detail/:order_oid/"
+            element={
+              <PrivateRoute>
+                <OrderDetail />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/customer/wishlist/"
+            element={
+              <PrivateRoute>
+                <Wishlist />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/customer/notifications/"
+            element={
+              <PrivateRoute>
+                <Notifications />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/customer/settings/"
+            element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="customer/orders/"
+            element={
+              <PrivateRoute>
+                <Orders />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="customer/order/invoice/:order_oid"
+            element={
+              <PrivateRoute>
+                <Invoice />
+              </PrivateRoute>
+            }
+          />
+          {/* Vendor Routes */}
+          <Route
+            path="/vendor/dashboard/"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/products/"
+            element={
+              <PrivateRoute>
+                <VendorProducts />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/orders/"
+            element={
+              <PrivateRoute>
+                <VendorOrders />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/orders/:oid/"
+            element={
+              <PrivateRoute>
+                <VendorOrderDetail />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/orders/:oid/:id/"
+            element={
+              <PrivateRoute>
+                <AddTracking />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/earning/"
+            element={
+              <PrivateRoute>
+                <Earning />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/reviews/"
+            element={
+              <PrivateRoute>
+                <Reviews />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/reviews/:id/"
+            element={
+              <PrivateRoute>
+                <ReviewDetail />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/detail/:slug" element={<ProductDetail />} />
+          <Route
+            path="/vendor/coupon/"
+            element={
+              <PrivateRoute>
+                <Coupon />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/coupon/:id/"
+            element={
+              <PrivateRoute>
+                {" "}
+                <EditCoupon />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/notifications/"
+            element={
+              <PrivateRoute>
+                {" "}
+                <VendorNotifications />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/settings/"
+            element={
+              <PrivateRoute>
+                <VendorSettings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/product/new/"
+            element={
+              <PrivateRoute>
+                <AddProduct />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vendor/product/update/:product_pid/"
+            element={
+              <PrivateRoute>
+                <UpdateProduct />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/vendor/:slug/" element={<Shop />} />
+          <Route path="/vendor/register/" element={<VendorRegister />} />
+          {/*Admin Routes*/}
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/vendors" element={<VendorManagement />} />
+          <Route path="/admin/products" element={<ProductManagement />} />
+          <Route path="/admin/orders" element={<OrderManagement />} />
+          <Route path="/admin/service-fees" element={<ServiceFees />} />
+          <Route path="/admin/reports" element={<Reports />} />
+          <Route path="/admin/notifications" element={<AdminNotifications />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          {/* Not Found*/}
+          <Route path="*" element={<NotFund />} />
+        </Routes>
+        {/* </MainWrapper> */}
         <StoreFooter />
       </BrowserRouter>
     </CartContext.Provider>
