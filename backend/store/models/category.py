@@ -50,7 +50,7 @@ class Category(models.Model):
             uniqueid = uuid_key[:4]
             self.slug = slugify(self.title) +'-' + str(uniqueid.lower())
         super(Category, self).save(*args, **kwargs)
-#invoking the save() method from the superclass of Category, which is common in Django models when you 
+#invoking the save() method from the superclass of Category,
 
 #/****************************************************************************************/    
 # Model for Tags

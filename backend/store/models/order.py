@@ -1,11 +1,17 @@
 #Cart, CartOrder, CartOrderItem, CancelOrder, Coupon, CouponUsers, DeliveryCountries
-from .common import *
+
+
+from django.db import models 
+from django.utils.html import mark_safe 
+from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator 
+from userauth.models import User
+from vendor.models import Vendor 
+from shortuuid.django_fields import ShortUUIDField
 from .product import Product
-from .choices import *
+from .choices import PAYMENT_STATUS, ORDER_STATUS, DELIVERY_STATUS
 from django.core.validators import RegexValidator
 from django.utils.text import gettext_lazy as _
-
-
 
 class Cart(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)

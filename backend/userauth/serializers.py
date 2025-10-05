@@ -4,7 +4,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from rest_framework import serializers
 
-from rest_framework.validators import UniqueValidator 
+
 
 
 
@@ -17,7 +17,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
 
         token = super().get_token(user)
-        
+        token['user_id'] = user.id  # Add this line
         token['full_name'] = user.full_name
        
         token['email'] = user.email
