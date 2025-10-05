@@ -42,7 +42,7 @@ class RazorpayCheckoutView(generics.CreateAPIView):
                 'payment_capture': 1,
                 'notes': {'store_name': config('STORE_NAME', 'RetroRelics')}
             })
-            order.stripe_session_id = razorpay_order['id']
+            order.razorpay_session_id = razorpay_order['id']
             order.save()
             return Response({
                 'id': razorpay_order['id'],
@@ -228,7 +228,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                 if payment["status"] == "captured":
                     with transaction.atomic():
                         order.payment_status = "paid"
-                        order.stripe_session_id = session_id
+                        order.razorpay_session_id = session_id
                         order.save()
                         self.deduct_stock(order_items)
                     self.send_all_notifications(order, order_items)

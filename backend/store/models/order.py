@@ -77,13 +77,9 @@ class CartOrder(models.Model):
     )
     
     coupons = models.ManyToManyField('store.Coupon', blank=True)
-    #Changing stripe_session_id to razorpay_session_id in models.py and running migrations could cause issues 
-    # if existing data references stripe_session_id, as Django will treat it as a new field, potentially leading
-    # to data loss or errors. Instead, keep stripe_session_id and add a comment clarifying it stores the Razorpay
-    # order ID. Update views.py and Checkout.jsx to use this field for Razorpay integration. No migration is
-    # needed, avoiding disruption to existing products/vendors.
     
-    stripe_session_id = models.CharField(max_length=200,null=True, blank=True)# Stores Razorpay order ID
+    
+    razorpay_session_id = models.CharField(max_length=200,null=True, blank=True)# Stores Razorpay order ID
     oid = ShortUUIDField(length=10, max_length=25, alphabet="abcdefghijklmnopqrstuvxyz")
     date = models.DateTimeField(default=timezone.now)
     
