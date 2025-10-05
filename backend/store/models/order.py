@@ -22,6 +22,7 @@ class Cart(models.Model):
     color = models.CharField(max_length=100, null=True, blank=True)
     cart_id = models.CharField(max_length=1000, null=True, blank=True)
     date = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True, help_text="True if cart is unplaced/active; False if converted to order")
     def __str__(self):
         return f'{self.cart_id} - {self.product.title}'
     #Including product.title helps quickly recognize what item is in the cart, especially when multiple carts

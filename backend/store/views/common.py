@@ -1,50 +1,23 @@
 # Django Packages
 from django.shortcuts import get_object_or_404, redirect, render
-from django.http import JsonResponse, HttpResponseNotFound, HttpResponse## Import HTTP response classes for returning JSON, plain text, or 404 errors in views
+from django.http import JsonResponse, HttpResponseNotFound, HttpResponse
 from django.views import View
-# Import the base class for creating class-based views in Django. This lets you define views using Python classes
-# instead of functions, which is great for organizing logic, especially when handling multiple HTTP methods like GET, POST, etc.
+
 from django.utils.decorators import method_decorator
-# Import method_decorator to apply function-based decorators to class-based views. This is especially useful when
-# you want to use decorators like @login_required, @csrf_exempt, or custom ones on methods inside a class-based view.
+
 from django.views.decorators.csrf import csrf_exempt
-## Import csrf_exempt to disable CSRF protection on specific views. This decorator is useful when you're building
-# APIs or handling requests from external sources that don't include CSRF tokens. But use it with caution—
-# disabling CSRF protection can expose your app to security risks if not handled properly.
+
 from django.db.models import Q
-# Import Q objects to build complex queries with OR, AND, and NOT logic
+
 from django.db import transaction
-# Import transaction management tools for atomic operations in Django
-#This lets you wrap database operations in a transaction block, ensuring that either all changes succeed or 
-# none are applied—perfect for maintaining data integrity.
-#You can also use transaction.on_commit() to trigger actions only after a successful commit.
+
+
 from django.urls import reverse
-# Import reverse to dynamically generate URLs from view names
-#reverse() is a powerful Django utility that lets you build URLs based on the name of a view, rather than 
-# hardcoding paths. This makes your code more maintainable and less error-prone—especially when URLs change.
+
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, send_mail
-## Import tools to send emails; send_mail for simple messages, EmailMultiAlternatives for rich content 
-# (HTML + plain text)Use send_mail for quick plain-text emails. Use EmailMultiAlternatives when you need both 
-# plain text and HTML versions, attachments, or more control over headers.
-'''
-send_mail(
-    subject='Hello!',
-    message='Plain text body',
-    from_email='from@example.com',
-    recipient_list=['to@example.com'],
-)
-Example with EmailMultiAlternatives:
 
-python
-email = EmailMultiAlternatives(
-    subject='Hello!',
-    body='Plain text body',
-    from_email='from@example.com',
-    to=['to@example.com'],
-)
-email.attach_alternative('<p>HTML body</p>', 'text/html')
-email.send()'''
+
 from django.template.loader import render_to_string
 
 

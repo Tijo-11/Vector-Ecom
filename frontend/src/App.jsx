@@ -63,6 +63,7 @@ export default function App() {
   return (
     <CartContext.Provider value={[cartCount, setCartCount]}>
       <BrowserRouter>
+        <CartInitializer />
         <StoreHeader />
         <MainWrapper>
           <Routes>

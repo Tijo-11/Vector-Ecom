@@ -1,15 +1,12 @@
+// src/utils/auth.js
 import { useAuthStore } from "../store/auth";
-import apiInstance from "./axios"; // <-- import axios from "./axios"; works since it was an exported  as default.
-//Better thing is import apiInstance from './axios';
-import { jwtDecode } from "jwt-decode"; // ✅ Correct import (default export)
-//jwt-decode is a super useful library when you want to extract information from a JWT without verifying it.
-import Cookies from "js-cookie"; //js-cookie is a lightweight JavaScript library that simplifies working with cookies
+import apiInstance from "./axios";
+import { jwtDecode } from "jwt-decode";
+import Cookies from "js-cookie";
 import Swal from "sweetalert2";
-// Importing Swal (SweetAlert2) for displaying toast notifications # npm install sweetalert2
+import { generateRandomString } from "../views/shop/ProductDetail/cartId";
 
-// Configuring global toast notifications using Swal.mixin
 const Toast = Swal.mixin({
-  //This line sets up a Toast object using Swal.mixin() to define default options for lightweight, non-blocking
   toast: true,
   position: "top",
   showConfirmButton: false,
@@ -17,34 +14,32 @@ const Toast = Swal.mixin({
   timerProgressBar: true,
 });
 
-//Function to handle user login
+// Removed syncCartAfterLogin - handled by CartInitializer
+
 export const login = async (email, password) => {
   try {
-    // Making a POST request to obtain user tokens
     const { data, status } = await apiInstance.post("user/token/", {
       email,
       password,
     });
-    // If the request is successful (status code 200), set authentication user and display success toast
+
     if (status === 200) {
       setAuthUser(data.access, data.refresh);
-      // Displaying a success toast notification
       Toast.fire({
         icon: "success",
         title: "Login Successful",
       });
-    } // Returning data and error information
+    }
+
     return { data, error: null };
   } catch (error) {
     return {
-      // Handling errors and returning data and error information
       data: null,
       error: error.response?.data?.detail || "something went wrong",
     };
   }
 };
 
-// Function to handle user registration
 export const register = async (
   full_name,
   email,
@@ -53,7 +48,6 @@ export const register = async (
   password2
 ) => {
   try {
-    // Making a POST request to register a new user
     const { data } = await apiInstance.post("user/register/", {
       full_name,
       email,
@@ -61,17 +55,16 @@ export const register = async (
       password,
       password2,
     });
-    // Logging in the newly registered user and displaying success toast
-    await login(email, password); //Auto-login after registration
-    // Displaying a success toast notification
+
+    await login(email, password);
+
     Toast.fire({
       icon: "success",
       title: "Signed Up Successfully",
     });
-    // Returning data and error information
+
     return { data, error: null };
   } catch (error) {
-    // Handling errors and returning data and error information
     return {
       data: null,
       error: error.response?.data?.detail || "Something went wrong",
@@ -79,16 +72,28 @@ export const register = async (
   }
 };
 
-// Function to handle user logout
 export const logout = () => {
-  // Removing access and refresh tokens from cookies
+  const accessToken = Cookies.get("access_token");
+
+  if (accessToken) {
+    try {
+      const user = jwtDecode(accessToken);
+      if (user && user.user_id) {
+        localStorage.removeItem(`cart_id_user_${user.user_id}`);
+      }
+    } catch (err) {
+      console.error("Error decoding token during logout:", err);
+    }
+  }
+
   Cookies.remove("access_token");
   Cookies.remove("refresh_token");
-  // Clear random_string from local storage
-  localStorage.removeItem("random_string");
-  // Resetting Zustand store: clears allUserData, user, and isLoggedIn
+  localStorage.removeItem("userData");
+
+  localStorage.setItem("random_string", generateRandomString());
+
   useAuthStore.getState().setUser(null);
-  // Displaying a success toast notification
+
   Toast.fire({
     icon: "success",
     title: "You have been logged out.",
@@ -112,34 +117,30 @@ export const setUser = async () => {
 };
 
 export const setAuthUser = (access_token, refresh_token) => {
-  Cookies.set("access_token", access_token, { expires: 1, secure: true }); //expires: 1 means the cookie will expire in 1 day.
+  Cookies.set("access_token", access_token, { expires: 1, secure: true });
   Cookies.set("refresh_token", refresh_token, { expires: 7, secure: true });
 
   const user = jwtDecode(access_token) || null;
-  // If user information is present, update user state; otherwise, set loading state to false
+
   if (user) {
     useAuthStore.getState().setUser(user);
+    localStorage.setItem("userData", JSON.stringify(user));
   }
   useAuthStore.getState().setLoading(false);
 };
 
-// Function to refresh the access token using the refresh token
 export const getRefreshToken = async (refresh_token) => {
   const response = await apiInstance.post("user/token/refresh/", {
     refresh: refresh_token,
   });
-  return response.data; //Returns new access and refresh tokens.
+  return response.data;
 };
 
-// Function to check if the access token is expired
 export const isAccessTokenExpired = (accessToken) => {
   try {
-    // Decoding the access token and checking if it has expired
     const decodedToken = jwtDecode(accessToken);
     return decodedToken.exp < Date.now() / 1000;
-    //Compares the token’s exp (expiry time in seconds) with the current time (converted to seconds).
   } catch (err) {
-    // Returning true if the token is invalid or expired
     return true;
   }
 };

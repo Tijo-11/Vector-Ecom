@@ -1,6 +1,10 @@
+// plugin/AddToCart.jsx
 import apiInstance from "../utils/axios";
-import { useState } from "react";
 import Swal from "sweetalert2";
+import { CartContext } from "../plugin/Context";
+import { useContext } from "react";
+import CartId from "../views/shop/ProductDetail/cartId";
+import { useAuthStore } from "../store/auth";
 
 const Toast = Swal.mixin({
   toast: true,
@@ -10,43 +14,37 @@ const Toast = Swal.mixin({
   timerProgressBar: true,
 });
 
-// let [isAddingToCart, setIsAddingToCart] = useState("Add To Cart");
-// Function to add a product to the cart
 export const addToCart = async (
   product_id,
-  user_id,
   qty,
   price,
   shipping_amount,
   current_address,
   color,
   size,
-  cart_id,
   setIsAddingToCart
 ) => {
-  const axios = apiInstance;
-  // Set the loading state to "Processing..." while the request is in progress
-  // setIsAddingToCart('Processing...');
+  const [cartCount, setCartCount] = useContext(CartContext);
+  const { user, isLoggedIn } = useAuthStore();
+  const cart_id = CartId();
+
+  if (setIsAddingToCart) setIsAddingToCart("Processing...");
 
   try {
-    // Create a new FormData object to send product information to the server
-    const formData = new FormData();
-    formData.append("product", product_id);
-    formData.append("user", user_id);
-    formData.append("qty", qty);
-    formData.append("price", price);
-    formData.append("shipping_amount", shipping_amount);
-    formData.append("country", current_address);
-    formData.append("size", size);
-    formData.append("color", color);
-    formData.append("cart_id", cart_id);
+    const payload = {
+      product: product_id,
+      user: isLoggedIn ? user?.user_id : "",
+      qty,
+      price,
+      shipping_amount,
+      country: current_address,
+      size: size || "",
+      color: color || "",
+      cart_id,
+    };
 
-    // setCartCount((prevCount) => prevCount - 1);
+    const response = await apiInstance.post("cart/", payload);
 
-    // Send a POST request to the server's 'cart-view/' endpoint with the product information
-    const response = await axios.post("cart-view/", formData);
-
-    // Log the response data from the server
     console.log(response.data);
 
     Toast.fire({
@@ -54,13 +52,19 @@ export const addToCart = async (
       title: "Added To Cart",
     });
 
-    // Set the loading state to "Added To Cart" upon a successful response
-    // setIsAddingToCart('Added To Cart');
-  } catch (error) {
-    // Log any errors that occur during the request
-    console.log(error);
+    // Refetch count
+    const url =
+      isLoggedIn && user?.user_id
+        ? `/cart-list/${cart_id}/${user.user_id}/`
+        : `/cart-list/${cart_id}/`;
 
-    // Set the loading state to "An Error Occurred" in case of an error
-    // setIsAddingToCart('An Error Occurred');
+    const res = await apiInstance.get(url);
+    const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
+    setCartCount(totalQty);
+
+    if (setIsAddingToCart) setIsAddingToCart("Added To Cart");
+  } catch (error) {
+    console.log(error);
+    if (setIsAddingToCart) setIsAddingToCart("An Error Occurred");
   }
 };

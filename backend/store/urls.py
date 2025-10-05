@@ -1,6 +1,6 @@
 from django.urls import path
 from .views.product_category import CategoryListView, ProductListView, FeaturedProductListView, ProductDetailView
-from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartItemDeleteAPIView
+from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartItemDeleteAPIView, CartMergeAPIView
 from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView, OrdersDetailAPIView
 from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
 from .views.Review_views import ReviewListAPIView, SearchProductView     #, ReviewCreateAPIView
@@ -16,6 +16,7 @@ urlpatterns = [
     #If unauthenticated or registered user places order to handle order this url is used, we don't need 
     #new view for it
     path('cart-detail/<str:cart_id>/', CartDetailView.as_view(), name='cart-detail'),
+    path('cart-merge/', CartMergeAPIView.as_view(), name="cart-merge"),
     
     ###
     path('cart-delete/<str:cart_id>/<int:item_id>/<int:user_id>/', CartItemDeleteAPIView.as_view(), name="cart-delete"),

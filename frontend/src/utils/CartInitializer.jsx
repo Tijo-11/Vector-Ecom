@@ -1,42 +1,102 @@
-// src/components/CartInitializer.jsx
-import { useEffect, useContext } from "react";
+// src/utils/CartInitializer.jsx
+import { useEffect, useContext, useState } from "react";
 import { CartContext } from "../plugin/Context";
-import CartId from "../views/shop/ProductDetail/cartId";
-import UserData from "../plugin/UserData";
-import apiInstance from "../utils/axios";
+import { useAuthStore } from "../store/auth";
+import CartId, {
+  generateRandomString,
+} from "../views/shop/ProductDetail/cartId";
+import apiInstance from "./axios";
 
 const CartInitializer = () => {
   const [cartCount, setCartCount] = useContext(CartContext);
-  const cart_id = CartId();
-  const userData = UserData();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const { user, isLoggedIn } = useAuthStore();
+
+  // Reset initialization on auth change
+  useEffect(() => {
+    setIsInitialized(false);
+  }, [isLoggedIn, user?.user_id]);
 
   useEffect(() => {
-    // Add safety checks
-    if (!cart_id) {
-      console.log("No cart_id available yet");
-      setCartCount(0);
-      return;
-    }
+    const initializeCart = async () => {
+      if (isInitialized) return;
 
-    const url = userData?.user_id
-      ? `/cart-list/${cart_id}/${userData?.user_id}/`
-      : `/cart-list/${cart_id}/`;
+      let currentCartId = CartId();
 
-    console.log("Fetching cart from:", url);
+      if (isLoggedIn && user?.user_id) {
+        const anonymousCartId = localStorage.getItem("random_string");
 
-    apiInstance
-      .get(url)
-      .then((res) => {
-        console.log("Cart data received:", res.data);
+        try {
+          const mergeResponse = await apiInstance.post("/cart-merge/", {
+            user_id: user.user_id,
+            cart_id: anonymousCartId || currentCartId || null,
+          });
+
+          const { cart_id, cart_count, start_new } = mergeResponse.data;
+
+          if (start_new || !cart_id) {
+            // No active cart or placed → start new
+            currentCartId = generateRandomString();
+            localStorage.setItem(`cart_id_user_${user.user_id}`, currentCartId);
+            setCartCount(0);
+          } else {
+            currentCartId = cart_id;
+            localStorage.setItem(`cart_id_user_${user.user_id}`, currentCartId);
+            if (anonymousCartId && cart_id !== anonymousCartId) {
+              localStorage.removeItem("random_string");
+            }
+            setCartCount(cart_count || 0);
+          }
+          console.log("Cart merged/loaded:", {
+            cart_id: currentCartId,
+            cart_count,
+          });
+        } catch (err) {
+          console.error("Cart merge error:", err);
+          // Fallback: Generate new if error
+          if (!currentCartId) {
+            currentCartId = generateRandomString();
+            localStorage.setItem(`cart_id_user_${user.user_id}`, currentCartId);
+          }
+          setCartCount(0);
+        }
+      } else {
+        // Anonymous
+        if (!currentCartId) {
+          currentCartId = generateRandomString();
+          localStorage.setItem("random_string", currentCartId);
+        }
+      }
+
+      // Fetch count
+      await fetchCartItems(currentCartId);
+      setIsInitialized(true);
+    };
+
+    const fetchCartItems = async (cartId) => {
+      if (!cartId) {
+        setCartCount(0);
+        return;
+      }
+
+      const url =
+        isLoggedIn && user?.user_id
+          ? `/cart-list/${cartId}/${user.user_id}/`
+          : `/cart-list/${cartId}/`;
+
+      try {
+        const res = await apiInstance.get(url);
         const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
         setCartCount(totalQty);
-      })
-      .catch((err) => {
+        console.log("Cart fetched:", { url, totalQty });
+      } catch (err) {
         console.error("Cart fetch error:", err);
-        // Don't let cart errors break the app
         setCartCount(0);
-      });
-  }, [cart_id, userData?.user_id, setCartCount]);
+      }
+    };
+
+    initializeCart();
+  }, [isLoggedIn, user?.user_id, setCartCount, isInitialized]);
 
   return null;
 };
