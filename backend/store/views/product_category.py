@@ -1,4 +1,10 @@
-from .common import *
+from rest_framework import generics
+from store.serializers import   ProductSerializer, CategorySerializer# Models
+from store.models import  Product,Category
+from rest_framework.permissions import AllowAny#, IsAuthenticated
+
+# Others Packages
+
 
 
 class CategoryListView(generics.ListAPIView):
@@ -19,15 +25,12 @@ class FeaturedProductListView(generics.ListAPIView):
     permission_classes = (AllowAny,)
     
 class ProductDetailView(generics.RetrieveAPIView):
-# Class-based view to retrieve a single Product instance by ID or slug
-#This view handles GET requests and returns details of one product. It expects a queryset and serializer_class 
-# to be defined, and typically uses a URL pattern like /products/<pk>/.
+
     serializer_class = ProductSerializer
+    permission_classes =(AllowAny,)
     
     def get_object(self):
-        # Retrieve the product using the provided slug from the URL
         slug = self.kwargs.get('slug')
-# URL parameters (like <slug>) are passed into the view instance 
-# via self.kwargs. So self.kwargs.get('slug') fetches the value from the URL pattern.
+
         return Product.objects.get(slug=slug)
     
