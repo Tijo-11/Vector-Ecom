@@ -17,11 +17,6 @@ class Product(models.Model):
     description = models.TextField(null=True, blank=True)
     # Categories that the product belongs to
     category = models.ForeignKey('store.Category', on_delete=models.SET_NULL, null=True, blank=True, related_name="category")
-#on_delete=models.SET_NULL means:, If a Category is deleted, the category field in Product will be set
-# to NULL — instead of deleting the Product. This works only because null=True is set — it allows the field to 
-# be empty in the database. You can delete a Category without breaking Product
-#Also, blank=True lets you leave the field empty in forms/admin.
-#Many Product instances can link to the same Category.
     # Tags associated with the product
     tags = models.CharField(max_length=1000, null=True, blank=True)
     # Brand associated with the product
@@ -29,11 +24,7 @@ class Product(models.Model):
     #technically it's valid, but not ideal if Tag and Brand are separate models.
     #No relational integrity — you can't enforce valid tags or brands.
     #No reverse lookup — can't query which products use a specific brand or tag.
-    #Harder to filter, join, or manage in admin.
-    #brand = models.ForeignKey(Brand, null=True, blank=True, on_delete=models.SET_NULL)
-    #tags = models.ManyToManyField(Tag, blank=True) // is better alternative
-    #This way: Product links to one Brand., Product can have multiple Tags.
-    #ou get full ORM power: .filter(tags__name="Eco"), .brand.name, etc.
+    
     
     
     '''*************# Price and other financial details*****************'''
@@ -132,16 +123,10 @@ class Product(models.Model):
         return Size.objects.filter(product=self)
     # Returns a list of products frequently bought together with this product
     def frequently_bought_together(self):
-        from .order import CartOrder, CartOrderItem
-        frequently_bought_together_products = Product.objects.filter(order_item__order__in=CartOrder.objects.filter(orderitem__product=self)).exclude(id=self.id).annotate(count=models.Count('order_item')).order_by('-count')[:3]
-        #CartOrder.objects.filter(orderitem__product=self), Finds all orders that contain the current product (self).
-        #Product.objects.filter(order_item__order__in=...)Finds all products that were part of those same orders.
-        #.exclude(id=self.id)
-        #.annotate(count=models.Count('id')),Counting 'id' doesn’t give you frequency of co-purchase — it just counts instances of the product.
-        #A better approach might be Count('order_item') or Count('order_item__order') to reflect how often the product appears in shared orders.
-        #.order_by('-id')[:3],Orders the results by descending product ID (not by frequency).
-        #This might not be ideal — you'd probably want to order by the count instead:
-        #.order_by('-count')[:3]
+        from .order import CartOrder
+        frequently_bought_together_products = Product.objects.filter(order_item__order__in=CartOrder.
+        objects.filter(orderitem__product=self)).exclude(id=self.id).annotate(count=models.Count(
+            'order_item')).order_by('-count')[:3]
         return frequently_bought_together_products
      # Custom save method to generate a slug if it's empty, update in_stock, and calculate the product rating
      

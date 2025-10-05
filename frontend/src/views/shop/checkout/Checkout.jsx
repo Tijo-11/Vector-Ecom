@@ -168,6 +168,3 @@ function Checkout() {
 }
 
 export default Checkout;
-
-//In slow connections either Razorpay or Paypal or sometimes both are not getting rendered9throttle-3g).
-//Needs to fix that

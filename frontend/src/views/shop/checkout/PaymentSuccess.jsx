@@ -45,6 +45,13 @@ function PaymentSuccess() {
           // ✅ PayPal already verified in backend during onApprove
           setStatus("paid");
         }
+        // ✅ Clear guest cartId
+        const userData = localStorage.getItem("userData");
+        const userObj = userData ? JSON.parse(userData) : null;
+        if (!userObj?.user_id) {
+          localStorage.removeItem("random_string");
+          console.log("Guest cartId cleared from localStorage");
+        }
 
         // In both cases, fetch order details
         const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);

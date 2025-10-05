@@ -26,7 +26,7 @@ class Cart(models.Model):
     country = models.CharField(max_length=100, null=True, blank=True)
     size = models.CharField(max_length=100, null=True, blank=True)
     color = models.CharField(max_length=100, null=True, blank=True)
-    cart_id = models.CharField(max_length=1000, null=True, blank=True)
+    cart_id = models.CharField(max_length=1000, null=True, blank=True, db_index=True)
     date = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True, help_text="True if cart is unplaced/active; False if converted to order")
     def __str__(self):

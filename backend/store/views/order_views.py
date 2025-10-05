@@ -1,6 +1,18 @@
-from .common import *
-from django.db import transaction  # Add this import for atomic transaction
+# Django Packages
+from django.db.models import Q
+from django.db import transaction
+# Restframework Packages
+from rest_framework.response import Response
+from rest_framework import generics,status
+from rest_framework.permissions import AllowAny
+# Serializers
+from store.serializers import  CartOrderSerializer,  CouponSerializer
+# Models
+from userauth.models import User
+from store.models import CartOrderItem, Cart,  CartOrder,    Coupon
+# Others Packages
 from decimal import Decimal
+
 
 class CreateOrderView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
@@ -30,10 +42,14 @@ class CreateOrderView(generics.CreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        cart_items = Cart.objects.filter(cart_id=cart_id)
+        # ✅ FIXED: Add is_active=True, and filter by user if provided
+        cart_items = Cart.objects.filter(cart_id=cart_id, is_active=True)
+        if user:
+            cart_items = cart_items.filter(user=user)
+        
         if not cart_items.exists():
             return Response(
-                {"error": "No cart items found for the provided cart_id"},
+                {"error": "No active cart items found for the provided cart_id"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -57,7 +73,7 @@ class CreateOrderView(generics.CreateAPIView):
                 buyer=user
             )
 
-            for c in cart_items:
+            for c in cart_items:  # Now only active/user-specific
                 CartOrderItem.objects.create(
                     order=order,
                     product=c.product,

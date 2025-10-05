@@ -1,7 +1,16 @@
 #Review, Faq
+from django.db import models 
+ 
+from django.dispatch import receiver 
 
-from .common import *
-from .choices import *
+from django.db.models.signals import post_save
+from userauth.models import User,  Profile
+
+
+
+from shortuuid.django_fields import ShortUUIDField
+
+from .choices import RATING
 
 
 class Review(models.Model):

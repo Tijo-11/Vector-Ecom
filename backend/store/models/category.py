@@ -2,10 +2,9 @@
 from django.db import models
 from django.utils.html import mark_safe
 from django.utils.text import slugify
-from shortuuid.django_fields import ShortUUIDField
 import shortuuid
 from userauth.models import user_directory_path
-from .common import *
+
 
 #Category  causes circular import between product and category, review and product etc.
 
@@ -43,7 +42,7 @@ class Category(models.Model):
     
     # Custom save method to generate a slug if it's empty
     def save(self, *args, **kwargs):
-        if self.slug =="" or self.slug == None:
+        if self.slug =="" or self.slug is None:
             uuid_key = shortuuid.uuid()
     ## Generates a short, unique ID using shortuuid.Great for creating compact, URL-safe identifiers for
     # models, tokens, or public-facing keys.

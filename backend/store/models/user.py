@@ -1,8 +1,9 @@
 # Wishlist, Address, Notifications
 
 #country in address is commented out, rerun migrations after adding add-on tax application
-from .common import *
-from .product import Product
+from django.db import models 
+from userauth.models import User
+from vendor.models import Vendor 
 from .order import CartOrder, CartOrderItem
 
 # Define a model for Wishlist

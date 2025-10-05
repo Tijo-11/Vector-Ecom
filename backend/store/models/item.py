@@ -1,8 +1,9 @@
 # Gallery, Specification, Color, Size
+##--------------##--------------------
+from django.db import models 
+from userauth.models import  user_directory_path
+from shortuuid.django_fields import ShortUUIDField
 
-
-from .common import *
-from .product import Product
 
 class Gallery(models.Model):
     product = models.ForeignKey('store.Product', on_delete=models.CASCADE, null=True)
