@@ -25,6 +25,7 @@ export const login = async (email, password) => {
 
     if (status === 200) {
       setAuthUser(data.access, data.refresh);
+      localStorage.removeItem("random_string");
       Toast.fire({
         icon: "success",
         title: "Login Successful",
