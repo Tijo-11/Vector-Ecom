@@ -9,7 +9,6 @@ import Sidebar from "./Sidebar";
 
 function Orders() {
   const [orders, setOrders] = useState([]);
-  const [isFilterOpen, setIsFilterOpen] = useState(false); // 👈 dropdown state
 
   const axios = apiInstance;
   const userData = UserData();
@@ -39,35 +38,36 @@ function Orders() {
         `vendor/orders-filter/${userData?.vendor_id}?filter=${param}`
       );
       setOrders(response.data);
-      setIsFilterOpen(false); // 👈 close dropdown after choosing
     } catch (error) {
       console.log(error);
     }
   };
 
   return (
-    <div className="container mx-auto px-4" id="main">
-      <div className="flex flex-col md:flex-row h-full">
-        <Sidebar />
-        <div className="md:w-3/4 lg:w-5/6 mt-4">
-          <div className="mb-10">
-            <h4 className="flex items-center text-xl font-semibold mb-4">
-              <ShoppingCart className="text-blue-600 mr-2" /> All Orders
-            </h4>
-            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 relative py-4">
-              {/* Filter Dropdown */}
-              <div className="relative">
-                <button
-                  className="bg-gray-600 text-white px-12 py-2 mx-2 rounded-md hover:bg-gray-700 flex items-center mt-3 mb-3 md:mt-0 md:mb-0"
-                  type="button"
-                  onClick={() => setIsFilterOpen((prev) => !prev)} // 👈 toggle
-                >
-                  Filter
-                  <i className="fas fa-sliders ml-4 " />
-                </button>
+    <div className="w-full px-4" id="main">
+      <div className="flex flex-row h-full">
+        <div className="w-full" id="main">
+          <div className="flex h-full">
+            <Sidebar />
+            <div className="flex-1 mt-4 px-4">
+              <h4 className="text-xl font-semibold flex items-center">
+                <i className="bi bi-grid mr-2" /> All Orders
+              </h4>
 
-                {isFilterOpen && (
-                  <ul className="absolute left-0 mt-1 bg-white shadow-lg rounded-md z-10 w-40">
+              <div className="flex flex-wrap gap-3 relative py-4">
+                {/* Filter Dropdown */}
+                <div className="relative group">
+                  <button
+                    className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center mt-3 mb-3 md:mt-0 md:mb-0"
+                    type="button"
+                    id="dropdownMenuButton1"
+                  >
+                    Filter <i className="fas fa-sliders ml-2" />
+                  </button>
+                  <ul
+                    className="absolute left-0 mt-1 hidden group-hover:block bg-white shadow-lg rounded-md z-10 w-48"
+                    aria-labelledby="dropdownMenuButton1"
+                  >
                     <li>
                       <button
                         className="block w-full text-left px-4 py-2 hover:bg-gray-100"
@@ -150,57 +150,52 @@ function Orders() {
                       </button>
                     </li>
                   </ul>
-                )}
+                </div>
               </div>
-            </div>
 
-            {/* Orders Table */}
-            <div className="overflow-x-auto rounded-lg shadow">
-              <table className="w-full border-collapse">
-                <thead className="bg-gray-800 text-white">
-                  <tr>
-                    <th className="py-2 px-4 text-left">#ID</th>
-                    <th className="py-2 px-4 text-left">Name</th>
-                    <th className="py-2 px-4 text-left">Date</th>
-                    <th className="py-2 px-4 text-left">Status</th>
-                    <th className="py-2 px-4 text-left">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders?.map((o, index) => (
-                    <tr
-                      key={index}
-                      className="border-b hover:bg-gray-50 transition"
-                    >
-                      <td className="py-2 px-4">#{o.oid}</td>
-                      <td className="py-2 px-4">{o.full_name}</td>
-                      <td className="py-2 px-4">
-                        {moment(o.date).format("MM/DD/YYYY")}
-                      </td>
-                      <td className="py-2 px-4">{o.order_status}</td>
-                      <td className="py-2 px-4">
-                        <Link
-                          to={`/vendor/orders/${o.oid}/`}
-                          className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 inline-flex items-center"
-                        >
-                          <Eye size={16} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {orders?.length < 1 && (
+              <div className="mt-2 mb-3">
+                <table className="w-full border-collapse">
+                  <thead className="bg-gray-800 text-white">
                     <tr>
-                      <td
-                        colSpan="5"
-                        className="text-center py-6 text-lg text-gray-600"
-                      >
-                        No orders yet
-                      </td>
+                      <th className="py-2 px-4 text-left">#ID</th>
+                      <th className="py-2 px-4 text-left">Name</th>
+                      <th className="py-2 px-4 text-left">Date</th>
+                      <th className="py-2 px-4 text-left">Status</th>
+                      <th className="py-2 px-4 text-left">Action</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {orders?.map((o, index) => (
+                      <tr key={index} className="border-b">
+                        <td className="py-2 px-4">#{o.oid}</td>
+                        <td className="py-2 px-4">{o.full_name}</td>
+                        <td className="py-2 px-4">
+                          {moment(o.date).format("MM/DD/YYYY")}
+                        </td>
+                        <td className="py-2 px-4">
+                          {o.order_status?.toUpperCase()}
+                        </td>
+                        <td className="py-2 px-4 flex space-x-2">
+                          <Link
+                            to={`/vendor/orders/${o.oid}/`}
+                            className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center justify-center"
+                          >
+                            <Eye size={16} />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {orders?.length < 1 && (
+                      <tr>
+                        <td colSpan="5" className="text-center py-4 text-lg">
+                          No Orders Yet
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
