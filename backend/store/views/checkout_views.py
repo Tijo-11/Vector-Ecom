@@ -1,12 +1,34 @@
-from .common import *
 import razorpay
 from decouple import config
 import requests
 import logging
 from django.db import transaction
+# Django Packages
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+# Restframework Packages
+from rest_framework.response import Response
+from rest_framework import generics,status
+from rest_framework.permissions import AllowAny#, IsAuthenticated
+# Serializers
+from store.serializers import   CartOrderSerializer
+
+# Models
+from store.models import  CartOrderItem,Notification, CartOrder
+#other packages
+import time
+import threading
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+
+
+
+
+
+
 
 
 
@@ -66,8 +88,6 @@ class RazorpayCheckoutView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-import time
-import threading
 
 logger = logging.getLogger(__name__)
 
@@ -106,17 +126,7 @@ def get_paypal_access_token(client_id, secret_id):
         print(f"PayPal auth failed: {str(e)}")
         raise
 
-import time
-import threading
-import logging
-import requests
-import razorpay
-from decouple import config
-from django.db import transaction
-from rest_framework import generics, status
-from rest_framework.response import Response
 
-logger = logging.getLogger(__name__)
 
 class PaymentSuccessView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
@@ -169,7 +179,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                 logger.warning(f"Insufficient stock for {product.title} during payment success.")
 
     def post(self, request, *args, **kwargs):
-        start_time = time.time()
+        start_time = time.time() #noqa
         payload = request.data
         order_id = payload.get("order_id")
         session_id = payload.get("session_id")  # Razorpay

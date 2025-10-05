@@ -1,4 +1,20 @@
-from .common import *
+# Restframework Packages
+from rest_framework.response import Response
+from rest_framework import generics
+from rest_framework.permissions import AllowAny#, IsAuthenticated
+from rest_framework import status
+# Serializers
+
+from store.serializers import CouponSerializer, CouponSummarySerializer
+
+# Models
+
+from store.models import Coupon
+
+from vendor.models import Vendor
+
+## Others Packages
+
 
 ######Coupons
 class CouponListAPIView(generics.ListAPIView):
@@ -32,7 +48,7 @@ class CouponCreateAPIView(generics.CreateAPIView):
         print("active ======", active)
 
         vendor = Vendor.objects.get(id=vendor_id)
-        coupon = Coupon.objects.create(
+        coupon = Coupon.objects.create(#noqa
             vendor=vendor,
             code=code,
             discount=discount,

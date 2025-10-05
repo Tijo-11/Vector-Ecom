@@ -1,5 +1,17 @@
-from .common import *
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+# Django Packages
+from django.shortcuts import get_object_or_404
+
+# Restframework Packages
+from rest_framework.response import Response
+from rest_framework import generics,status
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+# Serializers
+from store.serializers import   ProductSerializer, ReviewSerializer
+# Models
+from userauth.models import User
+from store.models import  Product, Review
+# Others Packages
+
 
 class ReviewListAPIView(generics.ListCreateAPIView):#List view and Create view together
     # queryset = Review.objects.all() # it is overriden
@@ -21,7 +33,7 @@ class ReviewListAPIView(generics.ListCreateAPIView):#List view and Create view t
     
     # create Review
     def create(self, request, *args, **kwargs):
-        permission_classes = (IsAuthenticatedOrReadOnly,)
+        permission_classes = (IsAuthenticatedOrReadOnly,) #noqa
         payload = request.data
         user_id = payload['user_id']
         product_id = payload['product_id']

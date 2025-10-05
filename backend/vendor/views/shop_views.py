@@ -1,4 +1,31 @@
-from .common import *
+# Django Packages
+
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+
+# Restframework Packages
+
+from rest_framework.response import Response
+
+from rest_framework import generics
+from rest_framework.permissions import AllowAny#, IsAuthenticated
+
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+
+# Serializers
+from userauth.serializers import  ProfileSerializer
+from store.serializers import ProductSerializer, DeliveryCouriersSerializer, CartOrderItemSerializer
+
+# Models
+from userauth.models import Profile
+from store.models import  CartOrderItem, Product, DeliveryCouriers
+from vendor.models import Vendor
+
+## Others Packages
+
+from vendor.serializers import VendorSerializer
 class VendorProfileUpdateView(generics.RetrieveUpdateAPIView):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
