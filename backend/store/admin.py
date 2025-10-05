@@ -85,7 +85,7 @@ class ProductAdmin(ImportExportModelAdmin):
 
     
 class CartAdmin(ImportExportModelAdmin):
-    list_display = ['product', 'cart_id', 'qty', 'price', 'sub_total' , 'shipping_amount', 'service_fee', 'tax_fee', 'total', 'country', 'size', 'color', 'date']
+    list_display = ['product', 'cart_id','is_active', 'qty', 'price', 'sub_total' , 'shipping_amount', 'service_fee', 'tax_fee', 'total', 'country', 'size', 'color', 'date']
     
 class CategoryAdmin(ImportExportModelAdmin):
     list_editable = [ 'active']

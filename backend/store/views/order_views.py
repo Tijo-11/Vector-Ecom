@@ -6,8 +6,8 @@ class CreateOrderView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     queryset = CartOrder.objects.all()
     permission_classes = (AllowAny,)
-    
-    def create(self, request, *args, **kwargs):  # Override default create method
+
+    def create(self, request, *args, **kwargs):
         payload = request.data
         full_name = payload['full_name']
         email = payload['email']
@@ -18,12 +18,12 @@ class CreateOrderView(generics.CreateAPIView):
         state = payload['state']
         postal_code = payload['pincode']
         cart_id = payload['cart_id']
-        user_id = payload.get('user_id')  # Use .get() to avoid KeyError
-        
-        # Handle user_id
+        user_id = payload.get('user_id')
+
+        # Handle user (optional)
         user = None
-        if user_id and user_id != "0":  # Treat user_id as string
-            user = User.objects.filter(id=user_id).first()  # Use .first() to avoid DoesNotExist
+        if user_id and user_id != "0":
+            user = User.objects.filter(id=user_id).first()
             if not user:
                 return Response(
                     {"error": "User with provided ID does not exist"},
@@ -36,16 +36,15 @@ class CreateOrderView(generics.CreateAPIView):
                 {"error": "No cart items found for the provided cart_id"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Use a database transaction to ensure stock updates are atomic with order creation
+
         with transaction.atomic():
-            total_shipping = Decimal(0.00)
-            total_tax = Decimal(0.00)
-            total_service_fee = Decimal(0.00)
-            total_subtotal = Decimal(0.00)
-            total_initial_total = Decimal(0.00)
-            total_total = Decimal(0.00)  # After applying coupon
-            
+            total_shipping = Decimal(0)
+            total_tax = Decimal(0)
+            total_service_fee = Decimal(0)
+            total_subtotal = Decimal(0)
+            total_initial_total = Decimal(0)
+            total_total = Decimal(0)
+
             order = CartOrder.objects.create(
                 full_name=full_name,
                 email=email,
@@ -55,11 +54,11 @@ class CreateOrderView(generics.CreateAPIView):
                 mobile=mobile,
                 state=state,
                 postal_code=postal_code,
-                buyer=user  # Assign user (None if no valid user)
+                buyer=user
             )
-            
+
             for c in cart_items:
-                CartOrderItem.objects.create(  # Fixed typo: 'object' to 'objects'
+                CartOrderItem.objects.create(
                     order=order,
                     product=c.product,
                     vendor=c.product.vendor,
@@ -74,37 +73,23 @@ class CreateOrderView(generics.CreateAPIView):
                     tax_fee=c.tax_fee,
                     initial_total=c.total
                 )
-                
+
                 total_shipping += Decimal(c.shipping_amount)
                 total_tax += Decimal(c.tax_fee)
                 total_service_fee += Decimal(c.service_fee)
                 total_subtotal += Decimal(c.sub_total)
                 total_initial_total += Decimal(c.total)
-                total_total += Decimal(c.total)  # After applying coupon
-                
+                total_total += Decimal(c.total)
                 order.vendor.add(c.product.vendor)
-                
-                # Update product stock after creating the order item
-                # This ensures stock is decreased only on successful order placement
-                product = c.product
-                if product.stock_qty >= c.qty:
-                    product.stock_qty -= c.qty
-                    product.save()  # This will also update in_stock via the model's save method
-                else:
-                    # If stock is insufficient, you might want to handle this (e.g., rollback or error)
-                    # For now, we'll assume validation happened earlier; adjust as needed
-                    raise ValueError(f"Insufficient stock for product {product.title}: {c.qty} requested, {product.stock_qty} available")
-            
+
             order.sub_total = total_subtotal
             order.shipping_amount = total_shipping
             order.tax_fee = total_tax
             order.service_fee = total_service_fee
             order.initial_total = total_initial_total
             order.total = total_total
-            
             order.save()
-        
-        # Transaction commits here on success; rolls back on any exception (e.g., stock issues)
+
         return Response(
             {"message": "Order Created Successfully", "order_oid": order.oid},
             status=status.HTTP_201_CREATED
