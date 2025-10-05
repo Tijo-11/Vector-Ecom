@@ -25,9 +25,9 @@ export default function CategoryProducts() {
   const [selectedSizes, setSelectedSizes] = useState({});
   const [quantityValue, setQuantityValue] = useState({});
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const { slug } = useParams(); // Get category slug from URL
+  const { slug } = useParams(); // category slug from URL
 
-  // Find category title based on slug
+  // Find category title
   const category = categories.find((cat) => cat.slug === slug);
   const pageTitle =
     slug && category
@@ -39,6 +39,7 @@ export default function CategoryProducts() {
     document.title = pageTitle;
   }, [pageTitle]);
 
+  // Fetch products
   useEffect(() => {
     setLoading(true);
     apiInstance
@@ -64,6 +65,7 @@ export default function CategoryProducts() {
       });
   }, [slug]);
 
+  // Fetch categories
   useEffect(() => {
     apiInstance
       .get(`category/`)
@@ -90,23 +92,53 @@ export default function CategoryProducts() {
     setSelectedProduct(productId);
   };
 
-  const handleAddToCart = async (product_id, price, shipping_amount) => {
+  // ✅ Updated Add to Cart with stock validation
+  const handleAddToCart = async (product_id, price, shipping_amount, slug) => {
     const qty = Number(quantityValue[product_id] || 0);
     if (qty <= 0) return;
 
-    const formData = new FormData();
-    formData.append("product", product_id);
-    formData.append("user", user?.user_id || "");
-    formData.append("qty", qty);
-    formData.append("price", price);
-    formData.append("shipping_amount", shipping_amount);
-    formData.append("country", currentAddress?.country || "Unknown");
-    formData.append("size", selectedSizes[product_id] || "");
-    formData.append("color", selectedColors[product_id] || "");
-    formData.append("cart_id", cart_id);
-
     try {
+      // 1️⃣ Get live stock for product
+      const productRes = await apiInstance.get(`/products/${slug}/`);
+      const stock_qty = productRes.data.stock_qty;
+      const product_name = productRes.data.title;
+
+      // 2️⃣ Fetch cart to check existing quantity
+      const url = user?.user_id
+        ? `/cart-list/${cart_id}/${user.user_id}/`
+        : `/cart-list/${cart_id}/`;
+
+      const cartRes = await apiInstance.get(url);
+      const existingItem = cartRes.data.find(
+        (item) => item.product.id === product_id
+      );
+      const existingQty = existingItem ? existingItem.qty : 0;
+
+      // 3️⃣ Stock validation
+      if (existingQty + qty > stock_qty) {
+        Swal.fire({
+          icon: "warning",
+          title: "Stock Limit Reached",
+          text: `Only ${stock_qty} unit(s) of "${product_name}" available. You already have ${existingQty} in your cart.`,
+          confirmButtonColor: "#2563eb",
+        });
+        return;
+      }
+
+      // 4️⃣ Proceed to add to cart
+      const formData = new FormData();
+      formData.append("product", product_id);
+      formData.append("user", user?.user_id || "");
+      formData.append("qty", qty);
+      formData.append("price", price);
+      formData.append("shipping_amount", shipping_amount);
+      formData.append("country", currentAddress?.country || "Unknown");
+      formData.append("size", selectedSizes[product_id] || "");
+      formData.append("color", selectedColors[product_id] || "");
+      formData.append("cart_id", cart_id);
+
       const response = await apiInstance.post(`cart/`, formData);
+
       Toast.fire({
         icon: "success",
         title: response.data.message || "Added to cart",
@@ -124,6 +156,7 @@ export default function CategoryProducts() {
 
   return (
     <div className="container mx-auto my-4">
+      {/* Header */}
       <div className="bg-yellow-100 py-8 px-8 text-center">
         <h1 className="text-4xl font-bold mb-4">{pageTitle}</h1>
         <p className="text-lg text-gray-600">
@@ -133,13 +166,16 @@ export default function CategoryProducts() {
         </p>
       </div>
 
+      {/* Product grid */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <h2 className="sr-only">Products</h2>
+
         {products.length === 0 && slug && (
           <p className="text-center text-gray-500 mt-4">
             No products found for this category.
           </p>
         )}
+
         <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8 mt-4">
           {products?.map((product) => (
             <div key={product.id} className="group flex flex-col h-full">
@@ -151,6 +187,7 @@ export default function CategoryProducts() {
                 />
                 <h3 className="mt-4 text-sm text-gray-700">{product.title}</h3>
               </Link>
+
               <div className="flex items-center gap-2">
                 {product.old_price && (
                   <p className="text-sm line-through text-gray-400">
@@ -175,6 +212,7 @@ export default function CategoryProducts() {
                 </p>
               )}
 
+              {/* Size and Color selectors */}
               <div className="mt-2">
                 {product.size?.length > 0 && (
                   <div>
@@ -195,6 +233,7 @@ export default function CategoryProducts() {
                     </ul>
                   </div>
                 )}
+
                 {product.color?.length > 0 && (
                   <div>
                     <p>Color: {selectedColors[product.id] || "No color"}</p>
@@ -215,6 +254,8 @@ export default function CategoryProducts() {
                     </ul>
                   </div>
                 )}
+
+                {/* Quantity */}
                 <div>
                   <label>Quantity:</label>
                   <input
@@ -227,6 +268,7 @@ export default function CategoryProducts() {
                 </div>
               </div>
 
+              {/* Action buttons */}
               <div className="mt-auto flex flex-col gap-2">
                 <button
                   onClick={() => {
@@ -250,10 +292,12 @@ export default function CategoryProducts() {
                       return;
                     }
 
+                    // ✅ Pass slug for stock check
                     handleAddToCart(
                       product.id,
                       product.price,
-                      product.shipping_amount
+                      product.shipping_amount,
+                      product.slug
                     );
                   }}
                   disabled={

@@ -31,11 +31,11 @@ export default function Products() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [cartCount, setCartCount] = useContext(CartContext);
-  const [wishlist, setWishlist] = useState([]); // Added wishlist state
+  const [wishlist, setWishlist] = useState([]);
   const userData = UserData();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
-  // Added function to fetch wishlist
+  // Fetch wishlist
   const fetchWishlist = async () => {
     if (!userData?.user_id) return;
     try {
@@ -64,7 +64,6 @@ export default function Products() {
     });
   }, []);
 
-  // Added useEffect to fetch wishlist
   useEffect(() => {
     if (userData?.user_id) {
       fetchWishlist();
@@ -101,25 +100,57 @@ export default function Products() {
     setSelectedProduct(productId);
   };
 
-  const handleAddToCart = async (product_id, price, shipping_amount) => {
+  // ✅ Updated with stock check logic
+  const handleAddToCart = async (product_id, price, shipping_amount, slug) => {
     const qty = Number(quantityValue[product_id] || 0);
     if (qty <= 0) return;
 
-    const formData = new FormData();
-    formData.append("product", product_id);
-    formData.append("user", user?.user_id || "");
-    formData.append("qty", qty);
-    formData.append("price", price);
-    formData.append("shipping_amount", shipping_amount);
-    formData.append("country", currentAddress?.country || "Unknown");
-    formData.append("size", selectedSizes[product_id] || "");
-    formData.append("color", selectedColors[product_id] || "");
-    formData.append("cart_id", cart_id);
-
-    // ✅ Optimistic update
-    setCartCount((prev) => prev + qty);
-
     try {
+      // 1️⃣ Get product details to check stock
+      const productRes = await apiInstance.get(`/products/${slug}/`);
+      const stock_qty = productRes.data.stock_qty;
+      const product_name = productRes.data.title;
+
+      // 2️⃣ Get current cart items
+      const url = user?.user_id
+        ? `/cart-list/${cart_id}/${user.user_id}/`
+        : `/cart-list/${cart_id}/`;
+      const cartRes = await apiInstance.get(url);
+      const cartItems = cartRes.data;
+
+      const existingItem = cartItems.find(
+        (item) => item.product.id === product_id
+      );
+      const existingQty = existingItem ? existingItem.qty : 0;
+
+      // 3️⃣ Check stock availability
+      if (existingQty + qty > stock_qty) {
+        Swal.fire({
+          icon: "warning",
+          title: "Stock Limit Reached",
+          text: `Only ${stock_qty} unit(s) of "${product_name}" available. You already have ${existingQty} in your cart. Please order up to ${
+            stock_qty - existingQty
+          } more.`,
+          confirmButtonColor: "#2563eb",
+        });
+        return; // ❌ Stop execution
+      }
+
+      // 4️⃣ Proceed as usual
+      const formData = new FormData();
+      formData.append("product", product_id);
+      formData.append("user", user?.user_id || "");
+      formData.append("qty", qty);
+      formData.append("price", price);
+      formData.append("shipping_amount", shipping_amount);
+      formData.append("country", currentAddress?.country || "Unknown");
+      formData.append("size", selectedSizes[product_id] || "");
+      formData.append("color", selectedColors[product_id] || "");
+      formData.append("cart_id", cart_id);
+
+      // ✅ Optimistic update
+      setCartCount((prev) => prev + qty);
+
       const response = await apiInstance.post(`cart/`, formData);
       Toast.fire({
         icon: "success",
@@ -127,19 +158,11 @@ export default function Products() {
       });
 
       // ✅ Sync with backend
-      const url = user?.user_id
-        ? `/cart-list/${cart_id}/${user.user_id}/`
-        : `/cart-list/${cart_id}/`;
-
       const res = await apiInstance.get(url);
       const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
       setCartCount(totalQty);
     } catch (error) {
       console.error("Error adding to cart:", error);
-
-      // ❌ Rollback optimistic update
-      setCartCount((prev) => Math.max(prev - qty, 0));
-
       Toast.fire({
         icon: "error",
         title: "Failed to add to cart",
@@ -156,9 +179,9 @@ export default function Products() {
     }
   };
 
-  //scroll to top
+  // Scroll to top
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "auto" }); // Instant scroll
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   if (loading) return <ProductsPlaceholder />;
@@ -204,17 +227,14 @@ export default function Products() {
                   <p className="text-green-600 font-semibold mt-2">In Stock</p>
                 )}
               </div>
-              {/* {product.rating && (
-                <p className="mt-2 text-yellow-500 text-sm">
-                  ⭐ {product.rating}
-                </p>
-              )} */}
+
               <StarRating rating={product.rating} />
               {product.category && (
                 <p className="text-sm text-gray-500">
                   Category: {product.category.title}
                 </p>
               )}
+
               <div className="mt-2">
                 {product.size?.length > 0 && (
                   <div>
@@ -268,6 +288,7 @@ export default function Products() {
                   />
                 </div>
               </div>
+
               <div className="mt-auto flex flex-col gap-2">
                 <button
                   onClick={() => {
@@ -276,7 +297,7 @@ export default function Products() {
                         icon: "warning",
                         title: "Out of Stock",
                         text: "This product is currently out of stock. Please check back later.",
-                        confirmButtonColor: "#2563eb", // blue
+                        confirmButtonColor: "#2563eb",
                       });
                       return;
                     }
@@ -294,7 +315,8 @@ export default function Products() {
                     handleAddToCart(
                       product.id,
                       product.price,
-                      product.shipping_amount
+                      product.shipping_amount,
+                      product.slug // 👈 pass slug here
                     );
                   }}
                   disabled={

@@ -14,7 +14,7 @@ export default function ProductOptions({
   country,
   user,
   cartId,
-  isOutOfStock, // ✅ from ProductDetail
+  isOutOfStock,
 }) {
   const Toast = Swal.mixin({
     toast: true,
@@ -77,8 +77,8 @@ export default function ProductOptions({
     setQtyValue(event.target.value);
   };
 
+  // ✅ Updated Add to Cart with stock check
   const handleAddToCart = async () => {
-    // 🔒 Prevent adding to cart if product is out of stock
     if (isOutOfStock) {
       Swal.fire({
         icon: "info",
@@ -89,40 +89,72 @@ export default function ProductOptions({
       return;
     }
 
-    const formData = new FormData();
-    formData.append("product", product.id);
-    formData.append("user", user || "");
-    formData.append("qty", qtyValue);
-    formData.append("price", product.price);
-    formData.append("shipping_amount", product.shipping_amount);
-    formData.append("country", country || "Unknown");
-    formData.append("size", sizeValue);
-    formData.append("color", colorValue);
-    formData.append("cart_id", cartId || "");
-
-    // Optimistic update
-    setCartCount((prev) => prev + Number(qtyValue));
+    const qty = Number(qtyValue || 0);
+    if (qty <= 0) {
+      Swal.fire({
+        icon: "info",
+        title: "Select Quantity",
+        text: "Please enter a valid quantity before adding to cart.",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
 
     try {
+      // 1️⃣ Fetch product stock info
+      const productRes = await apiInstance.get(`/products/${product.slug}/`);
+      const stock_qty = productRes.data.stock_qty;
+
+      // 2️⃣ Get existing cart items
+      const url = userData?.user_id
+        ? `/cart-list/${cart_id}/${userData.user_id}/`
+        : `/cart-list/${cart_id}/`;
+
+      const cartRes = await apiInstance.get(url);
+      const existingItem = cartRes.data.find(
+        (item) => item.product.id === product.id
+      );
+      const existingQty = existingItem ? existingItem.qty : 0;
+
+      // 3️⃣ Stock validation
+      if (existingQty + qty > stock_qty) {
+        Swal.fire({
+          icon: "warning",
+          title: "Insufficient Stock",
+          text: `Only ${stock_qty} unit(s) of "${product.title}" available. You already have ${existingQty} in your cart.`,
+          confirmButtonColor: "#2563eb",
+        });
+        return;
+      }
+
+      // 4️⃣ Proceed to add to cart
+      const formData = new FormData();
+      formData.append("product", product.id);
+      formData.append("user", user || "");
+      formData.append("qty", qty);
+      formData.append("price", product.price);
+      formData.append("shipping_amount", product.shipping_amount);
+      formData.append("country", country || "Unknown");
+      formData.append("size", sizeValue);
+      formData.append("color", colorValue);
+      formData.append("cart_id", cartId || "");
+
+      setCartCount((prev) => prev + qty); // optimistic update
+
       const response = await apiInstance.post("cart/", formData);
+
       Toast.fire({
         icon: "success",
         title: response.data.message || "Added to cart",
       });
 
-      // Sync with backend
-      const cart_id = CartId();
-      const userData = UserData();
-      const url = userData?.user_id
-        ? `/cart-list/${cart_id}/${userData.user_id}/`
-        : `/cart-list/${cart_id}/`;
-
+      // 5️⃣ Sync updated cart count
       const res = await apiInstance.get(url);
       const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
       setCartCount(totalQty);
     } catch (error) {
       console.error("Error adding to cart:", error);
-      setCartCount((prev) => Math.max(prev - Number(qtyValue), 0));
+      setCartCount((prev) => Math.max(prev - qty, 0));
       Toast.fire({
         icon: "error",
         title: "Failed to add to cart",

@@ -108,6 +108,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "product_rating",
             "rating_count",
             'order_count',
+            'stock_qty'
             #"get_precentage",
         ]
     def __init__(self, *args, **kwargs):
