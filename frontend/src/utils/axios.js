@@ -3,7 +3,7 @@ import log from "./logger";
 
 // Create an Axios instance with custom configuration
 const apiInstance = axios.create({
-  baseURL: "http://localhost:8000/api/",
+  baseURL: import.meta.env.VITE_API_URL,
   timeout: 5000,
   headers: {
     "Content-Type": "application/json",
@@ -49,7 +49,7 @@ apiInstance.interceptors.response.use(
           log.debug("Sending refresh request to backend...");
 
           const response = await axios.post(
-            "http://localhost:8000/api/token/refresh/",
+            `${import.meta.env.VITE_API_URL}token/refresh/`,
             { refresh: refreshToken }
           );
 

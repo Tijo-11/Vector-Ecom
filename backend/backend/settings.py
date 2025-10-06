@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
@@ -23,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY', config('SECRET_KEY', default=''))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -88,14 +89,15 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DATABASE_NAME'),
-        'USER': config('DATABASE_USER'),
-        'PASSWORD': config('DATABASE_PASSWORD'),
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('RDS_DB_NAME', config('DATABASE_NAME')),  # Fallback to local .env if not in EB
+        'USER': os.environ.get('RDS_USERNAME', config('DATABASE_USER')),
+        'PASSWORD': os.environ.get('RDS_PASSWORD', config('DATABASE_PASSWORD')),
+        'HOST': os.environ.get('RDS_HOSTNAME', 'localhost'),  # Use RDS host in cloud, localhost locally
+        'PORT': os.environ.get('RDS_PORT', '5432'),
     }
 }
 
@@ -142,7 +144,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 AUTH_USER_MODEL = 'userauth.User' #Note it is included as string
-GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_KEY', config('GOOGLE_CLIENT_KEY', default=''))
 
 
 
@@ -195,11 +197,11 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_HOST =    os.environ.get('EMAIL_HOST', config('EMAIL_HOST', default='smtp.gmail.com'))
+EMAIL_PORT = os.environ.get('EMAIL_PORT', config('EMAIL_PORT', default=587, cast=int))
+EMAIL_USE_TLS = True#
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', config('EMAIL_HOST_USER'))
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', config('EMAIL_HOST_PASSWORD'))
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 REST_FRAMEWORK = {

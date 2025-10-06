@@ -1,5 +1,6 @@
 import razorpay
 from decouple import config
+import os
 import requests
 import logging
 from django.db import transaction
@@ -47,8 +48,8 @@ class RazorpayCheckoutView(generics.CreateAPIView):
         except CartOrder.DoesNotExist:
             return Response({'message': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        key_id = config('RAZORPAY_KEY_ID')
-        key_secret = config('RAZORPAY_KEY_SECRET')
+        key_id = os.environ.get('RAZORPAY_KEY_ID', config('RAZORPAY_KEY_ID'))
+        key_secret = os.environ.get('RAZORPAY_KEY_SECRET', config('RAZORPAY_KEY_SECRET'))
         if not key_id or not key_secret:
             return Response(
                 {'message': 'Razorpay API credentials are missing or invalid'},
@@ -202,7 +203,7 @@ class PaymentSuccessView(generics.CreateAPIView):
         if capture_id:
             try:
                 access_token = get_paypal_access_token(
-                    config("PAYPAL_CLIENT_ID"), config("PAYPAL_CLIENT_SECRET")
+                    os.environ.get('PAYPAL_CLIENT_ID', config('PAYPAL_CLIENT_ID')), os.environ.get('PAYPAL_CLIENT_SECRET', config('PAYPAL_CLINET_SECRET'))
                 )
                 paypal_api_url = f"https://api-m.sandbox.paypal.com/v2/payments/captures/{capture_id}"
                 headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
