@@ -1,31 +1,65 @@
 import { useState, useEffect } from "react";
-import { login } from "../../utils/auth";
+import { login, googleLogin } from "../../utils/auth";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import { Link } from "react-router-dom";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState(""); // Changed from username to email
   const [password, setPassword] = useState("");
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn); //function from Zustand store:
-  //After successful login,  the auth store  sets isLoggedIn internally.
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/");
     }
+    const loadGoogleScript = () => {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setIsGoogleScriptLoaded(true);
+      document.body.appendChild(script);
+    };
+    loadGoogleScript();
   }, []);
+
+  useEffect(() => {
+    if (isGoogleScriptLoaded && window.google && window.google.accounts) {
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+      });
+      window.google.accounts.id.renderButton(
+        document.getElementById("googleSignInDiv"),
+        { theme: "outline", size: "large" }
+      );
+    }
+  }, [isGoogleScriptLoaded]);
+
+  const handleGoogleResponse = async (response) => {
+    setIsLoading(true);
+    const { error } = await googleLogin(response.credential);
+    if (error) {
+      alert(error);
+    } else {
+      navigate("/");
+    }
+    setIsLoading(false);
+  };
+
   const resetForm = () => {
-    setUsername("");
+    setEmail("");
     setPassword("");
   };
+
   const handleLogin = async (e) => {
     e.preventDefault();
-
     setIsLoading(true);
-    const { error } = await login(username, password);
+    const { error } = await login(email, password);
     if (error) {
       alert(error);
     } else {
@@ -49,24 +83,22 @@ export default function Login() {
                     </h3>
                     <div className="mt-6">
                       <form onSubmit={handleLogin}>
-                        {/* Email input */}
                         <div className="mb-4">
                           <label
-                            htmlFor="username"
+                            htmlFor="email"
                             className="block text-sm font-medium text-gray-700"
                           >
                             Email Address
                           </label>
                           <input
-                            type="text"
-                            id="username"
-                            name="username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                           />
                         </div>
-                        {/* Password input */}
                         <div className="mb-4">
                           <label
                             htmlFor="password"
@@ -83,7 +115,6 @@ export default function Login() {
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                           />
                         </div>
-                        {/* Submit button */}
                         <button
                           type="submit"
                           disabled={isLoading}
@@ -93,17 +124,19 @@ export default function Login() {
                             <>
                               <span className="mr-2">Processing...</span>
                               <i className="fas fa-spinner fa-spin" />
-                              {/* Font Awesome icon (fa-spinner) with spinning animation (fa-spin) to visually show activity. */}
                             </>
                           ) : (
                             <>
                               <span className="mr-2">Sign In</span>
                               <i className="fas fa-sign-in-alt" />
-                              {/* Uses Font Awesome icon set (fas) to render a login-style icon (fa-sign-in-alt). */}
                             </>
                           )}
                         </button>
-                        {/* Links */}
+                        <div className="text-center mt-4">Or</div>
+                        <div
+                          id="googleSignInDiv"
+                          className="w-full flex justify-center mt-4"
+                        ></div>
                         <div className="text-center mt-6">
                           <p>
                             Don't have an account?{" "}

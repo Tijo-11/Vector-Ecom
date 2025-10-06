@@ -4,9 +4,12 @@ from .views.dashboard_views import ProductsAPIView, OrdersAPIView, RevenueAPIVie
 from .views.dashboard_views import Earning, MonthlyEarningTracker, ReviewsListAPIView, ReviewsDetailAPIView, YearlyOrderReportChartAPIView
 from .views.coupon_views import CouponListAPIView, CouponStats, CouponDetailAPIView, CouponCreateAPIView
 #dashboard view contains yearly revenue
-from .views.notification_views import *
-from .views.shop_views import * #Both Vendor, Shop and Courier
-from .views.product_views import *#create, delete, update
+from .views.notification_views import (NotificationMarkAsSeen, NotificationSeenListAPIView,
+        NotificationSummaryAPIView,NotificationUnSeenListAPIView, )
+from .views.shop_views import (VendorProfileUpdateView, ShopProductsAPIView, ShopAPIView,
+            ShopUpdateView, VendorRegister, CourierListAPIView, OrderItemDetailAPIView)
+from .views.product_views import (ProductCreateView, ProductUpdateAPIView, ProductDeleteAPIView,
+                                  FilterProductsAPIView)
 urlpatterns=[
     path('vendor/stats/<vendor_id>/', DashboardStatsAPIView.as_view(), name='vendor-stats'),
     path('vendor/products/<vendor_id>/', ProductsAPIView.as_view(), name='vendor-prdoucts'),

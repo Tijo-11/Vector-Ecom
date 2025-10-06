@@ -142,6 +142,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 AUTH_USER_MODEL = 'userauth.User' #Note it is included as string
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
 
 
 

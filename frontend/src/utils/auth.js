@@ -1,4 +1,3 @@
-// src/utils/auth.js
 import { useAuthStore } from "../store/auth";
 import apiInstance from "./axios";
 import { jwtDecode } from "jwt-decode";
@@ -14,27 +13,17 @@ const Toast = Swal.mixin({
   timerProgressBar: true,
 });
 
-// Removed syncCartAfterLogin - handled by CartInitializer
-
 export const login = async (email, password) => {
   try {
     const { data, status } = await apiInstance.post("user/token/", {
       email,
       password,
     });
-
     if (status === 200) {
       setAuthUser(data.access, data.refresh);
-
-      // CRITICAL: Clear anonymous cart on login
       localStorage.removeItem("random_string");
-
-      Toast.fire({
-        icon: "success",
-        title: "Login Successful",
-      });
+      Toast.fire({ icon: "success", title: "Login Successful" });
     }
-
     return { data, error: null };
   } catch (error) {
     return {
@@ -59,14 +48,8 @@ export const register = async (
       password,
       password2,
     });
-
-    await login(email, password);
-
-    Toast.fire({
-      icon: "success",
-      title: "Signed Up Successfully",
-    });
-
+    // Do not auto-login; return data for OTP handling
+    Toast.fire({ icon: "success", title: "Signed Up. Verify OTP." });
     return { data, error: null };
   } catch (error) {
     return {
@@ -76,9 +59,41 @@ export const register = async (
   }
 };
 
+export const verifyOtp = async (otp, uidb64) => {
+  try {
+    const { data } = await apiInstance.post("user/verify-otp/", {
+      otp,
+      uidb64,
+    });
+    Toast.fire({ icon: "success", title: "Email Verified" });
+    return { data, error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error: error.response?.data?.message || "Invalid OTP",
+    };
+  }
+};
+
+export const googleLogin = async (credential) => {
+  try {
+    const { data } = await apiInstance.post("user/google-login/", {
+      credential,
+    });
+    setAuthUser(data.access, data.refresh);
+    localStorage.removeItem("random_string");
+    Toast.fire({ icon: "success", title: "Google Login Successful" });
+    return { data, error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error: error.response?.data?.error || "Google login failed",
+    };
+  }
+};
+
 export const logout = () => {
   const accessToken = Cookies.get("access_token");
-
   if (accessToken) {
     try {
       const user = jwtDecode(accessToken);
@@ -89,29 +104,18 @@ export const logout = () => {
       console.error("Error decoding token during logout:", err);
     }
   }
-
   Cookies.remove("access_token");
   Cookies.remove("refresh_token");
   localStorage.removeItem("userData");
-
   localStorage.setItem("random_string", generateRandomString());
-
   useAuthStore.getState().setUser(null);
-
-  Toast.fire({
-    icon: "success",
-    title: "You have been logged out.",
-  });
+  Toast.fire({ icon: "success", title: "You have been logged out." });
 };
 
 export const setUser = async () => {
   const accessToken = Cookies.get("access_token");
   const refreshToken = Cookies.get("refresh_token");
-
-  if (!accessToken || !refreshToken) {
-    return;
-  }
-
+  if (!accessToken || !refreshToken) return;
   if (isAccessTokenExpired(accessToken)) {
     const response = await getRefreshToken(refreshToken);
     setAuthUser(response.access, response.refresh);
@@ -123,9 +127,7 @@ export const setUser = async () => {
 export const setAuthUser = (access_token, refresh_token) => {
   Cookies.set("access_token", access_token, { expires: 1, secure: true });
   Cookies.set("refresh_token", refresh_token, { expires: 7, secure: true });
-
   const user = jwtDecode(access_token) || null;
-
   if (user) {
     useAuthStore.getState().setUser(user);
     localStorage.setItem("userData", JSON.stringify(user));
