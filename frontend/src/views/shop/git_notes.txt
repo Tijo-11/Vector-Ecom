@@ -1,0 +1,31 @@
+Git Note: Inspecting a Previous Commit in Detached HEAD State
+
+To temporarily inspect a previous commit without affecting your current branch:
+
+Checkout the commit (detached HEAD):
+
+bash
+git checkout <commit-hash>
+This puts you in a detached HEAD state, allowing you to explore or test without modifying any branches.
+
+Inspect or experiment freely: You can view files, run tests, or even make temporary commits. These won't affect your branches unless you explicitly save them.
+
+Return to the tip of your branch:
+
+bash
+git switch <branch-name>
+This brings you back to the latest commit on your branch, exiting the detached state.
+
+Example:
+
+bash
+git checkout 9d74a4a8   # Go to older commit
+# ...inspect or test...
+git switch main         # Return to latest commit on 'main'
+This is a safe way to explore history without disrupting your current work.
+###################################
+Confirm you're at the tip:
+
+bash
+git log --oneline -1
+This shows the most recent commit on your current branch. If it matches the commit you expect, you're at the tip.
