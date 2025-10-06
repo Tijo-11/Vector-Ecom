@@ -12,7 +12,7 @@ export default function UserProfileData() {
     const fetchProfile = async () => {
       const userId = userData?.user_id;
 
-      // ✅ CORE GUARD: Skip fetch if no valid user ID (guest or invalid)
+      //   Skip fetch if no valid user ID (guest or invalid)
       if (!userId || isNaN(Number(userId)) || Number(userId) <= 0) {
         console.log("Profile fetch skipped: Invalid user ID", userId);
         setProfile(null);
@@ -32,14 +32,14 @@ export default function UserProfileData() {
         console.error("Profile fetch error:", err);
         setError(err.response?.data?.detail || "Failed to load profile");
         setProfile(null);
-        // Optional: If 401, trigger logout (import { logout } from "../utils/auth")
+        // If 401, trigger logout (import { logout } from "../utils/auth")
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [userData?.user_id]); // ✅ Dep on user_id: Refetches on login/logout, skips re-runs if stable
+  }, [userData?.user_id]); //  Dep on user_id: Refetches on login/logout, skips re-runs if stable
 
   // Return object for easier consumption (loading, error states)
   return { profile, loading, error };

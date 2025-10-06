@@ -4,6 +4,7 @@ import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
 import { Link, useParams } from "react-router-dom";
+import log from "loglevel";
 
 function OrderDetail() {
   const [order, setOrder] = useState([]);
@@ -13,7 +14,7 @@ function OrderDetail() {
   const axios = apiInstance;
   const userData = UserData();
   const param = useParams();
-  console.log(param);
+  log.debug(param);
 
   useEffect(() => {
     axios
@@ -27,7 +28,7 @@ function OrderDetail() {
       });
   }, []);
 
-  console.log(order);
+  log.debug(order);
 
   return (
     <div>

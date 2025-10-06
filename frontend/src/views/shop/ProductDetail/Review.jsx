@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
-import moment from "moment"; //📅 Imports Moment.js, a JavaScript library for parsing, validating, manipulating,
-//  and formatting dates and times.
+import moment from "moment"; // for parsing, validating, manipulating, and formatting dates and times.
 import Swal from "sweetalert2";
-//
+import log from "loglevel";
+
 export default function Review({ product, userData }) {
   const [reviews, setReviews] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -20,38 +20,24 @@ export default function Review({ product, userData }) {
         const res = await apiInstance.get(`reviews/${product.id}/`);
         setReviews(res.data);
       } catch (error) {
-        console.error("Error fetching reviews:", error);
+        log.error("Error fetching reviews:", error);
       }
     }
   };
   useEffect(() => {
     //At first render, product is still {} (empty object from useState({}) in ProductDetail),
-    // so product?.id is undefined. That builds a URL like:
+    // so product?.id is undefined.
     if (product && product.id) {
       fetchReviewData();
     }
   }, [product]);
 
-  // Handle input change
-  //Updates review state dynamically Copies existing createReview state and updates the field matching
-  //  e.target.name with its new value from e.target.value. Useful for handling multiple form inputs with
-  // one function.
-  //e.target.name: The name attribute of the input element that triggered the event. It tells which
-  // field (e.g., "title", "comment") is being updated.
-  //e.target.value: The current value entered in that input field.
   const handleReviewChange = (e) => {
     setCreateReview({
       ...createReview,
       [e.target.name]: e.target.value,
     });
-    // console.log(createReview);
   };
-  /* Axios is a third-party library that simplifies HTTP requests with features like automatic JSON parsing, 
-request/response interceptors, and built-in support for timeouts and cancellation. It works in both browsers 
-and Node.js, making it versatile for frontend and backend use. In contrast, Fetch is a native browser API 
-that requires manual handling of JSON responses and errors, and lacks some of Axios’s advanced features like 
-interceptors and progress tracking. While Fetch is lightweight and built-in, Axios offers more convenience 
-and abstraction for complex request handling. */
 
   //handleSubmit
   const handleReviewSubmit = async (e) => {

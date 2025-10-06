@@ -5,6 +5,7 @@ import { ShoppingCart, Plus, Edit } from "lucide-react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
+import log from "loglevel";
 
 function OrderDetail() {
   const [order, setOrder] = useState({});
@@ -27,7 +28,7 @@ function OrderDetail() {
         setOrder(response.data);
         setOrderItems(response.data.orderitem);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        log.error("Error fetching data:", error);
       }
     };
 

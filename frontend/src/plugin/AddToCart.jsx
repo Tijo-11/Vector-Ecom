@@ -14,7 +14,7 @@ const Toast = Swal.mixin({
 });
 
 export const addToCart = async (
-  product_slug, // 👈 change this to slug so we can fetch product info easily
+  product_slug,
   product_id,
   qty,
   price,
@@ -31,12 +31,12 @@ export const addToCart = async (
   if (setIsAddingToCart) setIsAddingToCart("Processing...");
 
   try {
-    // 1️⃣ Get product details (for stock check)
+    // 1️.) Get product details (for stock check)
     const productRes = await apiInstance.get(`/products/${product_slug}/`);
     const stock_qty = productRes.data.stock_qty;
     const product_name = productRes.data.title;
 
-    // 2️⃣ Get current cart list
+    // 2) Get current cart list
     const cartUrl =
       isLoggedIn && user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
@@ -45,13 +45,13 @@ export const addToCart = async (
     const cartRes = await apiInstance.get(cartUrl);
     const cartItems = cartRes.data;
 
-    // 3️⃣ Find if this product already exists in cart
+    // 3) Find if this product already exists in cart
     const existingItem = cartItems.find(
       (item) => item.product.id === product_id
     );
     const existingQty = existingItem ? existingItem.qty : 0;
 
-    // 4️⃣ Check if adding exceeds stock
+    // 4) Check if adding exceeds stock
     if (existingQty + qty > stock_qty) {
       Swal.fire({
         icon: "warning",
@@ -59,10 +59,10 @@ export const addToCart = async (
         text: `Only ${stock_qty} unit(s) of "${product_name}" available. You already have ${existingQty} in cart.`,
       });
       if (setIsAddingToCart) setIsAddingToCart("Add To Cart");
-      return; // ❌ stop here
+      return;
     }
 
-    // 5️⃣ Proceed with add to cart
+    // 5) Proceed with add to cart
     const payload = {
       product: product_id,
       user: isLoggedIn ? user?.user_id : "",
@@ -82,7 +82,7 @@ export const addToCart = async (
       title: "Added To Cart",
     });
 
-    // 6️⃣ Refresh cart count
+    // 6) Refresh cart count
     const res = await apiInstance.get(cartUrl);
     const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
     setCartCount(totalQty);

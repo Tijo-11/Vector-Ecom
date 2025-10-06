@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Swal from "sweetalert2";
+import log from "loglevel";
 
 function Settings() {
   const [profileData, setProfileData] = useState({
@@ -41,7 +42,7 @@ function Settings() {
           p_image: res.data?.image || "",
         });
       } catch (error) {
-        console.error("Error fetching profile data: ", error);
+        log.error("Error fetching profile data:", error);
       }
     };
 
@@ -103,7 +104,7 @@ function Settings() {
         title: "Profile updated successfully",
       });
     } catch (error) {
-      console.error("Error updating profile:", error);
+      log.error("Error updating profile:", error);
 
       // ✅ Show error notification
       let errorMessage = "Something went wrong!";

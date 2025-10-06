@@ -9,6 +9,7 @@ import ProductGallery from "./EditProduct/ProductGallery";
 import ProductSpecifications from "./EditProduct/ProductSpecifications";
 import ProductVariants from "./EditProduct/ProductVariants";
 import { CheckCircle } from "lucide-react";
+import log from "loglevel";
 
 function UpdateProduct() {
   const userData = UserData();
@@ -109,7 +110,7 @@ function UpdateProduct() {
             : [{ image: null }]
         );
       } catch (error) {
-        console.error("Error fetching product data:", error);
+        log.error("Error fetching product data:", error);
         Swal.fire({
           icon: "error",
           title: "Error",
@@ -207,7 +208,7 @@ function UpdateProduct() {
       product.stock_qty === "" ||
       product.image === null
     ) {
-      console.log("Please fill in all required fields");
+      log.debug("Please fill in all required fields");
       setIsLoading(false);
       Swal.fire({
         icon: "warning",
@@ -295,7 +296,7 @@ function UpdateProduct() {
 
       navigate("/vendor/products/");
     } catch (error) {
-      console.error("Error updating product:", error);
+      log.error("Error updating product:", error);
       setIsLoading(false);
       Swal.fire({
         icon: "error",

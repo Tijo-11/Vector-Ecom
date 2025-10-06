@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { v4 as uuidv4 } from "uuid";
+import log from "loglevel";
 
 function PaymentSuccess() {
   const { order_id } = useParams();
@@ -22,7 +23,7 @@ function PaymentSuccess() {
       setHasRun(true);
 
       const requestId = uuidv4();
-      console.log(
+      log.debug(
         `PaymentSuccess check (order_id=${order_id}, requestId=${requestId})`
       );
 
@@ -39,7 +40,7 @@ function PaymentSuccess() {
             { headers: { "X-Request-ID": requestId } }
           );
 
-          console.log("Razorpay verification response:", verifyResponse.data);
+          log.debug("Razorpay verification response:", verifyResponse.data);
           setStatus(verifyResponse.data.message || "unpaid");
         } else {
           // ✅ PayPal already verified in backend during onApprove
@@ -50,20 +51,20 @@ function PaymentSuccess() {
         const userObj = userData ? JSON.parse(userData) : null;
         if (!userObj?.user_id) {
           localStorage.removeItem("random_string");
-          console.log("Guest cartId cleared from localStorage");
+          log.debug("Guest cartId cleared from localStorage");
         }
 
         // In both cases, fetch order details
         const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
-        console.log("Order response:", orderResponse.data);
+        log.debug("Order response:", orderResponse.data);
         setOrder(orderResponse.data || {});
       } catch (error) {
-        console.error("PaymentSuccess error:", error);
+        log.error("PaymentSuccess error:", error);
         if (error.response?.data?.message === "already_paid") {
           setStatus("already_paid");
           const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
           setOrder(orderResponse.data || {});
-          console.log(orderResponse.data);
+          log.debug(orderResponse.data);
         } else {
           setStatus("unpaid");
         }

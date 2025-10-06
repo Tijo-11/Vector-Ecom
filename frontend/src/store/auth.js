@@ -1,9 +1,6 @@
 import { create } from "zustand";
-// Zustand is a lightweight state management library for React. The `create` function is used
-// to build custom hooks that manage shared state across components without boilerplate or context providers.
 
 import { mountStoreDevtool } from "simple-zustand-devtools";
-// simple-zustand-devtools is a handy utility that lets you inspect and debug your Zustand store right
 // from the browser’s developer tools. It helps track state changes and actions for easier debugging.
 
 const useAuthStore = create((set, get) => ({
@@ -32,7 +29,7 @@ const useAuthStore = create((set, get) => ({
           }
         : null,
       isLoggedIn: !!user,
-      isVendor: user?.vendor_id > 0,   // To check vendor
+      isVendor: user?.vendor_id > 0, // To check vendor
     }),
 
   // setLoading: Updates the loading state during API calls (true while waiting, false after response).

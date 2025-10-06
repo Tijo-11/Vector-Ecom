@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
 import cartID from "../ProductDetail/cartId";
 import CheckoutForm from "./CheckoutForm";
+import log from "loglevel";
 
 function CartSummary({ cartItems, setCartTotal }) {
   const [cart_total, setCartTotalLocal] = useState({
@@ -30,7 +31,7 @@ function CartSummary({ cartItems, setCartTotal }) {
           setCartTotalLocal(newTotals);
           setCartTotal(newTotals);
         } catch (error) {
-          console.error("Error fetching cart totals:", error);
+          log.error("Error fetching cart totals:", error);
         }
       }
     };
@@ -39,7 +40,7 @@ function CartSummary({ cartItems, setCartTotal }) {
 
   const handleOrderSubmit = (formData) => {
     // Pass form data to parent or handle additional logic if needed
-    console.log("Order submitted with data:", { ...formData, cart_total });
+    log.debug("Order submitted with data:", { ...formData, cart_total });
   };
 
   return (

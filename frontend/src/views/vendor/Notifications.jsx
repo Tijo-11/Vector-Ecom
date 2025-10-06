@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
+import log from "loglevel";
 
 function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -27,7 +28,7 @@ function Notifications() {
       );
       setNotifications(response.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      log.error("Error fetching data:", error);
     }
   };
 
@@ -38,7 +39,7 @@ function Notifications() {
       );
       setSeenNotifications(response.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      log.error("Error fetching data:", error);
     }
   };
 
@@ -49,7 +50,7 @@ function Notifications() {
       );
       setNotificationStats(response.data[0]);
     } catch (error) {
-      console.error("Error fetching stats data:", error);
+      log.error("Error fetching stats data:", error);
     }
   };
 
@@ -68,7 +69,7 @@ function Notifications() {
       await fetchUnseenData();
       await fetchSeenData();
     } catch (error) {
-      console.error("Error marking notification as seen:", error);
+      log.error("Error marking notification as seen:", error);
     }
   };
 

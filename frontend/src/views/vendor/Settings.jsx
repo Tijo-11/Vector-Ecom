@@ -5,6 +5,7 @@ import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
 import Swal from "sweetalert2";
 import { CheckCircle, Store } from "lucide-react";
+import log from "loglevel";
 
 function Settings() {
   const [profileData, setProfileData] = useState({
@@ -46,7 +47,7 @@ function Settings() {
         setprofileImage(res.data.image);
       });
     } catch (error) {
-      console.error("Error fetching profile data:", error);
+      log.error("Error fetching profile data:", error);
     }
   };
 
@@ -57,7 +58,7 @@ function Settings() {
         setVendorImage(res.data.image);
       });
     } catch (error) {
-      console.error("Error fetching vendor data:", error);
+      log.error("Error fetching vendor data:", error);
     }
   };
 
@@ -120,7 +121,7 @@ function Settings() {
       fetchProfileData();
       Swal.fire({ icon: "success", title: "Profile updated successfully" });
     } catch (error) {
-      console.error("Error updating profile:", error);
+      log.error("Error updating profile:", error);
     }
   };
 
@@ -145,7 +146,7 @@ function Settings() {
       Swal.fire({ icon: "success", title: "Shop updated successfully" });
       await fetchVendorData();
     } catch (error) {
-      console.error("Error updating shop:", error);
+      log.error("Error updating shop:", error);
     }
   };
 

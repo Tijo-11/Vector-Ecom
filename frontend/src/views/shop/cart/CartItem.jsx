@@ -6,6 +6,7 @@ import UserCountry from "../ProductDetail/UserCountry";
 import { toast } from "../../../utils/toast";
 import { CartContext } from "../../../plugin/Context";
 import Swal from "sweetalert2";
+import log from "loglevel";
 
 function CartItem({ cartItems, setCart, setCartTotal }) {
   const [productQuantities, setProductQuantities] = useState({});
@@ -100,7 +101,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       );
       setCartCount(totalQty);
     } catch (error) {
-      console.error("Error updating cart:", error);
+      log.error("Error updating cart:", error);
       setCartCount(previousCartCount); // Rollback optimistic update
       toast.fire({ icon: "error", title: "Failed to update cart" }); // ✅ Single toast
     }
@@ -117,7 +118,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     try {
       // DELETE first
       const response = await apiInstance.delete(url);
-      console.log(response.data);
+      log.debug(response.data);
 
       // Then fetch updated cart (critical: do this regardless of totals)
       const cartUrl = user?.user_id
@@ -145,7 +146,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
           total: totalResponse.data?.total || 0,
         });
       } catch (totalError) {
-        console.warn(
+        log.warn(
           "Totals fetch failed after delete (non-critical):",
           totalError
         );
@@ -163,7 +164,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       // Success! (DELETE + cart update worked)
       toast.fire({ icon: "success", title: "Item removed from cart" });
     } catch (error) {
-      console.error("Critical error in delete (DELETE or cart fetch):", error);
+      log.error("Critical error in delete (DELETE or cart fetch):", error);
       // Only rollback if core ops fail
       setCart(previousCart);
       setCartCount(previousCartCount);

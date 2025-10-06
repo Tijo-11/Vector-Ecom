@@ -8,6 +8,7 @@ import UserCountry from "./ProductDetail/UserCountry";
 import UserData from "../../plugin/UserData";
 import cartID from "./ProductDetail/cartId";
 import Swal from "sweetalert2";
+import log from "loglevel";
 
 export default function Search() {
   const Toast = Swal.mixin({
@@ -93,7 +94,7 @@ export default function Search() {
     formData.append("cart_id", cart_id);
 
     const response = await apiInstance.post(`cart/`, formData);
-    console.log(response.data);
+    log.debug(response.data);
     Toast.fire({
       icon: "success",
       title: response.data.message || "Added to cart",

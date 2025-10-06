@@ -6,6 +6,7 @@ import Swal from "sweetalert2";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
+import log from "loglevel";
 
 function EditCoupon() {
   const [coupon, setCoupon] = useState({});
@@ -25,7 +26,7 @@ function EditCoupon() {
       );
       setCoupon(res.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      log.error("Error fetching data:", error);
     }
   };
 

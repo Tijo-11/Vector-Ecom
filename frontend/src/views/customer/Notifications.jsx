@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
+import log from "loglevel";
 
 function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -29,7 +30,7 @@ function Notifications() {
       // ✅ remove from state after marking as seen
       setNotifications((prev) => prev.filter((noti) => noti.id !== noti_id));
     } catch (err) {
-      console.error("Error marking notification as seen", err);
+      log.error("Error marking notification as seen", err);
     }
   };
 

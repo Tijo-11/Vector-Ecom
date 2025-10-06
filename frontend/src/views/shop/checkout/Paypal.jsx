@@ -3,6 +3,7 @@ import { useState } from "react";
 import Swal from "sweetalert2";
 import { API_BASEURL, SERVER_URL } from "../../../utils/constants";
 import { useNavigate } from "react-router-dom";
+import log from "loglevel";
 
 function PaypalButton({ order, order_id }) {
   const [error, setError] = useState(null);
@@ -69,7 +70,7 @@ function PaypalButton({ order, order_id }) {
       const paypalOrderId = data.orderID;
       const captureId = details.purchase_units[0].payments.captures[0].id;
 
-      console.log({ name, status, paypalOrderId });
+      log.debug({ name, status, paypalOrderId });
 
       const response = await fetch(
         `${API_BASEURL}payment-success/${order_id}/`,
@@ -85,10 +86,10 @@ function PaypalButton({ order, order_id }) {
           }),
         }
       );
-      //👉 The order did exist, but once you called actions.order.capture(), PayPal closed it and it can’t be queried again via /v2/checkout/orders/{id}.
+      // The order did exist, but once you called actions.order.capture(), PayPal closed it and it can’t be queried again via /v2/checkout/orders/{id}.
 
-      //This is normal — after capture, the order ID is no longer valid for lookups. Instead, PayPal expects you to verify using the capture ID.
-      console.log("Frontend orderID:", data.orderID);
+      // — after capture, the order ID is no longer valid for lookups. Instead, PayPal expects you to verify using the capture ID.
+      log.debug("Frontend orderID:", data.orderID);
 
       const result = await response.json();
       if ((result.success || response.ok) && status === "COMPLETED") {

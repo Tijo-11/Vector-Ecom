@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
-// Importing Link from react-router-dom to navigate between different routes in the app.
 
 import { useAuthStore } from "../../store/auth";
-// Importing the custom Zustand store hook to access authentication-related state.
 
 export default function Dashboard() {
   // Extracting user and isLoggedIn state directly from the store

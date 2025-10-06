@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import apiInstance from "../../utils/axios";
 import { Link, useParams } from "react-router-dom";
+import log from "loglevel";
 
 function ViewOrder() {
   const [order, setOrder] = useState(null);
@@ -17,7 +18,7 @@ function ViewOrder() {
         setOrder(res.data);
         setOrderItems(res.data.orderitem);
       } catch (err) {
-        console.error("Error fetching order:", err);
+        log.error("Error fetching order:", err);
       } finally {
         setLoading(false);
       }

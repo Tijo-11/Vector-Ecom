@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-// Hook to read and modify URL query parameters in React components using React Router.
-// Example: const [searchParams] = useSearchParams(); gives access to ?key=value pairs.
+
 import axios from "../../utils/axios";
 import Swal from "sweetalert2";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [searchParams] = useSearchParams();
-  //React uses array destructuring here because useSearchParams() returns a tuple:
-  //searchParams: reads current query params (like ?page=2)
+
   const otp = searchParams.get("otp");
   const uuid = searchParams.get("uuid");
 
@@ -47,14 +45,10 @@ export default function ForgotPassword() {
     <>
       <section>
         <main className="mb-24 mt-12">
-          {/* max-w-7xl: sets max width to 80rem (1280px) */}
           <div className="max-w-7xl mx-auto px-4">
-            {/* Section: Forgot Password form */}
             <section>
               <div className="flex justify-center">
                 <div className="w-full max-w-xl md:max-w-md">
-                  {/* // max-w-xl: sets max width to 36rem (576px) on small screens //
-                  //  md:max-w-md: overrides to 28rem (448px) on medium screens and up */}
                   <div className="bg-white rounded-2xl shadow-md">
                     <div className="p-6">
                       <h3 className="text-center text-2xl font-semibold">

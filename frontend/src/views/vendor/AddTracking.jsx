@@ -12,6 +12,7 @@ import Swal from "sweetalert2";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
+import log from "loglevel";
 
 function OrderItemDetail() {
   const [orderItems, setOrderItems] = useState([]);
@@ -43,7 +44,7 @@ function OrderItemDetail() {
         setOrder(response.data.order);
         setOrderItems(response.data);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        log.error("Error fetching data:", error);
       }
     };
 
@@ -52,7 +53,7 @@ function OrderItemDetail() {
         const response = await axios.get(`vendor/couriers/`);
         setCourier(response.data);
       } catch (error) {
-        console.error("Error fetching courier:", error);
+        log.error("Error fetching courier:", error);
       }
     };
 
@@ -79,7 +80,7 @@ function OrderItemDetail() {
           });
         });
     } catch (error) {
-      console.log(error);
+      log.debug(error);
       setLoading(false);
     }
   };

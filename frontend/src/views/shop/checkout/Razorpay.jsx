@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRazorpay } from "react-razorpay";
 import apiInstance from "../../../utils/axios";
 import Swal from "sweetalert2";
+import { log } from "loglevel";
 
 function RazorpayButton({ order, order_id }) {
   const { error, isLoading, Razorpay } = useRazorpay();
@@ -86,7 +87,7 @@ function RazorpayButton({ order, order_id }) {
         title: "Error",
         text: "Failed to initiate Razorpay checkout.",
       });
-      console.error("Error initiating Razorpay checkout:", error);
+      log.error("Error initiating Razorpay checkout:", error);
     }
   };
 

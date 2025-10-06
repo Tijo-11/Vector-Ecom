@@ -13,6 +13,7 @@ import CartId from "../ProductDetail/cartId.jsx";
 import { addToWishlist } from "../../../plugin/addToWishlist";
 import { useAuthStore } from "../../../store/auth";
 import StarRating from "./StarRating";
+import log from "loglevel";
 
 export default function Products() {
   const Toast = Swal.mixin({
@@ -44,7 +45,7 @@ export default function Products() {
       );
       setWishlist(response.data);
     } catch (error) {
-      console.log("Error fetching wishlist:", error);
+      log.error("Error fetching wishlist:", error);
     }
   };
 
@@ -162,7 +163,7 @@ export default function Products() {
       const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
       setCartCount(totalQty);
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      log.error("Error adding to cart:", error);
       Toast.fire({
         icon: "error",
         title: "Failed to add to cart",
@@ -175,7 +176,7 @@ export default function Products() {
       await addToWishlist(product_id, userData?.user_id);
       fetchWishlist(); // Refresh wishlist after adding/removing
     } catch (error) {
-      console.log("Error updating wishlist:", error);
+      log.error("Error updating wishlist:", error);
     }
   };
 

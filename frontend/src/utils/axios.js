@@ -1,4 +1,5 @@
 import axios from "axios";
+import log from "./logger";
 
 // Create an Axios instance with custom configuration
 const apiInstance = axios.create({
@@ -22,68 +23,56 @@ const getCookie = (name) => {
 apiInstance.interceptors.request.use(
   (config) => {
     const token = getCookie("access_token");
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Optional: Add a response interceptor to handle token refresh
+// Add a response interceptor to handle token refresh
 apiInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If token expired (401) and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-
-      console.log("🔄 Access token expired, attempting refresh...");
+      log.debug("Access token expired, attempting refresh...");
 
       try {
         const refreshToken = getCookie("refresh_token");
-        console.log("🔑 Refresh token found:", refreshToken ? "Yes" : "No");
+        log.debug("Refresh token found:", !!refreshToken);
 
         if (refreshToken) {
-          console.log("📤 Sending refresh request to backend...");
+          log.debug("Sending refresh request to backend...");
 
-          // Try to refresh the token
           const response = await axios.post(
             "http://localhost:8000/api/token/refresh/",
             { refresh: refreshToken }
           );
 
           const newAccessToken = response.data.access;
-          console.log("✅ New access token received");
+          log.debug("New access token received");
 
-          // Set new token in cookie
           document.cookie = `access_token=${newAccessToken}; path=/; max-age=${
             60 * 5
-          }`; // 5 minutes
-          console.log("🍪 Cookie updated with new access token");
+          }`;
+          log.debug("Cookie updated with new access token");
 
-          // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          console.log("🔁 Retrying original request...");
+          log.debug("Retrying original request...");
           return apiInstance(originalRequest);
         } else {
-          console.log("❌ No refresh token found, redirecting to login");
+          log.warn("No refresh token found, redirecting to login");
           throw new Error("No refresh token available");
         }
       } catch (refreshError) {
-        console.error("❌ Token refresh failed:", refreshError);
-        // If refresh fails, clear cookies and redirect to login
+        log.error("Token refresh failed:", refreshError);
         document.cookie = "access_token=; path=/; max-age=0";
         document.cookie = "refresh_token=; path=/; max-age=0";
-        console.log("🚪 Redirecting to login page...");
+        log.warn("Redirecting to login page...");
         window.location.href = "/login";
         return Promise.reject(refreshError);
       }

@@ -6,6 +6,7 @@ import Swal from "sweetalert2";
 import RazorpayButton from "./Razorpay";
 import PaypalButton from "./Paypal";
 import Loader from "./Loader";
+import log from "loglevel";
 
 function Checkout() {
   const [order, setOrder] = useState({});
@@ -18,7 +19,7 @@ function Checkout() {
       const response = await apiInstance.get(`/checkout/${order_id}/`);
       setOrder(response.data || {});
     } catch (error) {
-      console.error("Error fetching order:", error);
+      log.error("Error fetching order:", error);
     }
   };
 
@@ -46,7 +47,7 @@ function Checkout() {
           title: err.response.data.message,
         });
       } else {
-        console.error(err);
+        log.error(err);
       }
     }
   };

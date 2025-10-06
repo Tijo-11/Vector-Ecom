@@ -7,6 +7,7 @@ import CartId from "../ProductDetail/cartId.jsx";
 import UserData from "../../../plugin/UserData.js";
 import { addToWishlist } from "../../../plugin/addToWishlist";
 import { useAuthStore } from "../../../store/auth";
+import log from "loglevel";
 
 export default function ProductOptions({
   product,
@@ -45,7 +46,7 @@ export default function ProductOptions({
       );
       setWishlist(response.data);
     } catch (error) {
-      console.log("Error fetching wishlist:", error);
+      log.error("Error fetching wishlist:", error);
     }
   };
 
@@ -101,11 +102,11 @@ export default function ProductOptions({
     }
 
     try {
-      // 1️⃣ Fetch product stock info
+      // 1️ Fetch product stock info
       const productRes = await apiInstance.get(`/products/${product.slug}/`);
       const stock_qty = productRes.data.stock_qty;
 
-      // 2️⃣ Get existing cart items
+      // 2️ Get existing cart items
       const url = userData?.user_id
         ? `/cart-list/${cart_id}/${userData.user_id}/`
         : `/cart-list/${cart_id}/`;
@@ -116,7 +117,7 @@ export default function ProductOptions({
       );
       const existingQty = existingItem ? existingItem.qty : 0;
 
-      // 3️⃣ Stock validation
+      // 3️ Stock validation
       if (existingQty + qty > stock_qty) {
         Swal.fire({
           icon: "warning",
@@ -127,7 +128,7 @@ export default function ProductOptions({
         return;
       }
 
-      // 4️⃣ Proceed to add to cart
+      // 4️ Proceed to add to cart
       const formData = new FormData();
       formData.append("product", product.id);
       formData.append("user", user || "");
@@ -148,12 +149,12 @@ export default function ProductOptions({
         title: response.data.message || "Added to cart",
       });
 
-      // 5️⃣ Sync updated cart count
+      // 5️ Sync updated cart count
       const res = await apiInstance.get(url);
       const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
       setCartCount(totalQty);
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      log.error("Error adding to cart:", error);
       setCartCount((prev) => Math.max(prev - qty, 0));
       Toast.fire({
         icon: "error",

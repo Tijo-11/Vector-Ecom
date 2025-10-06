@@ -9,6 +9,7 @@ import ProductGallery from "./EditProduct/ProductGallery";
 import ProductSpecifications from "./EditProduct/ProductSpecifications";
 import ProductVariants from "./EditProduct/ProductVariants";
 import { CheckCircle } from "lucide-react";
+import log from "loglevel";
 
 function AddProduct() {
   const userData = UserData();
@@ -132,7 +133,7 @@ function AddProduct() {
       product.stock_qty === "" ||
       product.image === null
     ) {
-      console.log("Please fill in all required fields");
+      log.warn("Please fill in all required fields");
       setIsLoading(false);
       Swal.fire({
         icon: "warning",
@@ -221,7 +222,7 @@ function AddProduct() {
 
       // navigate('/vendor/products/');
     } catch (error) {
-      console.error("Error submitting form:", error);
+      log.error("Error submitting form:", error);
       setIsLoading(false);
       Swal.fire({
         icon: "error",

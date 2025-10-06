@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
 import cartID from "../ProductDetail/cartId";
+import log from "loglevel";
 
 function Cart() {
   const [cart, setCart] = useState([]);
@@ -20,9 +21,9 @@ function Cart() {
           : `/cart-list/${cartId}/`;
         const response = await apiInstance.get(url);
         setCart(response.data || []);
-        console.log(response.data);
+        log.debug(response.data);
       } catch (error) {
-        console.error("Error fetching cart items:", error);
+        log.error("Error fetching cart items:", error);
       }
     };
 

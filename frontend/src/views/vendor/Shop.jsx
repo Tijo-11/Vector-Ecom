@@ -6,9 +6,10 @@ import apiInstance from "../../utils/axios";
 import { CartContext } from "../../plugin/Context";
 import { addToWishlist } from "../../plugin/addToWishlist";
 import { addToCart } from "../../plugin/AddToCart";
-import CartID from "../shop/ProductDetail/cartID";
+import CartID from "../shop/ProductDetail/cartId";
 import GetCurrentAddress from "../shop/ProductDetail/UserCountry";
 import UserData from "../../plugin/UserData";
+import log from "loglevel";
 
 function Shop() {
   const [products, setProduct] = useState([]);
@@ -109,7 +110,7 @@ function Shop() {
 
       setCartCount(response.data.length);
     } catch (error) {
-      console.log(error);
+      log.error(error);
       setLoadingStates((prev) => ({
         ...prev,
         [product_id]: "Add to Cart",
@@ -121,7 +122,7 @@ function Shop() {
     try {
       await addToWishlist(product_id, userData?.user_id);
     } catch (error) {
-      console.log(error);
+      log.error(error);
     }
   };
 

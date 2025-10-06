@@ -8,6 +8,7 @@ import UserData from "../../../plugin/UserData";
 import CartId from "./cartId";
 import Review from "./Review";
 import Swal from "sweetalert2";
+import log from "loglevel";
 
 export default function ProductDetail() {
   const [product, setProduct] = useState({});
@@ -21,7 +22,7 @@ export default function ProductDetail() {
     apiInstance.get(`products/${param.slug}/`).then((response) => {
       setProduct(response.data);
       setMainImage(response.data.image);
-      console.log(response.data);
+      log.debug("Response data:", response.data);
     });
   }, [param.slug]);
 

@@ -5,6 +5,7 @@ import { Star, Reply, Send } from "lucide-react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
+import log from "loglevel";
 
 function ReviewDetail() {
   const [review, setReview] = useState([]);
@@ -26,7 +27,7 @@ function ReviewDetail() {
       );
       setReview(response.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      log.error("Error fetching data:", error);
     }
   };
 
@@ -49,7 +50,7 @@ function ReviewDetail() {
     await axios
       .patch(`vendor-reviews/${userData?.vendor_id}/${review.id}/`, formdata)
       .then((res) => {
-        console.log(res.data);
+        log.debug(res.data);
         fetchData();
         setUpdateReviews({ reply: "" });
         setShowReplyBox(false);

@@ -72,7 +72,7 @@ function CheckoutForm({ onSubmit }) {
         title: "Error",
         text: "Failed to create order. Please try again.",
       });
-      console.error("Error creating order:", error);
+      log.error("Error creating order:", error);
     }
   };
 

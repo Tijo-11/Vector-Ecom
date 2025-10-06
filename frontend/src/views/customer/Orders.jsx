@@ -5,6 +5,7 @@ import { Eye, FileText } from "lucide-react";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
 import { Link } from "react-router-dom";
+import log from "loglevel";
 
 function Orders() {
   const [orders, setOrders] = useState([]);
@@ -20,12 +21,12 @@ function Orders() {
         setLoading(false);
       })
       .catch((error) => {
-        console.error("Error fetching orders:", error);
+        log.error("Error fetching orders:", error);
         setLoading(false);
       });
   }, []);
 
-  console.log(orders);
+  log.debug(orders);
 
   const statusCounts = orders.reduce((count, order) => {
     const status = order.order_status;

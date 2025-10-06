@@ -8,6 +8,7 @@ import UserCountry from "../ProductDetail/UserCountry";
 import UserData from "../../../plugin/UserData";
 import cartID from "../ProductDetail/cartId";
 import Swal from "sweetalert2";
+import log from "loglevel";
 
 export default function CategoryProducts() {
   const Toast = Swal.mixin({
@@ -60,7 +61,7 @@ export default function CategoryProducts() {
         setLoading(false);
       })
       .catch((error) => {
-        console.error("Error fetching products:", error);
+        log.error("Error fetching products:", error);
         setLoading(false);
       });
   }, [slug]);
@@ -70,7 +71,7 @@ export default function CategoryProducts() {
     apiInstance
       .get(`category/`)
       .then((response) => setCategories(response.data))
-      .catch((error) => console.error("Error fetching categories:", error));
+      .catch((error) => log.error("Error fetching categories:", error));
   }, []);
 
   const currentAddress = UserCountry();
@@ -144,7 +145,7 @@ export default function CategoryProducts() {
         title: response.data.message || "Added to cart",
       });
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      log.error("Error adding to cart:", error);
       Toast.fire({
         icon: "error",
         title: "Failed to add to cart",

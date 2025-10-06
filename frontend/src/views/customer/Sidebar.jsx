@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import UserProfileData from "../../plugin/UserProfileData"; // Returns { profile, loading, error }
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
+import log from "loglevel";
 
 export default function Sidebar() {
   const {
@@ -57,7 +58,7 @@ export default function Sidebar() {
         );
         setNotificationCount(notificationsRes.data.length || 0);
       } catch (error) {
-        console.error("Error fetching sidebar data:", error);
+        log.error("Error fetching sidebar data:", error);
       } finally {
         setLoading(false);
       }

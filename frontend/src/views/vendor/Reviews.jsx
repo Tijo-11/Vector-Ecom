@@ -5,6 +5,7 @@ import { Star, Eye, IndianRupee } from "lucide-react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
+import log from "loglevel";
 
 function Reviews() {
   const [reviews, setReviews] = useState([]);
@@ -24,7 +25,7 @@ function Reviews() {
       );
       setReviews(response.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      log.error("Error fetching data:", error);
     }
   };
 
@@ -47,7 +48,7 @@ function Reviews() {
     await axios
       .patch(`vendor-reviews/${userData?.vendor_id}/${reviewId}`, formdata)
       .then((res) => {
-        console.log(res.data);
+        log.debug(res.data);
       });
   };
 

@@ -6,6 +6,7 @@ import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
 import { deleteProduct } from "../../plugin/DeleteProduct";
+import log from "loglevel";
 
 function ProductsVendor() {
   const [products, setProducts] = useState([]);
@@ -24,7 +25,7 @@ function ProductsVendor() {
       );
       setProducts(response.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      log.error("Error fetching data:", error);
     }
   };
 
@@ -37,7 +38,7 @@ function ProductsVendor() {
       await deleteProduct(userData?.vendor_id, productPid);
       await fetchData();
     } catch (error) {
-      console.log(error);
+      log.error(error);
     }
   };
 
@@ -48,7 +49,7 @@ function ProductsVendor() {
       );
       setProducts(response.data);
     } catch (error) {
-      console.log(error);
+      log.error(error);
     }
   };
 

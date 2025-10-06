@@ -1,7 +1,6 @@
 import Swal from "sweetalert2";
 import apiInstance from "../utils/axios";
 
-// Define a function named deleteProduct that takes vendorId and productPid as parameters
 export const deleteProduct = async (vendorId, productPid) => {
   // Return a new Promise that handles asynchronous resolution or rejection
   return new Promise(async (resolve, reject) => {

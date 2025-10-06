@@ -6,6 +6,7 @@ import UserData from "../../plugin/UserData";
 import moment from "moment";
 import { Link } from "react-router-dom";
 import { addToWishlist } from "../../plugin/addToWishlist";
+import log from "loglevel";
 
 function Wishlist() {
   const [wishlist, setWishlist] = useState([]);
@@ -30,7 +31,7 @@ function Wishlist() {
       setWishlist(response.data);
       setLoading(false);
     } catch (error) {
-      console.log("Error fetching wishlist:", error);
+      log.error("Error fetching wishlist:", error);
       setLoading(false);
     }
   };
@@ -41,14 +42,14 @@ function Wishlist() {
     }
   }, [userData?.user_id]);
 
-  console.log("Wishlist data:", wishlist);
+  log.debug("Wishlist data:", wishlist);
 
   const handleAddToWishlist = async (product_id) => {
     try {
       await addToWishlist(product_id, userData?.user_id);
       fetchWishlist();
     } catch (error) {
-      console.log("Error updating wishlist:", error);
+      log.debug("Error updating wishlist:", error);
     }
   };
 

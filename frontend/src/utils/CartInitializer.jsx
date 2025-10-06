@@ -5,6 +5,7 @@ import CartId, {
   generateRandomString,
 } from "../views/shop/ProductDetail/cartId";
 import apiInstance from "./axios";
+import log from "./logger"; // Import loglevel
 
 const CartInitializer = () => {
   const [cartCount, setCartCount] = useContext(CartContext);
@@ -26,36 +27,31 @@ const CartInitializer = () => {
         const userCartKey = `cart_id_user_${user.user_id}`;
 
         try {
-          // CRITICAL: Don't send any anonymous cart_id - just fetch user's cart from backend
           const mergeResponse = await apiInstance.post("/cart-merge/", {
             user_id: user.user_id,
-            cart_id: null, // Never send anonymous cart
+            cart_id: null,
           });
 
           const { cart_id, cart_count, start_new } = mergeResponse.data;
 
           if (start_new || !cart_id) {
-            // No active cart → start new
             currentCartId = generateRandomString();
             localStorage.setItem(userCartKey, currentCartId);
             setCartCount(0);
           } else {
-            // Use cart from backend
             currentCartId = cart_id;
             localStorage.setItem(userCartKey, currentCartId);
             setCartCount(cart_count || 0);
           }
 
-          // Clean up any anonymous cart reference
           localStorage.removeItem("random_string");
 
-          console.log("User cart loaded:", {
+          log.debug("User cart loaded", {
             cart_id: currentCartId,
             cart_count,
           });
         } catch (err) {
-          console.error("Cart merge error:", err);
-          // Fallback: Generate new if error
+          log.error("Cart merge error", err);
           if (!currentCartId) {
             currentCartId = generateRandomString();
             localStorage.setItem(userCartKey, currentCartId);
@@ -63,14 +59,12 @@ const CartInitializer = () => {
           setCartCount(0);
         }
       } else {
-        // Anonymous user
         if (!currentCartId) {
           currentCartId = generateRandomString();
           localStorage.setItem("random_string", currentCartId);
         }
       }
 
-      // Fetch count
       await fetchCartItems(currentCartId);
       setIsInitialized(true);
     };
@@ -90,9 +84,9 @@ const CartInitializer = () => {
         const res = await apiInstance.get(url);
         const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
         setCartCount(totalQty);
-        console.log("Cart fetched:", { url, totalQty });
+        log.debug("Cart fetched", { url, totalQty });
       } catch (err) {
-        console.error("Cart fetch error:", err);
+        log.error("Cart fetch error", err);
         setCartCount(0);
       }
     };

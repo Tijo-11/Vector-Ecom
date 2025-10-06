@@ -6,6 +6,7 @@ import { ShoppingCart, Eye } from "lucide-react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
+import log from "loglevel";
 
 function Orders() {
   const [orders, setOrders] = useState([]);
@@ -25,7 +26,7 @@ function Orders() {
         );
         setOrders(response.data);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        log.error("Error fetching data:", error);
       }
     };
 
@@ -39,7 +40,7 @@ function Orders() {
       );
       setOrders(response.data);
     } catch (error) {
-      console.log(error);
+      log.error(error);
     }
   };
 
