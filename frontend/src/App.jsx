@@ -48,6 +48,7 @@ import Shop from "./views/vendor/Shop";
 import VendorRegister from "./views/vendor/VendorRegister";
 import AddProduct from "./views/vendor/AddProduct";
 import UpdateProduct from "./views/vendor/UpdateProduct.jsx";
+import AdminRoute from "./layouts/AdminRoute.jsx";
 ///////---------------
 import AdminDashboard from "./views/admin/AdminDashboard.jsx";
 import ProductManagement from "./views/admin/ProductManagement.jsx";
@@ -269,17 +270,70 @@ export default function App() {
             <Route path="/vendor/:slug/" element={<Shop />} />
             <Route path="/vendor/register/" element={<VendorRegister />} />
             {/*Admin Routes*/}
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/vendors" element={<VendorManagement />} />
-            <Route path="/admin/products" element={<ProductManagement />} />
-            <Route path="/admin/orders" element={<OrderManagement />} />
-            <Route path="/admin/service-fees" element={<ServiceFees />} />
-            <Route path="/admin/reports" element={<Reports />} />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/vendors"
+              element={
+                <AdminRoute>
+                  <VendorManagement />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/products"
+              element={
+                <AdminRoute>
+                  <ProductManagement />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <AdminRoute>
+                  <OrderManagement />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/service-fees"
+              element={
+                <AdminRoute>
+                  <ServiceFees />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/reports"
+              element={
+                <AdminRoute>
+                  <Reports />
+                </AdminRoute>
+              }
+            />
             <Route
               path="/admin/notifications"
-              element={<AdminNotifications />}
+              element={
+                <AdminRoute>
+                  <AdminNotifications />
+                </AdminRoute>
+              }
             />
-            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route
+              path="/admin/settings"
+              element={
+                <AdminRoute>
+                  <AdminSettings />
+                </AdminRoute>
+              }
+            />
             {/* Not Found*/}
             <Route path="*" element={<NotFund />} />
           </Routes>

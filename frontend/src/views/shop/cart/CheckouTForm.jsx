@@ -16,6 +16,9 @@ function CheckoutForm({ onSubmit }) {
     country: "",
     pincode: "",
   });
+
+  const [loadingLocation, setLoadingLocation] = useState(false);
+
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
@@ -25,22 +28,96 @@ function CheckoutForm({ onSubmit }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // ✅ Email validation
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  // ✅ Mobile validation (10 digits)
+  const isValidMobile = (mobile) => /^[0-9]{10}$/.test(mobile);
+
+  // 📍 Autofill address using browser location + OpenStreetMap
+  const autofillAddress = () => {
+    if (!navigator.geolocation) {
+      Swal.fire({
+        icon: "error",
+        title: "Geolocation not supported",
+        text: "Your browser does not support location access.",
+      });
+      return;
+    }
+
+    setLoadingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+          );
+          const data = await response.json();
+          const address = data.address || {};
+
+          setFormData((prev) => ({
+            ...prev,
+            city: address.city || address.town || address.village || "",
+            state: address.state || "",
+            country: address.country || "",
+            pincode: address.postcode || "",
+          }));
+
+          Swal.fire({
+            icon: "success",
+            title: "Address Autofilled",
+            text: "City, state, country, and pincode have been filled automatically.",
+          });
+        } catch (error) {
+          Swal.fire({
+            icon: "error",
+            title: "Location Error",
+            text: "Unable to fetch address details.",
+          });
+        } finally {
+          setLoadingLocation(false);
+        }
+      },
+      (error) => {
+        Swal.fire({
+          icon: "error",
+          title: "Location Access Denied",
+          text: "Please allow location access to autofill address.",
+        });
+        setLoadingLocation(false);
+      }
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (
-      !formData.fullName ||
-      !formData.email ||
-      !formData.mobile ||
-      !formData.address ||
-      !formData.city ||
-      !formData.state ||
-      !formData.country ||
-      !formData.pincode
-    ) {
+
+    // Validation for all fields
+    if (Object.values(formData).some((val) => !val.trim())) {
       Swal.fire({
         icon: "error",
         title: "Missing Fields",
         text: "All fields are required before checkout.",
+      });
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Email",
+        text: "Please enter a valid email address.",
+      });
+      return;
+    }
+
+    if (!isValidMobile(formData.mobile)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Mobile Number",
+        text: "Mobile number must be 10 digits.",
       });
       return;
     }
@@ -59,20 +136,15 @@ function CheckoutForm({ onSubmit }) {
 
     try {
       const response = await apiInstance.post("/create-order/", data);
-      // Swal.fire({
-      //   icon: "success",
-      //   title: "Order Created",
-      //   text: `Order ID: ${response.data.order_id}. ${response.data.message}`,
-      // });
       onSubmit(formData);
-      navigate(`/checkout/${response.data.order_oid}`); // Placeholder route for checkout page
+      navigate(`/checkout/${response.data.order_oid}`);
     } catch (error) {
       Swal.fire({
         icon: "error",
         title: "Error",
         text: "Failed to create order. Please try again.",
       });
-      log.error("Error creating order:", error);
+      console.error("Error creating order:", error);
     }
   };
 
@@ -81,6 +153,7 @@ function CheckoutForm({ onSubmit }) {
       <h1 className="font-semibold text-2xl border-b pb-4">
         Contact Information
       </h1>
+
       {["fullName", "email", "mobile"].map((field) => (
         <div className="mt-4" key={field}>
           <label className="font-medium block mb-1 text-sm uppercase text-gray-700">
@@ -100,9 +173,22 @@ function CheckoutForm({ onSubmit }) {
           />
         </div>
       ))}
+
       <h1 className="font-semibold text-2xl border-b pb-4 mt-6">
         Shipping Details
       </h1>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={autofillAddress}
+          disabled={loadingLocation}
+          className="bg-green-500 text-white text-xs px-3 py-2 rounded-md hover:bg-green-600 transition mt-2"
+        >
+          {loadingLocation ? "Fetching location..." : "Autofill Address"}
+        </button>
+      </div>
+
       {["address", "city", "state", "country", "pincode"].map((field) => (
         <div className="mt-4" key={field}>
           <label className="font-medium block mb-1 text-sm uppercase text-gray-700">
@@ -115,7 +201,6 @@ function CheckoutForm({ onSubmit }) {
             onChange={(e) => {
               let value = e.target.value;
               if (field === "pincode") {
-                // Allow only digits and max 6 characters
                 value = value.replace(/\D/g, "").slice(0, 6);
               }
               handleChange({ target: { name: field, value } });
@@ -125,6 +210,7 @@ function CheckoutForm({ onSubmit }) {
           />
         </div>
       ))}
+
       <button
         onClick={handleSubmit}
         className="w-full mt-6 bg-blue-500 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
