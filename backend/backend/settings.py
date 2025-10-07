@@ -201,7 +201,10 @@ CORS_ALLOW_HEADERS = [
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com",
-    "https://retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com",  # Add https version too
+    "https://retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com",# Add https version too
+    "http://d3vxb6yub2zq9w.cloudfront.net",
+    "https://d3vxb6yub2zq9w.cloudfront.net",
+    "http://localhost:5173", #local dev
 ] #For react
 CORS_ALLOW_CREDENTIALS = True
 
@@ -261,3 +264,13 @@ LOGGING = {
     },
 }
 LOGIN_URL= None
+
+
+
+#---HTTPS integration settings
+SECURE_SSL_REDIRECT = True  # Redirect HTTP to HTTPS (once server supports it)
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 31536000  # Enable HSTS for 1 year (after testing)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
