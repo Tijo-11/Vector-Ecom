@@ -29,7 +29,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', config('SECRET_KEY', default=''))
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['http://retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com/']
+ALLOWED_HOSTS = ['retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com', 'localhost']
 
 
 # Application definition
@@ -91,15 +91,15 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('RDS_DB_NAME', config('DATABASE_NAME')),  # Fallback to local .env if not in EB
-        'USER': os.environ.get('RDS_USERNAME', config('DATABASE_USER')),
-        'PASSWORD': os.environ.get('RDS_PASSWORD', config('DATABASE_PASSWORD')),
-        'HOST': os.environ.get('RDS_HOSTNAME', 'localhost'),  # Use RDS host in cloud, localhost locally
-        'PORT': os.environ.get('RDS_PORT', '5432'),
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('RDS_DB_NAME'),
+            'USER': os.environ.get('RDS_USERNAME'),
+            'PASSWORD': os.environ.get('RDS_PASSWORD'),
+            'HOST': os.environ.get('RDS_HOSTNAME'),
+            'PORT': os.environ.get('RDS_PORT'),
+        }
     }
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -200,8 +200,9 @@ CORS_ALLOW_HEADERS = [
     'x-request-id',  # Add this to allow X-Request-ID
 ]
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",   # React dev server
-]
+    "http://retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com",
+    "https://retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com",  # Add https version too
+] #For react
 CORS_ALLOW_CREDENTIALS = True
 
 # Email Configuration
