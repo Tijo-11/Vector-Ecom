@@ -29,7 +29,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', config('SECRET_KEY', default=''))
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['http://retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com/']
 
 
 # Application definition
@@ -136,11 +136,20 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/' 
-STATICFILES_DIRS = [BASE_DIR / 'static'] 
-STATIC_ROOT = BASE_DIR / 'staticfiles' 
+MEDIA_URL = 'media/'
+# Static files (CSS, JavaScript, Images)
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = 'retrorelics-static-media'
+AWS_S3_REGION_NAME = 'ap-south-1'
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+STORAGES = {
+    "staticfiles": {"BACKEND": "storages.backends.s3.S3Storage"},
+    "default": {"BACKEND": "storages.backends.s3.S3Storage"},  # For media
+}
 
-MEDIA_URL = 'media/' 
-MEDIA_ROOT = BASE_DIR / 'media' 
 
 
 AUTH_USER_MODEL = 'userauth.User' #Note it is included as string
@@ -250,3 +259,4 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+LOGIN_URL= None

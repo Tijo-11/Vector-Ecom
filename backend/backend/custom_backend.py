@@ -1,4 +1,3 @@
-# Add this file to your Django project, e.g., backend/custom_backends.py
 from django.core.mail.backends.base import BaseEmailBackend
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
