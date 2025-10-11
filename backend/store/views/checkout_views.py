@@ -17,7 +17,7 @@ from store.serializers import   CartOrderSerializer
 from userauth.tasks import send_async_email
 
 # Models
-from store.models import  CartOrderItem,Notification, CartOrder
+from store.models import  CartOrderItem,Notification, CartOrder, Cart
 #other packages
 import time
 # import threading
@@ -125,7 +125,6 @@ class PaymentSuccessView(generics.CreateAPIView):
 
     def send_all_notifications(self, order, order_items):
         """Send notifications and emails asynchronously."""
-        # Buyer notification
         if order.buyer and order.email:
             try:
                 if "@" in order.email and "." in order.email:
@@ -138,7 +137,6 @@ class PaymentSuccessView(generics.CreateAPIView):
             except Exception as e:
                 logger.error(f"Buyer notification failed: {str(e)}")
 
-        # Vendor notifications
         vendor_groups = {}
         for item in order_items:
             if item.vendor and item.vendor.email and "@" in item.vendor.email:
@@ -165,6 +163,19 @@ class PaymentSuccessView(generics.CreateAPIView):
             else:
                 logger.warning(f"Insufficient stock for {product.title} during payment success.")
 
+    def deactivate_cart(self, cart_id, user_id=None):
+        """Mark all Cart entries associated with the cart_id as inactive."""
+        try:
+            cart_items = Cart.objects.filter(cart_id=cart_id, is_active=True)
+            if user_id:
+                cart_items = cart_items.filter(user_id=user_id)
+            for item in cart_items:
+                item.is_active = False
+                item.save()
+                logger.info(f"Deactivated cart item: {item.id} for cart_id={cart_id}")
+        except Exception as e:
+            logger.error(f"Failed to deactivate cart items for cart_id={cart_id}: {str(e)}")
+
     def post(self, request, *args, **kwargs):
         start_time = time.time()  # noqa
         payload = request.data
@@ -190,7 +201,7 @@ class PaymentSuccessView(generics.CreateAPIView):
             try:
                 access_token = get_paypal_access_token(
                     os.environ.get('PAYPAL_CLIENT_ID', config('PAYPAL_CLIENT_ID')),
-                    os.environ.get('PAYPAL_CLIENT_SECRET', config('PAYPAL_CLINET_SECRET'))
+                    os.environ.get('PAYPAL_CLIENT_SECRET', config('PAYPAL_CLIENT_SECRET'))
                 )
                 paypal_api_url = f"https://api-m.sandbox.paypal.com/v2/payments/captures/{capture_id}"
                 headers = {
@@ -204,13 +215,16 @@ class PaymentSuccessView(generics.CreateAPIView):
                     if paypal_data.get("status") == "COMPLETED":
                         with transaction.atomic():
                             order.payment_status = "paid"
+                            order.order_status = "Confirmed"
                             order.save()
+                            self.deactivate_cart(order.oid, order.buyer_id if order.buyer else None)
                             self.deduct_stock(order_items)
                         self.send_all_notifications(order, order_items)
                         return Response({"message": "payment_successful"}, status=status.HTTP_200_OK)
                     elif paypal_data.get("status") in ["PENDING", "IN_PROGRESS"]:
                         with transaction.atomic():
                             order.payment_status = "processing"
+                            order.order_status = "Pending"
                             order.save()
                         return Response({"message": f"Payment is {paypal_data.get('status').lower()}"}, status=status.HTTP_202_ACCEPTED)
                     else:
@@ -229,8 +243,10 @@ class PaymentSuccessView(generics.CreateAPIView):
                 if payment["status"] == "captured":
                     with transaction.atomic():
                         order.payment_status = "paid"
+                        order.order_status = "Confirmed"
                         order.razorpay_session_id = session_id
                         order.save()
+                        self.deactivate_cart(order.oid, order.buyer_id if order.buyer else None)
                         self.deduct_stock(order_items)
                     self.send_all_notifications(order, order_items)
                     return Response({"message": "payment_successful"}, status=status.HTTP_200_OK)

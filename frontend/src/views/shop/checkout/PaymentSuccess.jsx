@@ -34,7 +34,6 @@ function PaymentSuccess() {
       const attemptVerification = async (attempt = 0) => {
         try {
           if (razorpayPaymentId) {
-            // Add delay before first attempt to let Razorpay process
             if (attempt === 0) {
               await new Promise((resolve) => setTimeout(resolve, 1500));
             }
@@ -54,19 +53,27 @@ function PaymentSuccess() {
             log.debug("Razorpay verification response:", verifyResponse.data);
             const responseStatus = verifyResponse.data.message || "unpaid";
 
-            // Check if payment is still processing
-            if (responseStatus === "unpaid" && attempt < MAX_RETRIES - 1) {
+            if (
+              responseStatus === "payment_successful" ||
+              responseStatus === "already_paid"
+            ) {
+              // Dispatch payment success event
+              window.dispatchEvent(new Event("paymentSuccess"));
+              setStatus(responseStatus);
+            } else if (
+              responseStatus === "unpaid" &&
+              attempt < MAX_RETRIES - 1
+            ) {
               log.debug(
                 `Payment still processing, retrying in ${RETRY_DELAY}ms...`
               );
               setRetryCount(attempt + 1);
               await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
               return attemptVerification(attempt + 1);
+            } else {
+              setStatus(responseStatus);
             }
-
-            setStatus(responseStatus);
           } else if (paypalCaptureId) {
-            // PayPal verification with retry
             if (attempt === 0) {
               await new Promise((resolve) => setTimeout(resolve, 1500));
             }
@@ -88,16 +95,26 @@ function PaymentSuccess() {
             log.debug("PayPal verification response:", verifyResponse.data);
             const responseStatus = verifyResponse.data.message || "unpaid";
 
-            if (responseStatus === "unpaid" && attempt < MAX_RETRIES - 1) {
+            if (
+              responseStatus === "payment_successful" ||
+              responseStatus === "already_paid"
+            ) {
+              // Dispatch payment success event
+              window.dispatchEvent(new Event("paymentSuccess"));
+              setStatus(responseStatus);
+            } else if (
+              responseStatus === "unpaid" &&
+              attempt < MAX_RETRIES - 1
+            ) {
               log.debug(
                 `Payment still processing, retrying in ${RETRY_DELAY}ms...`
               );
               setRetryCount(attempt + 1);
               await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
               return attemptVerification(attempt + 1);
+            } else {
+              setStatus(responseStatus);
             }
-
-            setStatus(responseStatus);
           }
 
           // Clear guest cartId after successful payment
@@ -116,6 +133,8 @@ function PaymentSuccess() {
           log.error("PaymentSuccess error:", error);
 
           if (error.response?.data?.message === "already_paid") {
+            // Dispatch payment success event for already paid
+            window.dispatchEvent(new Event("paymentSuccess"));
             setStatus("already_paid");
             try {
               const orderResponse = await apiInstance.get(
@@ -126,7 +145,6 @@ function PaymentSuccess() {
               log.error("Failed to fetch order:", orderError);
             }
           } else if (attempt < MAX_RETRIES - 1) {
-            // Retry on error
             log.debug(`Error occurred, retrying in ${RETRY_DELAY}ms...`);
             setRetryCount(attempt + 1);
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));

@@ -5,7 +5,7 @@ import CartId, {
   generateRandomString,
 } from "../views/shop/ProductDetail/cartId";
 import apiInstance from "./axios";
-import log from "./logger"; // Import loglevel
+import log from "./logger";
 
 const CartInitializer = () => {
   const [cartCount, setCartCount] = useContext(CartContext);
@@ -16,6 +16,28 @@ const CartInitializer = () => {
   useEffect(() => {
     setIsInitialized(false);
   }, [isLoggedIn, user?.user_id]);
+
+  const fetchCartItems = async (cartId) => {
+    if (!cartId) {
+      setCartCount(0);
+      return;
+    }
+
+    const url =
+      isLoggedIn && user?.user_id
+        ? `/cart-list/${cartId}/${user.user_id}/`
+        : `/cart-list/${cartId}/`;
+
+    try {
+      const res = await apiInstance.get(url);
+      const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
+      setCartCount(totalQty);
+      log.debug("Cart fetched", { url, totalQty });
+    } catch (err) {
+      log.error("Cart fetch error", err);
+      setCartCount(0);
+    }
+  };
 
   useEffect(() => {
     const initializeCart = async () => {
@@ -29,7 +51,7 @@ const CartInitializer = () => {
         try {
           const mergeResponse = await apiInstance.post("/cart-merge/", {
             user_id: user.user_id,
-            cart_id: null,
+            cart_id: currentCartId,
           });
 
           const { cart_id, cart_count, start_new } = mergeResponse.data;
@@ -45,11 +67,7 @@ const CartInitializer = () => {
           }
 
           localStorage.removeItem("random_string");
-
-          log.debug("User cart loaded", {
-            cart_id: currentCartId,
-            cart_count,
-          });
+          log.debug("User cart loaded", { cart_id: currentCartId, cart_count });
         } catch (err) {
           log.error("Cart merge error", err);
           if (!currentCartId) {
@@ -69,29 +87,27 @@ const CartInitializer = () => {
       setIsInitialized(true);
     };
 
-    const fetchCartItems = async (cartId) => {
-      if (!cartId) {
+    initializeCart();
+
+    // Listen for payment success event to reset cart
+    const handlePaymentSuccess = () => {
+      if (isLoggedIn && user?.user_id) {
+        const userCartKey = `cart_id_user_${user.user_id}`;
+        const newCartId = generateRandomString();
+        localStorage.setItem(userCartKey, newCartId);
         setCartCount(0);
-        return;
-      }
-
-      const url =
-        isLoggedIn && user?.user_id
-          ? `/cart-list/${cartId}/${user.user_id}/`
-          : `/cart-list/${cartId}/`;
-
-      try {
-        const res = await apiInstance.get(url);
-        const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
-        setCartCount(totalQty);
-        log.debug("Cart fetched", { url, totalQty });
-      } catch (err) {
-        log.error("Cart fetch error", err);
+        setIsInitialized(false); // Force re-initialization
+      } else {
+        localStorage.removeItem("random_string");
         setCartCount(0);
       }
     };
 
-    initializeCart();
+    window.addEventListener("paymentSuccess", handlePaymentSuccess);
+
+    return () => {
+      window.removeEventListener("paymentSuccess", handlePaymentSuccess);
+    };
   }, [isLoggedIn, user?.user_id, setCartCount, isInitialized]);
 
   return null;

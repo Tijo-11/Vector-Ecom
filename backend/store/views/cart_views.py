@@ -14,11 +14,21 @@ from addon.models import Tax
 # Others Packages
 from decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 def get_active_user_cart(user):
     """Helper: Get user's active cart_id or None if none exists."""
-    active_cart = Cart.objects.filter(user=user, is_active=True).first()
-    return active_cart.cart_id if active_cart else None
+    try:
+        active_carts = Cart.objects.filter(user=user, is_active=True).order_by('-created_at')
+        if active_carts.exists():
+            return active_carts.first().cart_id
+        return None
+    except Exception as e:
+        logger.error(f"Error in get_active_user_cart for user {user.id}: {str(e)}")
+        return None
 
 class CartAPIView(generics.ListCreateAPIView):
     queryset = Cart.objects.filter(is_active=True)  # Always active
