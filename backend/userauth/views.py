@@ -14,7 +14,7 @@ from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 from django.conf import settings  # For GOOGLE_CLIENT_ID
 import logging
-from django.core.mail import send_mail
+from .tasks import send_async_email
 
 
 logger = logging.getLogger(__name__)
@@ -74,11 +74,11 @@ class RegisterView(generics.CreateAPIView):
                     f"http://localhost:5173/verify-email?otp={user.otp}&uidb64={uidb64}\n\n"
                     f"Thank you!"
                 )
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
+                send_async_email.delay(
+                subject=subject,
+                message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
                     fail_silently=False,
                 )
 
@@ -105,13 +105,13 @@ class RegisterView(generics.CreateAPIView):
             f"http://localhost:5173/verify-email?otp={user.otp}&uidb64={uidb64}\n\n"
             f"Thank you for registering!"
         )
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-            fail_silently=False,
-        )
+        send_async_email.delay(
+    subject=subject,
+    message=message,
+    from_email=settings.DEFAULT_FROM_EMAIL,
+    recipient_list=[user.email],
+    fail_silently=False,
+)
 
         return Response({
             "message": "User registered. OTP sent to email for verification.",
@@ -173,13 +173,13 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
             f"Or reset your password using this link:\n{link}\n\n"
             f"If you didn’t request this, please ignore this email."
         )
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-            fail_silently=False,
-        )
+        send_async_email.delay(
+    subject=subject,
+    message=message,
+    from_email=settings.DEFAULT_FROM_EMAIL,
+    recipient_list=[user.email],
+    fail_silently=False,
+)
         return Response({"message": "If this email exists, a reset link was sent."})
 
 

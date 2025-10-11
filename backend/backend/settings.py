@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY') or config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True  # Set to True for local testing; False in production (e.g., via env var)
+DEBUG = False  # Set to True for local testing; False in production (e.g., via env var)
 
 ALLOWED_HOSTS = ['retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com',
                  'retrorelics.live','localhost', 'api.retrorelics.live', '127.0.0.1']
@@ -292,3 +292,13 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
+
+
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'  # Match your Django TIME_ZONE if different
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

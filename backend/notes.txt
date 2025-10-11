@@ -1,55 +1,3 @@
-🔐 PyJWT Overview
-
-PyJWT is a Python library that provides a simple way to work with JSON Web Tokens (JWT) — a compact, URL-safe means of representing claims between two parties. It's widely used for authentication and authorization in web applications.
-
-🧰 Key Features
-Encode and decode JWTs using various algorithms like HS256, RS256, ES256, and more.
-
-Supports RFC 7519, the official specification for JWT.
-
-Easy integration with Python-based authentication systems.
-
-📦 Installation
-You can install it via pip:
-
-bash
-pip install PyJWT
-🧪 Example Usage
-python
-import jwt
-
-# Encode a payload
-encoded = jwt.encode({"some": "payload"}, "secret", algorithm="HS256")
-
-# Decode the token
-decoded = jwt.decode(encoded, "secret", algorithms=["HS256"])
-
-print(decoded)  # Output: {'some': 'payload'}
-📚 Documentation & Resources
-PyJWT on PyPI  :- https://pypi.org/project/PyJWT/
-
-Official Documentation
-https://pyjwt.readthedocs.io/en/stable/
-
-GitHub Repository
-https://github.com/jpadilla/pyjwt
-########################################################################################################
-pip install python-decouple
-from decouple import config
-.env file
-SECRET_KEY=********************
-DATABASE_NAME=************************
-DATABASE_USER=**********************
-DATABASE_PASSWORD=***************************
-#########################################################################################################
-pip install psycopg[binary]
-######################
-we would rarely need or use static files theirs because most of the time we'll be working
-with a front end library which is react.
-But we still need to configure this in case we have to create a template, or maybe a documentation
-sort of thing that will be needed in the future.
-we will focus on is configuring the media files, because that's
-what we strictly and obviously need in the back end.
 ########################################################
 
 ₹
@@ -60,4 +8,6 @@ code lines/snippets or the doubts of code snippets I send
 #########################################################################################################
 5241 8100 0000 0000
 ###########################
-User image is not there in database I think
+celery -A your_project worker -l INFO
+##
+To run celery tasks

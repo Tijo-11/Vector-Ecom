@@ -6,7 +6,7 @@ import logging
 from django.db import transaction
 # Django Packages
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
+
 from django.template.loader import render_to_string
 # Restframework Packages
 from rest_framework.response import Response
@@ -14,26 +14,16 @@ from rest_framework import generics,status
 from rest_framework.permissions import AllowAny#, IsAuthenticated
 # Serializers
 from store.serializers import   CartOrderSerializer
+from userauth.tasks import send_async_email
 
 # Models
 from store.models import  CartOrderItem,Notification, CartOrder
 #other packages
 import time
-import threading
+# import threading
 
 # Set up logging
 logger = logging.getLogger(__name__)
-
-
-
-
-
-
-
-
-
-
-
 class RazorpayCheckoutView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     permission_classes = [AllowAny]
@@ -102,16 +92,15 @@ def send_notification(user=None, vendor=None, order=None, order_item=None):
         print(f"Failed to create notification: {str(e)}")
 
 def send_email(subject, text_body, html_body, from_email, to_email):
-    """Send an email and log failures."""
-    try:
-        msg = EmailMultiAlternatives(subject, text_body, from_email, [to_email])
-        msg.attach_alternative(html_body, "text/html")
-        msg.send()
-        logger.info(f"Email sent to {to_email}")
-        print(f"Email sent to {to_email}")
-    except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {str(e)}")
-        print(f"Failed to send email to {to_email}: {str(e)}")
+    """Send an email asynchronously using Celery."""
+    send_async_email.delay(
+        subject=subject,
+        message=text_body,
+        html_message=html_body,
+        from_email=from_email,
+        recipient_list=[to_email],
+        fail_silently=False
+    )
 
 def get_paypal_access_token(client_id, secret_id):
     """Fetch PayPal access token."""
@@ -136,37 +125,34 @@ class PaymentSuccessView(generics.CreateAPIView):
 
     def send_all_notifications(self, order, order_items):
         """Send notifications and emails asynchronously."""
-        def send_notifications_thread():
-            # Buyer notification
-            if order.buyer and order.email:
-                try:
-                    if "@" in order.email and "." in order.email:
-                        send_notification(user=order.buyer, order=order)
-                        merge_data = {'order': order, 'order_items': order_items}
-                        subject = "Order Placed Successfully"
-                        text_body = render_to_string("email/customer_order_confirmation.txt", merge_data)
-                        html_body = render_to_string("email/customer_order_confirmation.html", merge_data)
-                        send_email(subject, text_body, html_body, settings.DEFAULT_FROM_EMAIL, order.email)
-                except Exception as e:
-                    logger.error(f"Buyer notification failed: {str(e)}")
+        # Buyer notification
+        if order.buyer and order.email:
+            try:
+                if "@" in order.email and "." in order.email:
+                    send_notification(user=order.buyer, order=order)
+                    merge_data = {'order': order, 'order_items': order_items}
+                    subject = "Order Placed Successfully"
+                    text_body = render_to_string("email/customer_order_confirmation.txt", merge_data)
+                    html_body = render_to_string("email/customer_order_confirmation.html", merge_data)
+                    send_email(subject, text_body, html_body, settings.DEFAULT_FROM_EMAIL, order.email)
+            except Exception as e:
+                logger.error(f"Buyer notification failed: {str(e)}")
 
-            # Vendor notifications
-            vendor_groups = {}
-            for item in order_items:
-                if item.vendor and item.vendor.email and "@" in item.vendor.email:
-                    vendor_groups.setdefault(item.vendor.id, []).append(item)
+        # Vendor notifications
+        vendor_groups = {}
+        for item in order_items:
+            if item.vendor and item.vendor.email and "@" in item.vendor.email:
+                vendor_groups.setdefault(item.vendor.id, []).append(item)
 
-            for vendor_id, items in vendor_groups.items():
-                vendor_email = items[0].vendor.email
-                for item in items:
-                    send_notification(vendor=item.vendor, order=order, order_item=item)
-                merge_data = {'order': order, 'order_items': items}
-                subject = "New Sale!"
-                text_body = render_to_string("email/vendor_order_sale.txt", merge_data)
-                html_body = render_to_string("email/vendor_order_sale.html", merge_data)
-                send_email(subject, text_body, html_body, settings.DEFAULT_FROM_EMAIL, vendor_email)
-
-        threading.Thread(target=send_notifications_thread).start()
+        for vendor_id, items in vendor_groups.items():
+            vendor_email = items[0].vendor.email
+            for item in items:
+                send_notification(vendor=item.vendor, order=order, order_item=item)
+            merge_data = {'order': order, 'order_items': items}
+            subject = "New Sale!"
+            text_body = render_to_string("email/vendor_order_sale.txt", merge_data)
+            html_body = render_to_string("email/vendor_order_sale.html", merge_data)
+            send_email(subject, text_body, html_body, settings.DEFAULT_FROM_EMAIL, vendor_email)
 
     def deduct_stock(self, order_items):
         """Decrease product stock after successful payment."""
@@ -257,4 +243,3 @@ class PaymentSuccessView(generics.CreateAPIView):
                 return Response({"message": "Razorpay processing error"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"message": "Missing session_id or paypal_capture_id"}, status=status.HTTP_400_BAD_REQUEST)
-
