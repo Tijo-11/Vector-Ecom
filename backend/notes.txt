@@ -8,6 +8,10 @@ code lines/snippets or the doubts of code snippets I send
 #########################################################################################################
 5241 8100 0000 0000
 ###########################
-celery -A your_project worker -l INFO
+celery -A backend worker -l INFO
 ##
 To run celery tasks
+
+Also run 
+redis-server
+###---------------

@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY') or config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False  # Set to True for local testing; False in production (e.g., via env var)
+DEBUG = True  # Set to True for local testing; False in production (e.g., via env var)
 
 ALLOWED_HOSTS = ['retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com',
                  'retrorelics.live','localhost', 'api.retrorelics.live', '127.0.0.1']

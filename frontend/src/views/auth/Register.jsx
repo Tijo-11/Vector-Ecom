@@ -18,17 +18,19 @@ export default function Register() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const navigate = useNavigate();
 
+  // Define Toast outside useEffect so it's accessible throughout component
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top",
+    showConfirmButton: false,
+    timer: 1500,
+    timerProgressBar: true,
+  });
+
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/");
     }
-    const Toast = Swal.mixin({
-      toast: true,
-      position: "top",
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
-    });
 
     const loadGoogleScript = () => {
       const script = document.createElement("script");
@@ -39,7 +41,7 @@ export default function Register() {
       document.body.appendChild(script);
     };
     loadGoogleScript();
-  }, []);
+  }, [isLoggedIn, navigate]);
 
   useEffect(() => {
     if (isGoogleScriptLoaded && window.google && window.google.accounts) {
@@ -58,7 +60,7 @@ export default function Register() {
     setIsLoading(true);
     const { error } = await googleLogin(response.credential);
     if (error) {
-      alert(error);
+      Toast.fire({ icon: "error", title: error });
     } else {
       navigate("/");
     }
@@ -78,7 +80,7 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== password2) {
-      alert("Passwords do not match");
+      Toast.fire({ icon: "error", title: "Passwords do not match" });
       return;
     }
     setIsLoading(true);
@@ -89,30 +91,47 @@ export default function Register() {
       password,
       password2
     );
+
+    setIsLoading(false);
+
     if (error) {
-      alert(error);
-    } else if (data.message) {
-      // Handle both new and resend
-      Toast.fire({ icon: "info", title: data.message });
+      Toast.fire({ icon: "error", title: error });
+    } else if (data && data.uidb64) {
+      // Successfully got response with uidb64
+      Toast.fire({ icon: "info", title: data.message || "OTP sent to email" });
       setUidb64(data.uidb64);
       setShowOtp(true);
+    } else {
+      // Unexpected response format
+      Toast.fire({ icon: "error", title: "Unexpected response from server" });
+      console.error("Unexpected data format:", data);
     }
-    setIsLoading(false);
   };
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     const { error } = await verifyOtp(otp, uidb64);
+
     if (error) {
-      alert(error);
+      setIsLoading(false);
+      Toast.fire({ icon: "error", title: error });
     } else {
       // Auto-login after verification
-      await login(email, password);
-      navigate("/");
-      resetForm();
+      const loginResult = await login(email, password);
+      setIsLoading(false);
+
+      if (loginResult.error) {
+        Toast.fire({
+          icon: "error",
+          title:
+            "Verification successful but login failed. Please login manually.",
+        });
+      } else {
+        navigate("/");
+        resetForm();
+      }
     }
-    setIsLoading(false);
   };
 
   return (
@@ -140,6 +159,7 @@ export default function Register() {
                             <input
                               type="text"
                               id="fullname"
+                              value={fullname}
                               onChange={(e) => setFullname(e.target.value)}
                               placeholder="Full Name"
                               required
@@ -156,6 +176,7 @@ export default function Register() {
                             <input
                               type="email"
                               id="email"
+                              value={email}
                               onChange={(e) => setEmail(e.target.value)}
                               placeholder="Email Address"
                               required
@@ -172,6 +193,7 @@ export default function Register() {
                             <input
                               type="text"
                               id="phone"
+                              value={phone}
                               onChange={(e) => setPhone(e.target.value)}
                               placeholder="Mobile Number"
                               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
@@ -187,6 +209,7 @@ export default function Register() {
                             <input
                               type="password"
                               id="password"
+                              value={password}
                               onChange={(e) => setPassword(e.target.value)}
                               placeholder="Password"
                               required
@@ -203,17 +226,18 @@ export default function Register() {
                             <input
                               type="password"
                               id="confirm-password"
+                              value={password2}
                               onChange={(e) => setPassword2(e.target.value)}
                               placeholder="Confirm Password"
                               required
                               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
-                          <p className="font-bold text-red-600">
-                            {password2 !== password
-                              ? "Passwords do not match"
-                              : ""}
-                          </p>
+                          {password2 && password !== password2 && (
+                            <p className="font-bold text-red-600 mb-4">
+                              Passwords do not match
+                            </p>
+                          )}
                           <button
                             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 disabled:opacity-50 flex items-center justify-center"
                             type="submit"
@@ -251,19 +275,23 @@ export default function Register() {
                       ) : (
                         <form onSubmit={handleOtpSubmit}>
                           <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-4">
+                              An OTP has been sent to <strong>{email}</strong>
+                            </p>
                             <label
                               htmlFor="otp"
                               className="block text-sm font-medium text-gray-700"
                             >
-                              Enter OTP (sent to email)
+                              Enter OTP
                             </label>
                             <input
                               type="text"
                               id="otp"
                               value={otp}
                               onChange={(e) => setOtp(e.target.value)}
-                              placeholder="OTP"
+                              placeholder="Enter 6-digit OTP"
                               required
+                              maxLength={6}
                               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
@@ -280,6 +308,13 @@ export default function Register() {
                             ) : (
                               "Verify OTP"
                             )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowOtp(false)}
+                            className="w-full mt-3 text-blue-600 hover:underline"
+                          >
+                            Back to registration
                           </button>
                         </form>
                       )}
