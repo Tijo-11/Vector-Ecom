@@ -49,7 +49,7 @@ apiInstance.interceptors.response.use(
           log.debug("Sending refresh request to backend...");
 
           const response = await axios.post(
-            `${import.meta.env.VITE_API_URL}token/refresh/`,
+            `${import.meta.env.VITE_API_URL}/token/refresh/`,
             { refresh: refreshToken }
           );
 

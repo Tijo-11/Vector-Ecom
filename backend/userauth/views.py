@@ -13,9 +13,35 @@ import shortuuid
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 from django.conf import settings  # For GOOGLE_CLIENT_ID
+import logging
+from django.core.mail import send_mail
+
+
+logger = logging.getLogger(__name__)
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+    def post(self, request, *args, **kwargs):
+        # Log the incoming request data (without password)
+        logger.info("Token request received")
+        logger.info(f"Request data keys: {list(request.data.keys())}")
+        logger.info(f"Has email: {'email' in request.data}")
+        logger.info(f"Has password: {'password' in request.data}")
+        logger.info(f"Content-Type: {request.content_type}")
+        logger.info(f"Request method: {request.method}")
+        
+        try:
+            response = super().post(request, *args, **kwargs)
+            logger.info("Token generation successful")
+            return response
+        except Exception as e:
+            logger.error(f"Token generation failed: {str(e)}", exc_info=True)
+            # Return detailed error for debugging (remove in production)
+            return Response({
+                'error': str(e),
+                'detail': 'Token generation failed',
+                'received_fields': list(request.data.keys())
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -28,9 +54,26 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
         user.otp = generate_otp()
         user.save()
+
         uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
-        # TODO: Send email with OTP (e.g., using Django's send_mail)
-        print(f"[DEBUG] Verification OTP for {user.email}: {user.otp}, uidb64: {uidb64}")
+
+        # Send email with OTP
+        subject = 'Verify Your Email - MyApp'
+        message = (
+            f"Hello {user.full_name or user.username},\n\n"
+            f"Your verification code is: {user.otp}\n\n"
+            f"Alternatively, you can verify your email by visiting the following link:\n"
+            f"http://localhost:5173/verify-email?otp={user.otp}&uidb64={uidb64}\n\n"
+            f"Thank you for registering!"
+        )
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+
         return Response({
             "message": "User registered. OTP sent to email for verification.",
             "uidb64": uidb64
@@ -67,21 +110,39 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         email = self.kwargs.get("email")
-        user = None
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            pass
-        if user:
-            user.otp = generate_otp()
-            user.save()
-            if not isinstance(user.pk, int):
-                raise ValueError(f"User ID {user.pk} is not an integer")
-            uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
-            otp = user.otp
-            link = f"http://localhost:5173/create-new-password?otp={otp}&uidb64={uidb64}"
-            print(f"[DEBUG] Password reset link for {email}: {link}")
+            # Always return success message to avoid leaking user existence
+            return Response({"message": "If this email exists, a reset link was sent."})
+        
+        # Generate OTP
+        user.otp = generate_otp()
+        user.save()
+
+        # Encode user ID
+        uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
+        otp = user.otp
+        link = f"http://localhost:5173/create-new-password?otp={otp}&uidb64={uidb64}"
+
+        # ----- Option 1: Simple plain text email -----
+        subject = "Password Reset Request"
+        message = (
+            f"Hello {user.full_name or user.username},\n\n"
+            f"You requested a password reset for your account.\n\n"
+            f"Your OTP code is: {otp}\n\n"
+            f"Or reset your password using this link:\n{link}\n\n"
+            f"If you didn’t request this, please ignore this email."
+        )
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
         return Response({"message": "If this email exists, a reset link was sent."})
+
 
 class PasswordChangeView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
