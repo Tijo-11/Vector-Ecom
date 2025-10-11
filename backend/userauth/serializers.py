@@ -12,9 +12,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     Custom serializer that accepts email instead of username for login
     """
     
-    # Tell the serializer to use email as the username field
     username_field = User.USERNAME_FIELD if hasattr(User, 'USERNAME_FIELD') else 'email'
-    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Replace username field with email field
@@ -51,18 +49,16 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({
                 'detail': 'No active account found with the given credentials'
             })
-        
-        # Check if email is verified
         if not user.email_verified:
             logger.warning(f"Email not verified for: {email}")
             raise serializers.ValidationError({
                 'detail': 'Email not verified. Please check your email for OTP.'
             })
         
-        # Authenticate using the username (Django's authenticate requires username)
+        # Authenticate using the correct identifier (email, since USERNAME_FIELD='email')
         authenticated_user = authenticate(
             request=self.context.get('request'),
-            username=user.username,
+            username=email,  # Pass email here, not user.username
             password=password
         )
         
@@ -71,13 +67,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({
                 'detail': 'No active account found with the given credentials'
             })
-        
-        if not authenticated_user.is_active:
-            raise serializers.ValidationError({
-                'detail': 'User account is disabled'
-            })
-        
-        # Generate tokens
+            
         refresh = self.get_token(authenticated_user)
         
         data = {
@@ -88,7 +78,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         logger.info(f"Login successful for: {email}")
         
         return data
-
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -101,12 +90,6 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields do not match"})
-        
-        # Check if email already exists
-        if User.objects.filter(email=attrs['email']).exists():
-            raise serializers.ValidationError({
-                "email": "A user with this email already exists."
-            })
         
         return attrs
 

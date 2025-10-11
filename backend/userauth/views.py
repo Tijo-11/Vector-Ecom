@@ -48,7 +48,46 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
 
-    def create(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if User.objects.filter(email=email).exists():
+            user = User.objects.get(email=email)
+            if user.email_verified:
+                return Response({
+                    "error": "An account with this email already exists, please login."
+                }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # Resend OTP for unverified account
+                user.otp = generate_otp()
+                user.save()
+                uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
+
+                # Send email with OTP
+                subject = 'Verify Your Email - MyApp'
+                message = (
+                    f"Hello {user.full_name or user.username},\n\n"
+                    f"Your verification code is: {user.otp}\n\n"
+                    f"Alternatively, you can verify your email by visiting the following link:\n"
+                    f"http://localhost:5173/verify-email?otp={user.otp}&uidb64={uidb64}\n\n"
+                    f"Thank you!"
+                )
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+
+                return Response({
+                    "message": "An account has been already registered with this email, please confirm the email to continue. OTP resent.",
+                    "uidb64": uidb64
+                }, status=status.HTTP_200_OK)
+        
+        # Normal registration for new email
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()

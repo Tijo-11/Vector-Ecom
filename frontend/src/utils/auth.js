@@ -41,21 +41,44 @@ export const register = async (
   password2
 ) => {
   try {
-    const { data } = await apiInstance.post("user/register/", {
+    const { data, status } = await apiInstance.post("user/register/", {
       full_name,
       email,
       phone,
       password,
       password2,
     });
-    // Do not auto-login; return data for OTP handling
-    Toast.fire({ icon: "success", title: "Signed Up. Verify OTP." });
-    return { data, error: null };
-  } catch (error) {
+    // Handle both 201 (new user) and 200 (OTP resend)
+    if (status === 201 || status === 200) {
+      return { data, error: null };
+    }
+    // Unexpected status
     return {
       data: null,
-      error: error.response?.data?.detail || "Something went wrong",
+      error: data.error || data.message || "Registration failed",
     };
+  } catch (error) {
+    let errMsg = "Something went wrong";
+    if (error.response && error.response.data) {
+      // Handle specific backend error messages
+      if (error.response.data.error) {
+        errMsg = error.response.data.error; // e.g., "An account with this email already exists, please login."
+      } else if (error.response.data.message) {
+        // This shouldn't hit for errors, but just in case
+        errMsg = error.response.data.message;
+      } else if (error.response.data.email) {
+        errMsg = error.response.data.email.join(", "); // e.g., validation errors
+      } else if (error.response.data.detail) {
+        errMsg = error.response.data.detail;
+      } else {
+        errMsg = Object.values(error.response.data).flat().join(", ");
+      }
+    } else if (error.code === "ECONNABORTED") {
+      errMsg = "Request timed out. Please try again.";
+    } else if (error.message === "Network Error") {
+      errMsg = "Network error. Check your connection or server status.";
+    }
+    return { data: null, error: errMsg };
   }
 };
 

@@ -14,10 +14,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY') or config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True  # Set to True for local testing; False in production (e.g., via env var)
 
 ALLOWED_HOSTS = ['retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com',
-                 'retrorelics.live','localhost', 'api.retrorelics.live']
+                 'retrorelics.live','localhost', 'api.retrorelics.live', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
@@ -73,7 +73,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
-DATABASES = {
+
+
+if DEBUG:
+    DATABASES= {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'multivendor',
+        'USER': 'user1',
+        'PASSWORD': 'olakka',
+        'HOST': 'localhost',
+        'PORT': '5432',
+        }
+    }
+else:
+
+    DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('RDS_DB_NAME'),
@@ -82,19 +97,7 @@ DATABASES = {
         'HOST': os.environ.get('RDS_HOSTNAME'),
         'PORT': os.environ.get('RDS_PORT'),
     }
-}
-
-#For local testing
-# DATABASES= {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'multivendor',
-#         'USER': 'user1',
-#         'PASSWORD': 'olakka',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
+    }
 
 
 # Password validation
@@ -134,8 +137,12 @@ AWS_QUERYSTRING_AUTH = False  # Don't add auth query params to URLs
 AWS_S3_SIGNATURE_VERSION = 's3v4'  # Use signature version 4
 
 # Static and Media URLs
-STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
-MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+if DEBUG:
+    STATIC_URL = '/static/'
+    MEDIA_URL = '/media/'
+else:
+    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
 
 # Collectstatic settings
 AWS_LOCATION = 'static'
@@ -268,15 +275,20 @@ LOGGING = {
 LOGIN_URL = None
 
 # HTTPS Security Settings
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# HTTPS Security Settings - make conditional
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not DEBUG else None
+# For local, ensure no forced HTTPS in CSRF_TRUSTED_ORIGINS
 CSRF_TRUSTED_ORIGINS = [
     "https://d3vxb6yub2zq9w.cloudfront.net",
     "https://retrorelics.live",
-    "https://api.retrorelics.live"
+    "https://api.retrorelics.live",
+] if not DEBUG else [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]

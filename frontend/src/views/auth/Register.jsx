@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { register, verifyOtp, login, googleLogin } from "../../utils/auth";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
+import Swal from "sweetalert2";
 
 export default function Register() {
   const [fullname, setFullname] = useState("");
@@ -21,6 +22,14 @@ export default function Register() {
     if (isLoggedIn) {
       navigate("/");
     }
+    const Toast = Swal.mixin({
+      toast: true,
+      position: "top",
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+    });
+
     const loadGoogleScript = () => {
       const script = document.createElement("script");
       script.src = "https://accounts.google.com/gsi/client";
@@ -82,7 +91,9 @@ export default function Register() {
     );
     if (error) {
       alert(error);
-    } else if (data.message.includes("OTP sent")) {
+    } else if (data.message) {
+      // Handle both new and resend
+      Toast.fire({ icon: "info", title: data.message });
       setUidb64(data.uidb64);
       setShowOtp(true);
     }

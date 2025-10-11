@@ -4,7 +4,7 @@ import log from "./logger";
 // Create an Axios instance with custom configuration
 const apiInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  timeout: 5000,
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
