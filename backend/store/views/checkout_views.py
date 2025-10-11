@@ -166,7 +166,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                 logger.warning(f"Insufficient stock for {product.title} during payment success.")
 
     def post(self, request, *args, **kwargs):
-        start_time = time.time() #noqa
+        start_time = time.time()  # noqa
         payload = request.data
         order_id = payload.get("order_id")
         session_id = payload.get("session_id")  # Razorpay
@@ -189,10 +189,14 @@ class PaymentSuccessView(generics.CreateAPIView):
         if capture_id:
             try:
                 access_token = get_paypal_access_token(
-                    os.environ.get('PAYPAL_CLIENT_ID', config('PAYPAL_CLIENT_ID')), os.environ.get('PAYPAL_CLIENT_SECRET', config('PAYPAL_CLINET_SECRET'))
+                    os.environ.get('PAYPAL_CLIENT_ID', config('PAYPAL_CLIENT_ID')),
+                    os.environ.get('PAYPAL_CLIENT_SECRET', config('PAYPAL_CLINET_SECRET'))
                 )
                 paypal_api_url = f"https://api-m.sandbox.paypal.com/v2/payments/captures/{capture_id}"
-                headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {access_token}"
+                }
                 response = requests.get(paypal_api_url, headers=headers)
 
                 if response.status_code == 200:
@@ -231,15 +235,20 @@ class PaymentSuccessView(generics.CreateAPIView):
                     self.send_all_notifications(order, order_items)
                     return Response({"message": "payment_successful"}, status=status.HTTP_200_OK)
 
+                elif payment["status"] == "authorized":
+                    return Response({"message": "processing"}, status=status.HTTP_202_ACCEPTED)
+
                 elif payment["status"] in ["failed", "cancelled"]:
                     return Response({"message": "cancelled"}, status=status.HTTP_400_BAD_REQUEST)
+
+                elif payment["status"] in ["created", "pending"]:
+                    return Response({"message": "processing"}, status=status.HTTP_202_ACCEPTED)
+
                 else:
                     return Response({"message": f"Payment status: {payment['status']}"}, status=status.HTTP_400_BAD_REQUEST)
 
-            except razorpay.errors.BadRequestError as e:
-                return Response({"message": f"Razorpay error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
-                logger.error(f"Unexpected Razorpay error: {str(e)}")
+                logger.error(f"Razorpay processing error: {str(e)}")
                 return Response({"message": "Razorpay processing error"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"message": "Missing session_id or paypal_capture_id"}, status=status.HTTP_400_BAD_REQUEST)

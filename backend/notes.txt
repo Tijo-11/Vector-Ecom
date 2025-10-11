@@ -15,3 +15,8 @@ To run celery tasks
 Also run 
 redis-server
 ###---------------
+PermissionError with Celery on Windows ([WinError 5] Access is denied). This is a known issue
+ with Celery's billiard library on Windows when using the default "spawn" process pool.
+ pip install gevent
+
+ celery -A backend worker --pool=gevent --loglevel=info
