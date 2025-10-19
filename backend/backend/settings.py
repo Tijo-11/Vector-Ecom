@@ -16,8 +16,15 @@ SECRET_KEY = os.environ.get('SECRET_KEY') or config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Set to True for local testing; False in production (e.g., via env var)
 
-ALLOWED_HOSTS = ['retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com',
-                 'retrorelics.live','localhost', 'api.retrorelics.live', '127.0.0.1']
+ALLOWED_HOSTS = [
+    'retro-env.eba-yvn88ury.ap-south-1.elasticbeanstalk.com',
+    '.elasticbeanstalk.com',  # Covers EB subdomains
+    'retrorelics.live',
+    'www.retrorelics.live',  
+    'api.retrorelics.live',
+    'localhost',
+    '127.0.0.1',
+]
 
 # Application definition
 INSTALLED_APPS = [
@@ -75,20 +82,9 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 
 
-if DEBUG:
-    DATABASES= {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'multivendor',
-        'USER': 'user1',
-        'PASSWORD': 'olakka',
-        'HOST': 'localhost',
-        'PORT': '5432',
-        }
-    }
-else:
 
-    DATABASES = {
+
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('RDS_DB_NAME'),
@@ -137,12 +133,9 @@ AWS_QUERYSTRING_AUTH = False  # Don't add auth query params to URLs
 AWS_S3_SIGNATURE_VERSION = 's3v4'  # Use signature version 4
 
 # Static and Media URLs
-if DEBUG:
-    STATIC_URL = '/static/'
-    MEDIA_URL = '/media/'
-else:
-    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+
+STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
 
 # Collectstatic settings
 AWS_LOCATION = 'static'
@@ -276,23 +269,19 @@ LOGIN_URL = None
 
 # HTTPS Security Settings
 # HTTPS Security Settings - make conditional
-SECURE_SSL_REDIRECT = not DEBUG
-SESSION_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = not DEBUG
-SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
-SECURE_HSTS_PRELOAD = not DEBUG
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if not DEBUG else None
+SECURE_HSTS_SECONDS =  31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # For local, ensure no forced HTTPS in CSRF_TRUSTED_ORIGINS
 CSRF_TRUSTED_ORIGINS = [
     "https://d3vxb6yub2zq9w.cloudfront.net",
     "https://retrorelics.live",
     "https://api.retrorelics.live",
-] if not DEBUG else [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
-
+] 
 
 # Celery Configuration
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
@@ -300,5 +289,5 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'  # Match your Django TIME_ZONE if different
+CELERY_TIMEZONE = 'Asia/Kolkata'  # Matches UTC+5:30
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
