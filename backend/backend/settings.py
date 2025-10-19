@@ -4,14 +4,14 @@ Django settings for backend project.
 
 import os
 from pathlib import Path
-from decouple import config
 from datetime import timedelta
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY') or config('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY') or get_random_secret_key()  
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Set to True for local testing; False in production (e.g., via env var)
@@ -124,44 +124,55 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = 'retrorelics-static-media'
 AWS_S3_REGION_NAME = 'ap-south-1'
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
-AWS_S3_FILE_OVERWRITE = False  # Prevent file overwrites
-AWS_DEFAULT_ACL = 'public-read'
+AWS_S3_FILE_OVERWRITE = False
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
-AWS_QUERYSTRING_AUTH = False  # Don't add auth query params to URLs
-AWS_S3_SIGNATURE_VERSION = 's3v4'  # Use signature version 4
+AWS_QUERYSTRING_AUTH = False
+AWS_S3_SIGNATURE_VERSION = 's3v4'
 
 # Static and Media URLs
 
 STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
-MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
 
-# Collectstatic settings
-AWS_LOCATION = 'static'
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+# Local static files directory (for collectstatic to gather from)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
+
 
 # Storage backends - SINGLE DEFINITION
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
+            "access_key": AWS_ACCESS_KEY_ID,
+            "secret_key": AWS_SECRET_ACCESS_KEY,
+            "bucket_name": AWS_STORAGE_BUCKET_NAME,
+            "region_name": AWS_S3_REGION_NAME,
             "location": "media",
             "file_overwrite": False,
-            "default_acl": "public-read",
+            "querystring_auth": False,
+            "custom_domain": AWS_S3_CUSTOM_DOMAIN,
         },
     },
     "staticfiles": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
+            "access_key": AWS_ACCESS_KEY_ID,
+            "secret_key": AWS_SECRET_ACCESS_KEY,
+            "bucket_name": AWS_STORAGE_BUCKET_NAME,
+            "region_name": AWS_S3_REGION_NAME,
             "location": "static",
-            "default_acl": "public-read",
+            "querystring_auth": False,
+            "custom_domain": AWS_S3_CUSTOM_DOMAIN,
         },
     },
 }
 
 AUTH_USER_MODEL = 'userauth.User'
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_KEY', config('GOOGLE_CLIENT_KEY', default=''))
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_KEY')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -212,11 +223,11 @@ CORS_ALLOW_ALL_ORIGINS = False
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get('EMAIL_HOST', config('EMAIL_HOST', default='smtp.gmail.com'))
-EMAIL_PORT = os.environ.get('EMAIL_PORT', config('EMAIL_PORT', default=587, cast=int))
+EMAIL_HOST = os.environ.get('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT',  587))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', config('EMAIL_HOST_USER'))
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', config('EMAIL_HOST_PASSWORD'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 REST_FRAMEWORK = {
