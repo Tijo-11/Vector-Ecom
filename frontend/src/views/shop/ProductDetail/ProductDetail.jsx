@@ -141,9 +141,8 @@ export default function ProductDetail() {
               product={product}
               setMainImage={setMainImage}
               country={currentAddress.country}
-              user={userData.user_id}
+              user={userData?.user_id}
               cartId={cartId}
-              isOutOfStock={isOutOfStock}
             />
 
             {/* Disabled Out of Stock Button */}
