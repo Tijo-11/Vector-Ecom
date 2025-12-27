@@ -54,12 +54,20 @@ apiInstance.interceptors.response.use(
           );
 
           const newAccessToken = response.data.access;
+          const newRefreshToken = response.data.refresh; // Capture the new refresh token
+
           log.debug("New access token received");
+          if (newRefreshToken) {
+            log.debug("New refresh token received");
+            document.cookie = `refresh_token=${newRefreshToken}; path=/; max-age=${
+              60 * 60 * 24 * 50
+            }`; // Set for 50 days
+          }
 
           document.cookie = `access_token=${newAccessToken}; path=/; max-age=${
             60 * 5
           }`;
-          log.debug("Cookie updated with new access token");
+          log.debug("Cookies updated with new tokens");
 
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           log.debug("Retrying original request...");
