@@ -90,7 +90,7 @@ export default function App() {
               element={<PaymentSuccess />}
             />
             <Route
-              path="/payments-failed/:session_id"
+              path="/payments-failed/:order_id"
               element={<PaymentFailed />}
             />
             <Route path="/view-order/:order_oid/" element={<ViewOrder />} />
