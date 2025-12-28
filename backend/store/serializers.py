@@ -3,7 +3,9 @@ from rest_framework import serializers
 from store.models import CancelledOrder, Cart, CartOrderItem, Notification, CouponUsers, Product, Tag 
 from store.models import Category, DeliveryCouriers, CartOrder, Gallery, Brand, ProductFaq, Review
 from store.models import Specification, Coupon, Color, Size, Address, Wishlist
+from store.models import OrderCancellation, OrderReturn
 ###############
+
 
 
 from addon.models import ConfigSettings
@@ -165,10 +167,16 @@ class CartSerializer(serializers.ModelSerializer):
 class CartOrderItemSerializer(serializers.ModelSerializer):
     # Serialize the related Product model
     # product = ProductSerializer()  
+    is_cancelled = serializers.SerializerMethodField()
 
     class Meta:
         model = CartOrderItem
         fields = '__all__'
+    
+    def get_is_cancelled(self, obj):
+        """Check if this item has been cancelled"""
+        from store.models import OrderCancellation
+        return OrderCancellation.objects.filter(items=obj).exists()
     
     def __init__(self, *args, **kwargs):
         super(CartOrderItemSerializer, self).__init__(*args, **kwargs)
@@ -362,6 +370,43 @@ class NotificationSummarySerializer(serializers.Serializer):
     read_noti = serializers.IntegerField(default=0)
     all_noti = serializers.IntegerField(default=0)
     
+
+# Define a serializer for the OrderCancellation model
+class OrderCancellationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = OrderCancellation
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(OrderCancellationSerializer, self).__init__(*args, **kwargs)
+        # Customize serialization depth based on the request method.
+        request = self.context.get('request')
+        if request and request.method == 'POST':
+            # When creating a new cancellation, set serialization depth to 0.
+            self.Meta.depth = 0
+        else:
+            # For other methods, set serialization depth to 3.
+            self.Meta.depth = 3
+
+
+# Define a serializer for the OrderReturn model
+class OrderReturnSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = OrderReturn
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(OrderReturnSerializer, self).__init__(*args, **kwargs)
+        # Customize serialization depth based on the request method.
+        request = self.context.get('request')
+        if request and request.method == 'POST':
+            # When creating a new return, set serialization depth to 0.
+            self.Meta.depth = 0
+        else:
+            # For other methods, set serialization depth to 3.
+            self.Meta.depth = 3
 
 
 

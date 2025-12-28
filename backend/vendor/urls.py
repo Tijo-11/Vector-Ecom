@@ -7,7 +7,7 @@ from .views.coupon_views import CouponListAPIView, CouponStats, CouponDetailAPIV
 from .views.notification_views import (NotificationMarkAsSeen, NotificationSeenListAPIView,
         NotificationSummaryAPIView,NotificationUnSeenListAPIView, )
 from .views.shop_views import (VendorProfileUpdateView, ShopProductsAPIView, ShopAPIView,
-            ShopUpdateView, VendorRegister, CourierListAPIView, OrderItemDetailAPIView)
+            ShopUpdateView, VendorRegister, CourierListAPIView, OrderItemDetailAPIView, MarkOrderAsDeliveredView)
 from .views.product_views import (ProductCreateView, ProductUpdateAPIView, ProductDeleteAPIView,
                                   FilterProductsAPIView)
 urlpatterns=[
@@ -49,6 +49,9 @@ urlpatterns=[
     path('vendor-register/', VendorRegister.as_view(), name='vendor-register'),
      # # Tracking Feature
     path('vendor/couriers/', CourierListAPIView.as_view()),
+    
+    # Order Management - Mark as Delivered
+    path('vendor/order-item-delivered/<int:pk>/', MarkOrderAsDeliveredView.as_view(), name='mark-order-delivered'),
 
 ]
    

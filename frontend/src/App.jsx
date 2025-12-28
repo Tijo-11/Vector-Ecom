@@ -19,6 +19,7 @@ import Checkout from "./views/shop/checkout/Checkout";
 import PaymentSuccess from "./views/shop/checkout/PaymentSuccess";
 import PaymentFailed from "./views/shop/checkout/PaymentFailed";
 import Search from "./views/shop/Search";
+import TrackOrder from "./views/shop/TrackOrder";
 import { CartContext } from "./plugin/Context.jsx";
 import CartId from "./views/shop/ProductDetail/cartId.jsx";
 import UserData from "./plugin/UserData.js";
@@ -94,6 +95,7 @@ export default function App() {
               element={<PaymentFailed />}
             />
             <Route path="/view-order/:order_oid/" element={<ViewOrder />} />
+            <Route path="/track-order" element={<TrackOrder />} />
             {/*Customer Endpoints*/}
             <Route
               path="customer/account/"

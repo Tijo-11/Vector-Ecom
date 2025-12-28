@@ -4,6 +4,8 @@ from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartIte
 from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView, OrdersDetailAPIView
 from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
 from .views.Review_views import ReviewListAPIView, SearchProductView     #, ReviewCreateAPIView
+from .views.cancel_views import CancelOrderView, ReturnOrderItemView
+from .views.order_management_views import GuestOrderTrackingView
 
 urlpatterns = [
     path('category/', CategoryListView.as_view(), name="category"),
@@ -33,8 +35,16 @@ urlpatterns = [
     path('reviews/<product_id>/', ReviewListAPIView.as_view(), name='list-review'),
     # path('reviews/', ReviewCreateAPIView.as_view(), name='create-review'),
     path('search/', SearchProductView.as_view(), name='search'),
+    
     #view-order
-    path('view-order/<order_id>/',  OrdersDetailAPIView.as_view(), name='Order-Detail'),    
+    path('view-order/<order_id>/',  OrdersDetailAPIView.as_view(), name='Order-Detail'),
+    
+    # Order Management - Cancellation and Returns
+    path('cancel-order/', CancelOrderView.as_view(), name='cancel-order'),
+    path('return-order-item/', ReturnOrderItemView.as_view(), name='return-order-item'),
+    
+    # Guest Order Tracking
+    path('guest-track-order/', GuestOrderTrackingView.as_view(), name='guest-track-order'),
 ]
 
 

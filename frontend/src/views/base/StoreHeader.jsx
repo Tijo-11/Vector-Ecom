@@ -155,6 +155,14 @@ function StoreHeader() {
               </button>
             </form>
 
+            {/* Track Order Link */}
+            <Link
+              to="/track-order"
+              className="bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded-lg"
+            >
+              Track Order
+            </Link>
+
             {/* Account + Logout + Cart */}
             {isLoggedIn ? (
               <>
@@ -326,6 +334,14 @@ function StoreHeader() {
                 </Link>
               </>
             )}
+
+            <Link
+              to="/track-order"
+              className="px-3 py-2 hover:bg-gray-800 rounded"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Track Order
+            </Link>
 
             <Link
               to="/cart"
