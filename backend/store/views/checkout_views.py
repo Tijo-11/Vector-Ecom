@@ -30,25 +30,32 @@ class RazorpayCheckoutView(generics.CreateAPIView):
     queryset = CartOrder.objects.all()
 
     def create(self, request, *args, **kwargs):
+        logger.info("Entering RazorpayCheckoutView.create")
         order_id = self.kwargs['order_id']
+        logger.debug(f"Processing order_id: {order_id}")
         try:
             order = CartOrder.objects.get(oid=order_id)
             if order.payment_status == "paid":
+                logger.warning(f"Order {order_id} already paid")
                 return Response({'message': 'Already paid', 'icon': 'warn'}, status=status.HTTP_200_OK)
         except CartOrder.DoesNotExist:
+            logger.error(f"Order not found: {order_id}")
             return Response({'message': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
 
         key_id = os.environ.get('RAZORPAY_KEY_ID', config('RAZORPAY_KEY_ID'))
         key_secret = os.environ.get('RAZORPAY_KEY_SECRET', config('RAZORPAY_KEY_SECRET'))
         if not key_id or not key_secret:
+            logger.error("Razorpay API credentials are missing or invalid")
             return Response(
                 {'message': 'Razorpay API credentials are missing or invalid'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
         try:
+            logger.info("Initializing Razorpay client")
             client = razorpay.Client(auth=(key_id, key_secret))
             client.set_app_details({"title": config('APP_TITLE', 'Django'), "version": config('APP_VERSION', '4.2')})
+            logger.info(f"Creating Razorpay order for amount: {int(order.total * 100)}")
             razorpay_order = client.order.create({
                 'amount': int(order.total * 100),  # In paise
                 'currency': 'INR',
@@ -57,6 +64,7 @@ class RazorpayCheckoutView(generics.CreateAPIView):
             })
             order.razorpay_session_id = razorpay_order['id']
             order.save()
+            logger.info(f"Razorpay order created successfully: {razorpay_order['id']}")
             return Response({
                 'id': razorpay_order['id'],
                 'amount': razorpay_order['amount'],
@@ -69,6 +77,7 @@ class RazorpayCheckoutView(generics.CreateAPIView):
             }, status=status.HTTP_200_OK)
         except razorpay.errors.BadRequestError as e:
             error_message = str(e)
+            logger.error(f"Razorpay BadRequestError: {error_message}")
             if 'authentication failed' in error_message.lower():
                 return Response(
                     {'message': 'Razorpay authentication failed. Please check API credentials'},
@@ -78,21 +87,28 @@ class RazorpayCheckoutView(generics.CreateAPIView):
                 {'message': f'Error creating Razorpay order: {error_message}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        except Exception as e:
+            logger.error(f"Unexpected error in Razorpay order creation: {str(e)}")
+            return Response(
+                {'message': 'Unexpected error creating Razorpay order'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 logger = logging.getLogger(__name__)
 
 def send_notification(user=None, vendor=None, order=None, order_item=None):
     """Create a notification and log any failures."""
+    logger.info("Sending notification")
     try:
         Notification.objects.create(user=user, vendor=vendor, order=order, order_item=order_item)
         logger.info(f"Notification created for order {order.id if order else 'unknown'}")
     except Exception as e:
         logger.error(f"Failed to create notification: {str(e)}")
-        print(f"Failed to create notification: {str(e)}")
 
 def send_email(subject, text_body, html_body, from_email, to_email):
     """Send an email asynchronously using Celery."""
+    logger.info(f"Sending email to {to_email} with subject: {subject}")
     send_async_email.delay(
         subject=subject,
         message=text_body,
@@ -101,19 +117,22 @@ def send_email(subject, text_body, html_body, from_email, to_email):
         recipient_list=[to_email],
         fail_silently=False
     )
+    logger.info(f"Email task queued for {to_email}")
 
 def get_paypal_access_token(client_id, secret_id):
     """Fetch PayPal access token."""
+    logger.info("Fetching PayPal access token")
     token_url = "https://api-m.sandbox.paypal.com/v1/oauth2/token"
     headers = {"Accept": "application/json", "Accept-Language": "en_US"}
     data = {"grant_type": "client_credentials"}
     try:
         response = requests.post(token_url, headers=headers, data=data, auth=(client_id, secret_id))
         response.raise_for_status()
-        return response.json().get("access_token")
+        access_token = response.json().get("access_token")
+        logger.info("PayPal access token fetched successfully")
+        return access_token
     except Exception as e:
         logger.error(f"PayPal auth failed: {str(e)}")
-        print(f"PayPal auth failed: {str(e)}")
         raise
 
 
@@ -125,6 +144,7 @@ class PaymentSuccessView(generics.CreateAPIView):
 
     def send_all_notifications(self, order, order_items):
         """Send notifications and emails asynchronously."""
+        logger.info(f"Sending all notifications for order {order.oid}")
         if order.buyer and order.email:
             try:
                 if "@" in order.email and "." in order.email:
@@ -144,16 +164,21 @@ class PaymentSuccessView(generics.CreateAPIView):
 
         for vendor_id, items in vendor_groups.items():
             vendor_email = items[0].vendor.email
-            for item in items:
-                send_notification(vendor=item.vendor, order=order, order_item=item)
-            merge_data = {'order': order, 'order_items': items}
-            subject = "New Sale!"
-            text_body = render_to_string("email/vendor_order_sale.txt", merge_data)
-            html_body = render_to_string("email/vendor_order_sale.html", merge_data)
-            send_email(subject, text_body, html_body, settings.DEFAULT_FROM_EMAIL, vendor_email)
+            try:
+                for item in items:
+                    send_notification(vendor=item.vendor, order=order, order_item=item)
+                merge_data = {'order': order, 'order_items': items}
+                subject = "New Sale!"
+                text_body = render_to_string("email/vendor_order_sale.txt", merge_data)
+                html_body = render_to_string("email/vendor_order_sale.html", merge_data)
+                send_email(subject, text_body, html_body, settings.DEFAULT_FROM_EMAIL, vendor_email)
+            except Exception as e:
+                logger.error(f"Vendor notification failed for {vendor_email}: {str(e)}")
+        logger.info(f"All notifications sent for order {order.oid}")
 
     def deduct_stock(self, order_items):
         """Decrease product stock after successful payment."""
+        logger.info("Deducting stock for order items")
         for item in order_items:
             product = item.product
             if product.stock_qty >= item.qty:
@@ -165,6 +190,7 @@ class PaymentSuccessView(generics.CreateAPIView):
 
     def deactivate_cart(self, cart_id, user_id=None):
         """Mark all Cart entries associated with the cart_id as inactive."""
+        logger.info(f"Deactivating cart for cart_id={cart_id}, user_id={user_id}")
         try:
             cart_items = Cart.objects.filter(cart_id=cart_id, is_active=True)
             if user_id:
@@ -177,27 +203,35 @@ class PaymentSuccessView(generics.CreateAPIView):
             logger.error(f"Failed to deactivate cart items for cart_id={cart_id}: {str(e)}")
 
     def post(self, request, *args, **kwargs):
+        logger.info("Entering PaymentSuccessView.post")
         start_time = time.time()  # noqa
         payload = request.data
         order_id = payload.get("order_id")
         session_id = payload.get("session_id")  # Razorpay
         capture_id = payload.get("paypal_capture_id")  # PayPal
+        logger.debug(f"Processing payment for order_id: {order_id}, session_id: {session_id}, capture_id: {capture_id}")
 
         if not order_id:
+            logger.warning("Missing order_id in payload")
             return Response({"message": "Missing order_id"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             order = CartOrder.objects.get(oid=order_id)
+            logger.info(f"Retrieved order: {order.oid}")
         except CartOrder.DoesNotExist:
+            logger.error(f"Order not found: {order_id}")
             return Response({"message": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
 
         if order.payment_status == "paid":
+            logger.warning(f"Order {order_id} already paid")
             return Response({"message": "already_paid"}, status=status.HTTP_200_OK)
 
         order_items = CartOrderItem.objects.filter(order=order)
+        logger.debug(f"Found {order_items.count()} order items")
 
         # --- PayPal flow ---
         if capture_id:
+            logger.info(f"Processing PayPal payment with capture_id: {capture_id}")
             try:
                 access_token = get_paypal_access_token(
                     os.environ.get('PAYPAL_CLIENT_ID', config('PAYPAL_CLIENT_ID')),
@@ -209,26 +243,44 @@ class PaymentSuccessView(generics.CreateAPIView):
                     "Authorization": f"Bearer {access_token}"
                 }
                 response = requests.get(paypal_api_url, headers=headers)
+                logger.info(f"PayPal API response status: {response.status_code}")
 
                 if response.status_code == 200:
                     paypal_data = response.json()
-                    if paypal_data.get("status") == "COMPLETED":
+                    status_val = paypal_data.get("status")
+                    logger.info(f"PayPal payment status: {status_val}")
+                    if status_val == "COMPLETED":
                         with transaction.atomic():
-                            order.payment_status = "paid"
-                            order.order_status = "Confirmed"
-                            order.save()
-                            self.deactivate_cart(order.oid, order.buyer_id if order.buyer else None)
+                            locked_order = CartOrder.objects.select_for_update().get(oid=order_id)
+                            if locked_order.payment_status == "paid":
+                                logger.warning(f"Order {order_id} already paid (locked check)")
+                                return Response({"message": "already_paid"}, status=status.HTTP_200_OK)
+                            locked_order.payment_status = "paid"
+                            locked_order.order_status = "Confirmed"
+                            locked_order.save()
+                            self.deactivate_cart(locked_order.oid, locked_order.buyer_id if locked_order.buyer else None)
                             self.deduct_stock(order_items)
-                        self.send_all_notifications(order, order_items)
+                        try:
+                            self.send_all_notifications(order, order_items)
+                        except Exception as e:
+                            logger.error(f"Notification failed: {str(e)}")
+                        logger.info(f"PayPal payment successful for order {order_id}")
                         return Response({"message": "payment_successful"}, status=status.HTTP_200_OK)
-                    elif paypal_data.get("status") in ["PENDING", "IN_PROGRESS"]:
+                    elif status_val in ["PENDING", "IN_PROGRESS"]:
                         with transaction.atomic():
-                            order.payment_status = "processing"
-                            order.order_status = "Pending"
-                            order.save()
-                        return Response({"message": f"Payment is {paypal_data.get('status').lower()}"}, status=status.HTTP_202_ACCEPTED)
+                            locked_order = CartOrder.objects.select_for_update().get(oid=order_id)
+                            if locked_order.payment_status == "processing":
+                                logger.info(f"Order {order_id} already processing (locked check)")
+                                return Response({"message": f"Payment is {status_val.lower()}"}, status=status.HTTP_202_ACCEPTED)
+                            locked_order.payment_status = "processing"
+                            locked_order.order_status = "Pending"
+                            locked_order.save()
+                        logger.info(f"PayPal payment {status_val.lower()} for order {order_id}")
+                        return Response({"message": f"Payment is {status_val.lower()}"}, status=status.HTTP_202_ACCEPTED)
                     else:
-                        return Response({"message": f"Payment failed: {paypal_data.get('status')}"}, status=status.HTTP_400_BAD_REQUEST)
+                        logger.warning(f"PayPal payment failed: {status_val}")
+                        return Response({"message": f"Payment failed: {status_val}"}, status=status.HTTP_400_BAD_REQUEST)
+                logger.error("PayPal API error")
                 return Response({"message": "PayPal API error"}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
                 logger.error(f"PayPal processing error: {str(e)}")
@@ -236,35 +288,58 @@ class PaymentSuccessView(generics.CreateAPIView):
 
         # --- Razorpay flow ---
         if session_id:
+            logger.info(f"Processing Razorpay payment with session_id: {session_id}")
             try:
                 client = razorpay.Client(auth=(config("RAZORPAY_KEY_ID"), config("RAZORPAY_KEY_SECRET")))
                 payment = client.payment.fetch(session_id)
+                payment_status = payment["status"]
+                logger.info(f"Razorpay payment status: {payment_status}")
 
-                if payment["status"] == "captured":
+                if payment_status == "captured":
                     with transaction.atomic():
-                        order.payment_status = "paid"
-                        order.order_status = "Confirmed"
-                        order.razorpay_session_id = session_id
-                        order.save()
-                        self.deactivate_cart(order.oid, order.buyer_id if order.buyer else None)
+                        locked_order = CartOrder.objects.select_for_update().get(oid=order_id)
+                        if locked_order.payment_status == "paid":
+                            logger.warning(f"Order {order_id} already paid (locked check)")
+                            return Response({"message": "already_paid"}, status=status.HTTP_200_OK)
+                        locked_order.payment_status = "paid"
+                        locked_order.order_status = "Confirmed"
+                        locked_order.razorpay_session_id = session_id
+                        locked_order.save()
+                        self.deactivate_cart(locked_order.oid, locked_order.buyer_id if locked_order.buyer else None)
                         self.deduct_stock(order_items)
-                    self.send_all_notifications(order, order_items)
+                    try:
+                        self.send_all_notifications(order, order_items)
+                    except Exception as e:
+                        logger.error(f"Notification failed: {str(e)}")
+                    logger.info(f"Razorpay payment successful for order {order_id}")
                     return Response({"message": "payment_successful"}, status=status.HTTP_200_OK)
 
-                elif payment["status"] == "authorized":
+                elif payment_status == "authorized":
+                    logger.info(f"Razorpay payment authorized for order {order_id}")
                     return Response({"message": "processing"}, status=status.HTTP_202_ACCEPTED)
 
-                elif payment["status"] in ["failed", "cancelled"]:
+                elif payment_status in ["failed", "cancelled"]:
+                    logger.warning(f"Razorpay payment {payment_status} for order {order_id}")
                     return Response({"message": "cancelled"}, status=status.HTTP_400_BAD_REQUEST)
 
-                elif payment["status"] in ["created", "pending"]:
+                elif payment_status in ["created", "pending"]:
+                    with transaction.atomic():
+                        locked_order = CartOrder.objects.select_for_update().get(oid=order_id)
+                        if locked_order.payment_status == "processing":
+                            logger.info(f"Order {order_id} already processing (locked check)")
+                            return Response({"message": "processing"}, status=status.HTTP_202_ACCEPTED)
+                        locked_order.payment_status = "processing"
+                        locked_order.save()
+                    logger.info(f"Razorpay payment {payment_status} for order {order_id}")
                     return Response({"message": "processing"}, status=status.HTTP_202_ACCEPTED)
 
                 else:
-                    return Response({"message": f"Payment status: {payment['status']}"}, status=status.HTTP_400_BAD_REQUEST)
+                    logger.warning(f"Unknown Razorpay payment status: {payment_status}")
+                    return Response({"message": f"Payment status: {payment_status}"}, status=status.HTTP_400_BAD_REQUEST)
 
             except Exception as e:
                 logger.error(f"Razorpay processing error: {str(e)}")
                 return Response({"message": "Razorpay processing error"}, status=status.HTTP_400_BAD_REQUEST)
 
+        logger.warning("Missing session_id or paypal_capture_id in payload")
         return Response({"message": "Missing session_id or paypal_capture_id"}, status=status.HTTP_400_BAD_REQUEST)
