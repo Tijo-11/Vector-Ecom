@@ -29,6 +29,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+SITE_URL = "http://localhost:5173"
 
 
 # Application definition

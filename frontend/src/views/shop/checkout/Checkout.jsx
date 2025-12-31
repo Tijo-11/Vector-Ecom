@@ -1,3 +1,4 @@
+// Checkout.jsx (Updated to show order items with discounts)
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
@@ -7,13 +8,11 @@ import RazorpayButton from "./Razorpay";
 import PaypalButton from "./Paypal";
 import Loader from "./Loader";
 import log from "loglevel";
-
 function Checkout() {
   const [order, setOrder] = useState({});
   const [couponCode, setCouponCode] = useState("");
   const { order_id } = useParams();
   const user = useAuthStore((state) => state.user);
-
   const fetchOrderData = async () => {
     try {
       const response = await apiInstance.get(`/checkout/${order_id}/`);
@@ -22,11 +21,9 @@ function Checkout() {
       log.error("Error fetching order:", error);
     }
   };
-
   useEffect(() => {
     if (order_id) fetchOrderData();
   }, [order_id]);
-
   const applyCoupon = async () => {
     const formdata = new FormData();
     formdata.append("order_oid", order_id);
@@ -51,7 +48,6 @@ function Checkout() {
       }
     }
   };
-
   return (
     <div className="container mx-auto mt-10 px-4">
       <div className="flex flex-col sm:flex-row shadow-md my-10">
@@ -79,8 +75,24 @@ function Checkout() {
               </div>
             ))}
           </div>
+          {/* Order Items List */}
+          <h2 className="font-semibold text-xl mt-8 mb-4">Order Items</h2>
+          <div className="space-y-4">
+            {order.orderitem?.map((item, index) => (
+              <div key={index} className="border p-4 rounded-md">
+                <p className="font-medium">{item.product?.title || "N/A"}</p>
+                <p>Quantity: {item.qty}</p>
+                <p>Price: ₹{item.price}</p>
+                <p>Subtotal: ₹{item.sub_total}</p>
+                {item.saved > 0 && (
+                  <p className="text-green-600">
+                    Saved: ₹{item.saved} (Offer Applied)
+                  </p>
+                )}
+              </div>
+            )) || <p>No items found</p>}
+          </div>
         </div>
-
         {/* Order Summary */}
         <div className="w-full sm:w-1/3 bg-white px-6 py-8 sm:px-8 sm:py-10">
           <h1 className="font-semibold text-2xl border-b pb-4 mb-6">
@@ -90,35 +102,38 @@ function Checkout() {
             <div className="flex justify-between">
               <span className="font-semibold text-sm uppercase text-gray-700">
                 Initial Total
+                <span className="text-xs normal-case text-gray-500 ml-1">
+                  (including tax, service fee){" "}
+                </span>
               </span>
               <span className="font-semibold text-sm">
                 ₹{order.initial_total || "0.00"}
               </span>
             </div>
-            <div className="flex justify-between">
+            {/* <div className="flex justify-between">
               <span className="font-semibold text-sm uppercase text-gray-700">
                 Shipping
-              </span>
-              <span className="font-semibold text-sm">
+              </span> */}
+            {/* <span className="font-semibold text-sm">
                 ₹{order.shipping_amount || "0.00"}
               </span>
-            </div>
-            <div className="flex justify-between">
+            </div> */}
+            {/* <div className="flex justify-between">
               <span className="font-semibold text-sm uppercase text-gray-700">
                 Tax
-              </span>
-              <span className="font-semibold text-sm">
+              </span> */}
+            {/* <span className="font-semibold text-sm">
                 ₹{order.tax_fee || "0.00"}
               </span>
-            </div>
-            <div className="flex justify-between">
+            </div> */}
+            {/* <div className="flex justify-between">
               <span className="font-semibold text-sm uppercase text-gray-700">
                 Service Fee
-              </span>
-              <span className="font-semibold text-sm">
+              </span> */}
+            {/* <span className="font-semibold text-sm">
                 ₹{order.service_fee || "0.00"}
               </span>
-            </div>
+            </div> */}
             {order.saved !== "0.00" && (
               <div className="flex justify-between">
                 <span className="font-semibold text-sm uppercase text-gray-700">
@@ -138,7 +153,6 @@ function Checkout() {
               </span>
             </div>
           </div>
-
           {/* Coupon Section */}
           <div className="mt-6">
             <label className="font-medium block mb-2 text-sm uppercase text-gray-700">
@@ -157,7 +171,6 @@ function Checkout() {
               Apply
             </button>
           </div>
-
           {/* Payment Buttons */}
           <RazorpayButton order={order} order_id={order_id} />
           <PaypalButton order={order} order_id={order_id} />
@@ -167,5 +180,4 @@ function Checkout() {
     </div>
   );
 }
-
 export default Checkout;

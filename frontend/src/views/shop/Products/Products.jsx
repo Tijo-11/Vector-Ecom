@@ -1,3 +1,4 @@
+// Products.jsx (Modified to show category offers in banner and product offers as shining text)
 import { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Heart } from "lucide-react";
@@ -14,7 +15,6 @@ import { addToWishlist } from "../../../plugin/addToWishlist";
 import { useAuthStore } from "../../../store/auth";
 import StarRating from "./StarRating";
 import log from "loglevel";
-
 export default function Products() {
   const Toast = Swal.mixin({
     toast: true,
@@ -23,8 +23,8 @@ export default function Products() {
     timer: 1500,
     timerProgressBar: true,
   });
-
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]); // New state for categories
   const [loading, setLoading] = useState(false);
   const [selectedColors, setSelectedColors] = useState({});
   const [selectedSizes, setSelectedSizes] = useState({});
@@ -35,7 +35,6 @@ export default function Products() {
   const [wishlist, setWishlist] = useState([]);
   const userData = UserData();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
-
   // Fetch wishlist
   const fetchWishlist = async () => {
     if (!userData?.user_id) return;
@@ -48,9 +47,9 @@ export default function Products() {
       log.error("Error fetching wishlist:", error);
     }
   };
-
   useEffect(() => {
     setLoading(true);
+    // Fetch products
     apiInstance.get(`products/`).then((response) => {
       const initialQuantities = response.data.reduce(
         (acc, product) => ({
@@ -63,67 +62,59 @@ export default function Products() {
       setQuantityValue(initialQuantities);
       setLoading(false);
     });
+    // Fetch categories for offers
+    apiInstance.get(`category/`).then((response) => {
+      setCategories(response.data);
+    });
   }, []);
-
   useEffect(() => {
     if (userData?.user_id) {
       fetchWishlist();
     }
   }, [userData?.user_id]);
-
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
       const viewportHeight = window.innerHeight;
       setShowScrollTop(scrollY > viewportHeight);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   const currentAddress = UserCountry();
   const user = UserData();
   const cart_id = cartID();
-
   const handleColorButtonClick = (e, productId, colorName) => {
     setSelectedColors((prev) => ({ ...prev, [productId]: colorName }));
     setSelectedProduct(productId);
   };
-
   const handleSizeButtonClick = (e, productId, sizeName) => {
     setSelectedSizes((prev) => ({ ...prev, [productId]: sizeName }));
     setSelectedProduct(productId);
   };
-
   const handleQuantityChange = (e, productId) => {
     setQuantityValue((prev) => ({ ...prev, [productId]: e.target.value }));
     setSelectedProduct(productId);
   };
-
   // ✅ Updated with stock check logic
   const handleAddToCart = async (product_id, price, shipping_amount, slug) => {
     const qty = Number(quantityValue[product_id] || 0);
     if (qty <= 0) return;
-
     try {
       // 1️⃣ Get product details to check stock
       const productRes = await apiInstance.get(`/products/${slug}/`);
       const stock_qty = productRes.data.stock_qty;
       const product_name = productRes.data.title;
-
       // 2️⃣ Get current cart items
       const url = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
       const cartRes = await apiInstance.get(url);
       const cartItems = cartRes.data;
-
       const existingItem = cartItems.find(
         (item) => item.product.id === product_id
       );
       const existingQty = existingItem ? existingItem.qty : 0;
-
       // 3️⃣ Check stock availability
       if (existingQty + qty > stock_qty) {
         Swal.fire({
@@ -136,7 +127,6 @@ export default function Products() {
         });
         return; // ❌ Stop execution
       }
-
       // 4️⃣ Proceed as usual
       const formData = new FormData();
       formData.append("product", product_id);
@@ -148,16 +138,13 @@ export default function Products() {
       formData.append("size", selectedSizes[product_id] || "");
       formData.append("color", selectedColors[product_id] || "");
       formData.append("cart_id", cart_id);
-
       // ✅ Optimistic update
       setCartCount((prev) => prev + qty);
-
       const response = await apiInstance.post(`cart/`, formData);
       Toast.fire({
         icon: "success",
         title: response.data.message || "Added to cart",
       });
-
       // ✅ Sync with backend
       const res = await apiInstance.get(url);
       const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
@@ -170,7 +157,6 @@ export default function Products() {
       });
     }
   };
-
   const handleAddToWishlist = async (product_id) => {
     try {
       await addToWishlist(product_id, userData?.user_id);
@@ -179,16 +165,16 @@ export default function Products() {
       log.error("Error updating wishlist:", error);
     }
   };
-
   // Scroll to top
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "auto" });
   };
-
+  // Filter categories with offers
+  const offeredCategories = categories.filter((cat) => cat.offer_discount > 0);
   if (loading) return <ProductsPlaceholder />;
-
   return (
     <div className="container mx-auto my-8 ">
+      {/* Dynamic Banner for Category Offers */}
       <div className="bg-yellow-100 py-8 text-center">
         <h1 className="text-4xl font-bold mb-4">
           Your Destination for Timeless Treasures.
@@ -196,8 +182,24 @@ export default function Products() {
         <p className="text-lg text-gray-600">
           Because memories never go out of style.
         </p>
+        {offeredCategories.length > 0 && (
+          <div className="mt-4">
+            <h2 className="text-2xl font-semibold mb-2">
+              Special Category Offers!
+            </h2>
+            <div className="flex flex-wrap justify-center gap-4">
+              {offeredCategories.map((cat) => (
+                <div key={cat.id} className="bg-white p-4 rounded shadow">
+                  <p className="font-bold">{cat.title}</p>
+                  <p className="text-red-500 animate-pulse">
+                    {cat.offer_discount}% OFF
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <h2 className="sr-only">Products</h2>
         <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8 mt-4">
@@ -220,6 +222,11 @@ export default function Products() {
                 <p className="mt-1 text-lg font-medium text-gray-900">
                   ₹{product.price}
                 </p>
+                {product.offer_discount > 0 && (
+                  <span className="text-red-500 font-bold animate-pulse">
+                    {product.offer_discount}% OFF
+                  </span>
+                )}
                 {product.stock_qty === 0 || !product.in_stock ? (
                   <p className="text-red-600 font-semibold mt-2">
                     Out of Stock
@@ -228,14 +235,12 @@ export default function Products() {
                   <p className="text-green-600 font-semibold mt-2">In Stock</p>
                 )}
               </div>
-
               <StarRating rating={product.rating} />
               {product.category && (
                 <p className="text-sm text-gray-500">
                   Category: {product.category.title}
                 </p>
               )}
-
               <div className="mt-2">
                 {product.size?.length > 0 && (
                   <div>
@@ -289,7 +294,6 @@ export default function Products() {
                   />
                 </div>
               </div>
-
               <div className="mt-auto flex flex-col gap-2">
                 <button
                   onClick={() => {
@@ -302,7 +306,6 @@ export default function Products() {
                       });
                       return;
                     }
-
                     if (!Number(quantityValue[product.id])) {
                       Swal.fire({
                         icon: "info",
@@ -312,7 +315,6 @@ export default function Products() {
                       });
                       return;
                     }
-
                     handleAddToCart(
                       product.id,
                       product.price,
@@ -338,7 +340,6 @@ export default function Products() {
                     ? "Out of Stock"
                     : "Add to Cart"}
                 </button>
-
                 {isLoggedIn ? (
                   <button
                     onClick={() => handleAddToWishlist(product.id)}
@@ -361,7 +362,6 @@ export default function Products() {
           ))}
         </div>
       </div>
-
       {showScrollTop && (
         <button
           onClick={scrollToTop}

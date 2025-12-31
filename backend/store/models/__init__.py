@@ -5,21 +5,14 @@ from .user import Wishlist, Address, Notification
 from .review import Review, ProductFaq
 from .item import Gallery, Specification, Color, Size
 from .cancellation import OrderCancellation, OrderReturn
-# from .choices import (
-#     STATUS, RATING, PRODUCT_TYPE, PAYMENT_STATUS, ORDER_STATUS,
-#     DISCOUNT_TYPE, DELIVERY_STATUS, OFFER_STATUS, WIN_STATUS,
-#     PRODUCT_CONDITION, PRODUCT_CONDITION_RATING, PAYMENT_METHOD
-# ) It doesn't need here
+from .offer import ProductOffer,CategoryOffer, ReferralOffer
+
 __all__ = [
     "Product", "Category", "Brand", "Tag", "Specification", "Size", "Color", "Gallery", "ProductFaq",
     "Cart", "CartOrder", "CartOrderItem", "CancelledOrder", "Coupon", "CouponUsers", "DeliveryCouriers",
     "Wishlist", "Address", "Notification", "Review",'OrderCancellation',
-    'OrderReturn'
-    #choices
-    # "DISCOUNT_TYPE", "STATUS_CHOICE", "STATUS", "PAYMENT_STATUS", "ORDER_STATUS",
-    # "AUCTION_STATUS", "WIN_STATUS", "PRODUCT_TYPE", "OFFER_STATUS",
-    # "PRODUCT_CONDITION", "PRODUCT_CONDITION_RATING", "DELIVERY_STATUS",
-    # "PAYMENT_METHOD", "RATING", #Redundant
+    'OrderReturn', "ProductOffer","CategoryOffer", "ReferralOffer"
+    
 ]
 
 #__all__ is a declaration of what should be exported when someone does from models import *,

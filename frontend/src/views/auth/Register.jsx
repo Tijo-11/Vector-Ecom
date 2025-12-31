@@ -1,9 +1,10 @@
+// frontend/Register.jsx (Modified to handle ref token)
 import { useEffect, useState } from "react";
 import { register, verifyOtp, login, googleLogin } from "../../utils/auth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import Swal from "sweetalert2";
-
+import apiInstance from "../../utils/axios";
 export default function Register() {
   const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
@@ -14,10 +15,12 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
   const [uidb64, setUidb64] = useState("");
+  const [newUserId, setNewUserId] = useState(null);
   const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const navigate = useNavigate();
-
+  const [searchParams] = useSearchParams();
+  const refToken = searchParams.get("ref");
   // Define Toast outside useEffect so it's accessible throughout component
   const Toast = Swal.mixin({
     toast: true,
@@ -26,12 +29,10 @@ export default function Register() {
     timer: 1500,
     timerProgressBar: true,
   });
-
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/");
     }
-
     const loadGoogleScript = () => {
       const script = document.createElement("script");
       script.src = "https://accounts.google.com/gsi/client";
@@ -42,7 +43,6 @@ export default function Register() {
     };
     loadGoogleScript();
   }, [isLoggedIn, navigate]);
-
   useEffect(() => {
     if (isGoogleScriptLoaded && window.google && window.google.accounts) {
       window.google.accounts.id.initialize({
@@ -55,7 +55,6 @@ export default function Register() {
       );
     }
   }, [isGoogleScriptLoaded]);
-
   const handleGoogleResponse = async (response) => {
     setIsLoading(true);
     const { error } = await googleLogin(response.credential);
@@ -66,7 +65,21 @@ export default function Register() {
     }
     setIsLoading(false);
   };
-
+  const applyReferral = async (token, userId) => {
+    try {
+      const response = await apiInstance.post("referral/apply/", {
+        token,
+        new_user_id: userId,
+      });
+      // Optional: show message
+      if (response.data.message) {
+        Toast.fire({ icon: "success", title: "Referral applied!" });
+      }
+    } catch (error) {
+      console.error("Referral apply failed:", error);
+      // Optional: silent or show error
+    }
+  };
   const resetForm = () => {
     setFullname("");
     setEmail("");
@@ -76,7 +89,6 @@ export default function Register() {
     setShowOtp(false);
     setOtp("");
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== password2) {
@@ -91,15 +103,14 @@ export default function Register() {
       password,
       password2
     );
-
     setIsLoading(false);
-
     if (error) {
       Toast.fire({ icon: "error", title: error });
     } else if (data && data.uidb64) {
       // Successfully got response with uidb64
       Toast.fire({ icon: "info", title: data.message || "OTP sent to email" });
       setUidb64(data.uidb64);
+      setNewUserId(data.user_id); // Store new user_id
       setShowOtp(true);
     } else {
       // Unexpected response format
@@ -107,12 +118,10 @@ export default function Register() {
       console.error("Unexpected data format:", data);
     }
   };
-
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     const { error } = await verifyOtp(otp, uidb64);
-
     if (error) {
       setIsLoading(false);
       Toast.fire({ icon: "error", title: error });
@@ -120,7 +129,6 @@ export default function Register() {
       // Auto-login after verification
       const loginResult = await login(email, password);
       setIsLoading(false);
-
       if (loginResult.error) {
         Toast.fire({
           icon: "error",
@@ -128,12 +136,15 @@ export default function Register() {
             "Verification successful but login failed. Please login manually.",
         });
       } else {
+        // Apply referral if token present
+        if (refToken && newUserId) {
+          await applyReferral(refToken, newUserId);
+        }
         navigate("/");
         resetForm();
       }
     }
   };
-
   return (
     <>
       <main className="mb-24 mt-12">

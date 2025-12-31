@@ -1,3 +1,4 @@
+# userauth/views.py (Modified to handle referral in registration if needed, but since separate, minimal change)
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -12,13 +13,10 @@ from rest_framework.decorators import permission_classes
 import shortuuid
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
-from django.conf import settings  # For GOOGLE_CLIENT_ID
+from django.conf import settings # For GOOGLE_CLIENT_ID
 import logging
 from .tasks import send_async_email
-
-
 logger = logging.getLogger(__name__)
-
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
     def post(self, request, *args, **kwargs):
@@ -29,7 +27,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
         logger.info(f"Has password: {'password' in request.data}")
         logger.info(f"Content-Type: {request.content_type}")
         logger.info(f"Request method: {request.method}")
-        
+       
         try:
             response = super().post(request, *args, **kwargs)
             logger.info("Token generation successful")
@@ -42,17 +40,15 @@ class MyTokenObtainPairView(TokenObtainPairView):
                 'detail': 'Token generation failed',
                 'received_fields': list(request.data.keys())
             }, status=status.HTTP_400_BAD_REQUEST)
-
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
-
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
         if not email:
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
+       
         if User.objects.filter(email=email).exists():
             user = User.objects.get(email=email)
             if user.email_verified:
@@ -64,7 +60,6 @@ class RegisterView(generics.CreateAPIView):
                 user.otp = generate_otp()
                 user.save()
                 uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
-
                 # Send email with OTP
                 subject = 'Verify Your Email - MyApp'
                 message = (
@@ -81,21 +76,18 @@ class RegisterView(generics.CreateAPIView):
                 recipient_list=[user.email],
                     fail_silently=False,
                 )
-
                 return Response({
                     "message": "An account has been already registered with this email, please confirm the email to continue. OTP resent.",
                     "uidb64": uidb64
                 }, status=status.HTTP_200_OK)
-        
+       
         # Normal registration for new email
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         user.otp = generate_otp()
         user.save()
-
         uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
-
         # Send email with OTP
         subject = 'Verify Your Email - MyApp'
         message = (
@@ -112,21 +104,18 @@ class RegisterView(generics.CreateAPIView):
     recipient_list=[user.email],
     fail_silently=False,
 )
-
         return Response({
             "message": "User registered. OTP sent to email for verification.",
-            "uidb64": uidb64
+            "uidb64": uidb64,
+            "user_id": user.id  # Add user_id for referral apply
         }, status=status.HTTP_201_CREATED)
-
 @api_view(['GET'])
 def getRoutes(request):
     routes = ['/api/token/', '/api/register/', '/api/token/refresh/', 'api/test']
     return Response(routes)
-
 class ProfileView(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = ProfileSerializer
-
     def get_object(self):
         user_id = self.kwargs['user_id']
         try:
@@ -137,16 +126,13 @@ class ProfileView(generics.RetrieveAPIView):
             raise User.DoesNotExist
         user = User.objects.get(id=user_id_int)
         return user.profile
-
 def generate_otp():
     uuid_key = shortuuid.uuid()
     unique_key = uuid_key[:6]
     return unique_key
-
 class PasswordEmailVerify(generics.RetrieveAPIView):
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
-
     def get(self, request, *args, **kwargs):
         email = self.kwargs.get("email")
         try:
@@ -154,16 +140,14 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
         except User.DoesNotExist:
             # Always return success message to avoid leaking user existence
             return Response({"message": "If this email exists, a reset link was sent."})
-        
+       
         # Generate OTP
         user.otp = generate_otp()
         user.save()
-
         # Encode user ID
         uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
         otp = user.otp
         link = f"http://localhost:5173/create-new-password?otp={otp}&uidb64={uidb64}"
-
         # ----- Option 1: Simple plain text email -----
         subject = "Password Reset Request"
         message = (
@@ -181,12 +165,9 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
     fail_silently=False,
 )
         return Response({"message": "If this email exists, a reset link was sent."})
-
-
 class PasswordChangeView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
-
     def create(self, request, *args, **kwargs):
         payload = request.data
         otp = payload.get('otp')
@@ -202,11 +183,9 @@ class PasswordChangeView(generics.CreateAPIView):
         user.otp = ""
         user.save()
         return Response({"message": "Password Changed Successfully"}, status=status.HTTP_200_OK)
-
 class VerifyEmailOTP(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
-
     def create(self, request, *args, **kwargs):
         payload = request.data
         otp = payload.get('otp')
@@ -221,7 +200,6 @@ class VerifyEmailOTP(generics.CreateAPIView):
         user.otp = ""
         user.save()
         return Response({"message": "Email verified successfully"}, status=status.HTTP_200_OK)
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def google_login(request):
@@ -238,11 +216,11 @@ def google_login(request):
             defaults={
                 'full_name': full_name,
                 'username': email_username,
-                'phone': '',  # Phone not available from Google; leave blank
+                'phone': '', # Phone not available from Google; leave blank
             }
         )
         if created:
-            user.set_unusable_password()  # No password for social users
+            user.set_unusable_password() # No password for social users
         user.email_verified = id_info.get('email_verified', False)
         user.save()
         token = MyTokenObtainPairSerializer.get_token(user)

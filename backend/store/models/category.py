@@ -6,7 +6,7 @@ import shortuuid
 from userauth.models import user_directory_path
 
 
-#Category  causes circular import between product and category, review and product etc.
+
 
 
 
