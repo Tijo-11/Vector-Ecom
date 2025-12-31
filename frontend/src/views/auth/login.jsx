@@ -1,21 +1,40 @@
 import { useState, useEffect } from "react";
 import { login, googleLogin } from "../../utils/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom"; // ← Added useSearchParams
 import { useAuthStore } from "../../store/auth";
 import { Link } from "react-router-dom";
+import apiInstance from "../../utils/axios";
+import Swal from "sweetalert2";
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top",
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+});
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState(""); // Changed from username to email
+  const [searchParams] = useSearchParams(); // ← To read ?ref=TOKEN
+  const refToken = searchParams.get("ref"); // Get referral token from URL
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
 
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // Redirect if already logged in
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/");
     }
+  }, [isLoggedIn, navigate]);
+
+  // Load Google Sign-In script
+  useEffect(() => {
     const loadGoogleScript = () => {
       const script = document.createElement("script");
       script.src = "https://accounts.google.com/gsi/client";
@@ -27,8 +46,9 @@ export default function Login() {
     loadGoogleScript();
   }, []);
 
+  // Initialize Google button
   useEffect(() => {
-    if (isGoogleScriptLoaded && window.google && window.google.accounts) {
+    if (isGoogleScriptLoaded && window.google?.accounts) {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: handleGoogleResponse,
@@ -40,33 +60,75 @@ export default function Login() {
     }
   }, [isGoogleScriptLoaded]);
 
+  // Apply referral if token exists and user just signed in
+  const applyReferralIfNeeded = async () => {
+    if (!refToken) return;
+
+    try {
+      const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+      const newUserId = userData?.user_id;
+
+      if (newUserId) {
+        await apiInstance.post("referral/apply/", {
+          token: refToken,
+          new_user_id: newUserId,
+        });
+        Toast.fire({
+          icon: "success",
+          title: "Referral applied! Your friend got a coupon 🎉",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to apply referral:", error);
+      // Silent fail — don't interrupt login flow
+    }
+  };
+
+  // Google Login Handler
   const handleGoogleResponse = async (response) => {
     setIsLoading(true);
-    const { error } = await googleLogin(response.credential);
+    const { error, data } = await googleLogin(response.credential);
+
     if (error) {
-      alert(error);
-    } else {
-      navigate("/");
+      Toast.fire({ icon: "error", title: error });
+      setIsLoading(false);
+      return;
     }
+
+    Toast.fire({ icon: "success", title: "Logged in with Google!" });
+
+    // Apply referral only after successful login
+    await applyReferralIfNeeded();
+
+    navigate("/");
+    setIsLoading(false);
+  };
+
+  // Regular Email/Password Login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const { error } = await login(email, password);
+
+    if (error) {
+      Toast.fire({ icon: "error", title: error });
+      setIsLoading(false);
+      return;
+    }
+
+    Toast.fire({ icon: "success", title: "Login Successful!" });
+
+    // Apply referral if this was a new signup via referral link
+    await applyReferralIfNeeded();
+
+    navigate("/");
     setIsLoading(false);
   };
 
   const resetForm = () => {
     setEmail("");
     setPassword("");
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    const { error } = await login(email, password);
-    if (error) {
-      alert(error);
-    } else {
-      navigate("/");
-      resetForm();
-    }
-    setIsLoading(false);
   };
 
   return (
@@ -93,9 +155,9 @@ export default function Login() {
                           <input
                             type="email"
                             id="email"
-                            name="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            required
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                           />
                         </div>
@@ -109,9 +171,9 @@ export default function Login() {
                           <input
                             type="password"
                             id="password"
-                            name="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            required
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                           />
                         </div>
@@ -132,12 +194,15 @@ export default function Login() {
                             </>
                           )}
                         </button>
-                        <div className="text-center mt-4">Or</div>
+
+                        <div className="text-center my-4 text-gray-500">Or</div>
+
                         <div
                           id="googleSignInDiv"
-                          className="w-full flex justify-center mt-4"
+                          className="w-full flex justify-center"
                         ></div>
-                        <div className="text-center mt-6">
+
+                        <div className="text-center mt-6 space-y-2">
                           <p>
                             Don't have an account?{" "}
                             <Link
@@ -147,7 +212,7 @@ export default function Login() {
                               Register
                             </Link>
                           </p>
-                          <p className="mt-2">
+                          <p>
                             <Link
                               to="/forgot-password"
                               className="text-red-600 hover:underline"
