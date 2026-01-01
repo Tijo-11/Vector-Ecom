@@ -1,4 +1,4 @@
-# store/serializers.py (Complete Fixed Version)
+# store/serializers.py (Complete Fixed Version with ProductOfferSerializer)
 
 from rest_framework import serializers
 from store.models import (
@@ -133,12 +133,14 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_offer_discount(self, obj):
         now = timezone.now()
 
-        # Product-specific offers
+        # Product-specific offers (include vendor-specific or global)
         product_discount = 0
         product_offers = obj.product_offers.filter(
             start_date__lte=now
         ).filter(
             Q(end_date__gte=now) | Q(end_date__isnull=True)
+        ).filter(
+            Q(vendor=obj.vendor) | Q(vendor__isnull=True)
         )
         if product_offers.exists():
             product_discount = product_offers.aggregate(
@@ -380,9 +382,6 @@ class OrderReturnSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
-
-# store/serializers.py - ProductOfferSerializer (fixed)
 class ProductOfferSerializer(serializers.ModelSerializer):
     product_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -394,9 +393,6 @@ class ProductOfferSerializer(serializers.ModelSerializer):
         model = ProductOffer
         fields = ['id', 'discount_percentage', 'start_date', 'end_date', 'is_active', 'products', 'product_ids']
         read_only_fields = ['products']
-
-    # REMOVED custom create method - let DRF handle creation
-    # The view will pop 'product_ids' and set the m2m after save
 
 class CategoryOfferSerializer(serializers.ModelSerializer):
     class Meta:
