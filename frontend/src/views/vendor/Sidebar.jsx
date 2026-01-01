@@ -1,3 +1,4 @@
+// Sidebar.jsx (modified, add offers link after coupon)
 import {
   Gauge,
   Grid,
@@ -11,14 +12,12 @@ import {
   LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-
 export default function VendorSidebar() {
   const location = useLocation();
   const nonActiveLink =
     "flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors";
   const activeLink =
     "flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors";
-
   const isActiveLink = (currentPath, LinkPath) => {
     return currentPath.includes(LinkPath);
   };
@@ -111,6 +110,18 @@ export default function VendorSidebar() {
             }
           >
             <Tag size={18} /> <span>Coupon & Discount</span>
+          </Link>
+        </li>
+        <li>
+          <Link
+            to="/vendor/offers/"
+            className={
+              isActiveLink(location.pathname, "/vendor/offers/")
+                ? activeLink
+                : nonActiveLink
+            }
+          >
+            <Tag size={18} /> <span>Offers</span>
           </Link>
         </li>
         <li>

@@ -5,19 +5,18 @@ from store.models import (
     CancelledOrder, Cart, CartOrderItem, Notification, CouponUsers,
     Product, Tag, Category, DeliveryCouriers, CartOrder, Gallery,
     Brand, ProductFaq, Review, Specification, Coupon, Color, Size,
-    Address, Wishlist, OrderCancellation, OrderReturn
+    Address, Wishlist, OrderCancellation, OrderReturn, ProductOffer,
+    CategoryOffer, ReferralOffer
 )
 from addon.models import ConfigSettings
 from userauth.serializers import ProfileSerializer
 from django.utils import timezone
 from django.db.models import Max, Q
 
-
 class ConfigSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfigSettings
         fields = "__all__"
-
 
 class CategorySerializer(serializers.ModelSerializer):
     offer_discount = serializers.SerializerMethodField()
@@ -38,56 +37,47 @@ class CategorySerializer(serializers.ModelSerializer):
             return offers.aggregate(Max('discount_percentage'))['discount_percentage__max'] or 0
         return 0
 
-
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = '__all__'
-
 
 class BrandSerializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
         fields = '__all__'
 
-
 class GallerySerializer(serializers.ModelSerializer):
     class Meta:
         model = Gallery
         fields = '__all__'
-
 
 class SpecificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Specification
         fields = '__all__'
 
-
 class SizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Size
         fields = '__all__'
-
 
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Color
         fields = '__all__'
 
-
 class ProductSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
-    gallery = GallerySerializer(many=True, read_only=True)
-    color = ColorSerializer(many=True, read_only=True)
-    size = SizeSerializer(many=True, read_only=True)
-    specification = SpecificationSerializer(many=True, read_only=True)
+    gallery = GallerySerializer(many=True, read_only=True, required=False)
+    color = ColorSerializer(many=True, read_only=True, required=False)
+    size = SizeSerializer(many=True, read_only=True, required=False)
+    specification = SpecificationSerializer(many=True, read_only=True, required=False)
     rating = serializers.IntegerField(required=False)
-
-    specification = SpecificationSerializer(many=True, required=False)
-    color = ColorSerializer(many=True, required=False)
-    size = SizeSerializer(many=True, required=False)
-    gallery = GallerySerializer(many=True, required=False, read_only=True)
+    product_rating = serializers.SerializerMethodField()
+    rating_count = serializers.SerializerMethodField()
+    order_count = serializers.SerializerMethodField()
     offer_discount = serializers.SerializerMethodField()
 
     class Meta:
@@ -126,10 +116,19 @@ class ProductSerializer(serializers.ModelSerializer):
             "color",
             "product_rating",
             "rating_count",
-            'order_count',
-            'stock_qty',
-            'offer_discount'
+            "order_count",
+            "stock_qty",
+            "offer_discount"
         ]
+
+    def get_product_rating(self, obj):
+        return obj.product_rating()
+
+    def get_rating_count(self, obj):
+        return obj.rating_count()
+
+    def get_order_count(self, obj):
+        return obj.order_count()
 
     def get_offer_discount(self, obj):
         now = timezone.now()
@@ -170,7 +169,6 @@ class ProductSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class ProductFaqSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
@@ -186,7 +184,6 @@ class ProductFaqSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class CartSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
@@ -201,7 +198,6 @@ class CartSerializer(serializers.ModelSerializer):
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
-
 
 class CartOrderItemSerializer(serializers.ModelSerializer):
     is_cancelled = serializers.SerializerMethodField()
@@ -222,7 +218,6 @@ class CartOrderItemSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class CartOrderSerializer(serializers.ModelSerializer):
     orderitem = CartOrderItemSerializer(many=True, read_only=True)
 
@@ -237,7 +232,6 @@ class CartOrderSerializer(serializers.ModelSerializer):
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
-
 
 class ReviewSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
@@ -255,7 +249,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class WishlistSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
@@ -271,7 +264,6 @@ class WishlistSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
@@ -284,7 +276,6 @@ class AddressSerializer(serializers.ModelSerializer):
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
-
 
 class CancelledOrderSerializer(serializers.ModelSerializer):
     class Meta:
@@ -299,7 +290,6 @@ class CancelledOrderSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class CouponSerializer(serializers.ModelSerializer):
     class Meta:
         model = Coupon
@@ -312,7 +302,6 @@ class CouponSerializer(serializers.ModelSerializer):
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
-
 
 class CouponUsersSerializer(serializers.ModelSerializer):
     coupon = CouponSerializer()
@@ -329,12 +318,10 @@ class CouponUsersSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class DeliveryCouriersSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryCouriers
         fields = '__all__'
-
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -349,28 +336,23 @@ class NotificationSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class SummarySerializer(serializers.Serializer):
     products = serializers.IntegerField()
     orders = serializers.IntegerField()
     revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
 
-
 class EarningSummarySerializer(serializers.Serializer):
     monthly_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
     total_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
-
 
 class CouponSummarySerializer(serializers.Serializer):
     total_coupons = serializers.IntegerField(default=0)
     active_coupons = serializers.IntegerField(default=0)
 
-
 class NotificationSummarySerializer(serializers.Serializer):
     un_read_noti = serializers.IntegerField(default=0)
     read_noti = serializers.IntegerField(default=0)
     all_noti = serializers.IntegerField(default=0)
-
 
 class OrderCancellationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -385,7 +367,6 @@ class OrderCancellationSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class OrderReturnSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderReturn
@@ -393,6 +374,50 @@ class OrderReturnSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super(OrderReturnSerializer, self).__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and request.method == 'POST':
+            self.Meta.depth = 0
+        else:
+            self.Meta.depth = 3
+
+
+
+# store/serializers.py - ProductOfferSerializer (fixed)
+class ProductOfferSerializer(serializers.ModelSerializer):
+    product_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=True
+    )
+
+    class Meta:
+        model = ProductOffer
+        fields = ['id', 'discount_percentage', 'start_date', 'end_date', 'is_active', 'products', 'product_ids']
+        read_only_fields = ['products']
+
+    # REMOVED custom create method - let DRF handle creation
+    # The view will pop 'product_ids' and set the m2m after save
+
+class CategoryOfferSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CategoryOffer
+        fields = ['id', 'discount_percentage', 'start_date', 'end_date', 'category']
+
+    def __init__(self, *args, **kwargs):
+        super(CategoryOfferSerializer, self).__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and request.method == 'POST':
+            self.Meta.depth = 0
+        else:
+            self.Meta.depth = 3
+
+class ReferralOfferSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReferralOffer
+        fields = ['id', 'token', 'created_at', 'is_used', 'expiry_date', 'referring_user', 'reward_coupon']
+
+    def __init__(self, *args, **kwargs):
+        super(ReferralOfferSerializer, self).__init__(*args, **kwargs)
         request = self.context.get('request')
         if request and request.method == 'POST':
             self.Meta.depth = 0

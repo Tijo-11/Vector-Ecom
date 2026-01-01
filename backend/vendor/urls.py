@@ -1,4 +1,4 @@
-# urls.py (modified)
+# vendor/urls.py (corrected import)
 from django.urls import path
 from .views.dashboard_views import DashboardStatsAPIView, MonthlyOrderChartAPIFBV, MonthlyProductsChartAPIFBV
 from .views.dashboard_views import ProductsAPIView, OrdersAPIView, RevenueAPIView, OrderDetailAPIView, FilterOrderAPIView
@@ -12,6 +12,7 @@ from .views.shop_views import (VendorProfileUpdateView, ShopProductsAPIView, Sho
 from .views.product_views import (ProductCreateView, ProductUpdateAPIView, ProductDeleteAPIView,
                                   FilterProductsAPIView)
 from .views.report_views import SalesReportAPIView, SalesReportPDFView, SalesReportExcelView
+from .views.offer_views import ProductOfferListCreateAPIView, ProductOfferDetailAPIView
 
 urlpatterns=[
     path('vendor/stats/<vendor_id>/', DashboardStatsAPIView.as_view(), name='vendor-stats'),
@@ -58,4 +59,6 @@ urlpatterns=[
     path('vendor/sales-report/<vendor_id>/', SalesReportAPIView.as_view(), name='vendor-sales-report'),
     path('vendor/sales-report-pdf/<vendor_id>/', SalesReportPDFView.as_view(), name='vendor-sales-report-pdf'),
     path('vendor/sales-report-excel/<vendor_id>/', SalesReportExcelView.as_view(), name='vendor-sales-report-excel'),
+    path('vendor/offers/<int:vendor_id>/', ProductOfferListCreateAPIView.as_view(), name='vendor-offers'),
+    path('vendor/offers/<int:vendor_id>/<int:pk>/', ProductOfferDetailAPIView.as_view(), name='vendor-offer-delete'),
 ]

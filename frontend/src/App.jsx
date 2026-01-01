@@ -49,6 +49,7 @@ import Shop from "./views/vendor/Shop";
 import VendorRegister from "./views/vendor/VendorRegister";
 import AddProduct from "./views/vendor/AddProduct";
 import UpdateProduct from "./views/vendor/UpdateProduct.jsx";
+import Offers from "./views/vendor/Offers.jsx"; // Added import for Offers
 import AdminRoute from "./layouts/AdminRoute.jsx";
 ///////---------------
 import AdminDashboard from "./views/admin/AdminDashboard.jsx";
@@ -266,6 +267,14 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <UpdateProduct />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/offers/"
+              element={
+                <PrivateRoute>
+                  <Offers />
                 </PrivateRoute>
               }
             />
