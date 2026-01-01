@@ -81,6 +81,9 @@ apiInstance.interceptors.request.use(
             accessToken = newToken;
           } catch (error) {
             log.error("Token refresh failed:", error);
+            Cookies.remove("access_token");
+            Cookies.remove("refresh_token");
+            localStorage.removeItem("userData");
             useAuthStore.getState().setUser(null);
             window.location.href = "/login";
             return Promise.reject(error);
