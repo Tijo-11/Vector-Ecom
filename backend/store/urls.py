@@ -2,7 +2,7 @@
 from django.urls import path
 from .views.product_category import CategoryListView, ProductListView, FeaturedProductListView, ProductDetailView
 from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartItemDeleteAPIView, CartMergeAPIView
-from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView, OrdersDetailAPIView
+from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView, OrdersDetailAPIView, RemoveCouponAPIView
 from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
 from .views.Review_views import ReviewListAPIView, SearchProductView #, ReviewCreateAPIView
 from .views.cancel_views import CancelOrderView, ReturnOrderItemView
@@ -51,4 +51,5 @@ urlpatterns = [
     # Referral
     path('referral/generate/', GenerateReferralView.as_view(), name='generate-referral'),
     path('referral/my-coupons/', MyReferralCouponsView.as_view(), name='my-referral-coupons'),
+    path('coupon/remove/', RemoveCouponAPIView.as_view(), name='remove-coupon'),
 ]

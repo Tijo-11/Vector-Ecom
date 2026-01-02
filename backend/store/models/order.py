@@ -60,7 +60,8 @@ class CartOrder(models.Model):
     #help_text improves usability in Django admin/forms by explaining what the field represents — especially useful for non-developers managing data.
     saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True, help_text="Amount saved by customer")
     # Optional field showing how much the customer saved; null in DB, blank in forms; tooltip for admin
-    
+    offer_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    coupon_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     # Personal Informations
     full_name = models.CharField(max_length=1000)
     email = models.CharField(max_length=1000)
@@ -110,7 +111,8 @@ class CartOrderItem(models.Model):
     tax_fee = models.DecimalField(default=0.00, max_digits=12, decimal_places=2, help_text="Estimated Vat based on delivery country = tax_rate * (total + shipping)")
     service_fee = models.DecimalField(default=0.00, max_digits=12, decimal_places=2, help_text="Estimated Service Fee = service_fee * total (paid by buyer to platform)")
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Grand Total of all amount listed above")
-    
+    offer_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    coupon_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     
     expected_delivery_date_from = models.DateField(auto_now_add=False, null=True, blank=True)
     expected_delivery_date_to = models.DateField(auto_now_add=False, null=True, blank=True)
