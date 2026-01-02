@@ -1,5 +1,4 @@
-# store/views/order_views.py (Fixed)
-
+# store/views/order_views.py 
 from django.db.models import Q
 from django.db import transaction
 from rest_framework.response import Response
@@ -84,9 +83,10 @@ class CreateOrderView(generics.CreateAPIView):
                         Q(end_date__gte=now) | Q(end_date__isnull=True)
                     )
                     if product_offers.exists():
-                        product_discount = product_offers.aggregate(
+                        max_product_discount = product_offers.aggregate(
                             Max('discount_percentage')
-                        )['discount_percentage__max'] or Decimal(0)
+                        )['discount_percentage__max'] or 0
+                        product_discount = Decimal(max_product_discount)
 
                 category_discount = Decimal(0)
                 if c.product.category:
@@ -96,9 +96,10 @@ class CreateOrderView(generics.CreateAPIView):
                         Q(end_date__gte=now) | Q(end_date__isnull=True)
                     )
                     if category_offers.exists():
-                        category_discount = category_offers.aggregate(
+                        max_category_discount = category_offers.aggregate(
                             Max('discount_percentage')
-                        )['discount_percentage__max'] or Decimal(0)
+                        )['discount_percentage__max'] or 0
+                        category_discount = Decimal(max_category_discount)
 
                 max_discount = max(product_discount, category_discount)
                 discount_rate = max_discount / Decimal(100)
@@ -215,7 +216,7 @@ class CouponAPIView(generics.CreateAPIView):
 
         for item in order_items:
             if not item.coupon.filter(id=coupon.id).exists():
-                discount = item.total * (coupon.discount / 100)
+                discount = item.total * (Decimal(coupon.discount) / Decimal(100))
                 item.total -= discount
                 item.sub_total -= discount
                 item.saved += discount
