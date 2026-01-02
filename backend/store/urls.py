@@ -7,7 +7,7 @@ from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
 from .views.Review_views import ReviewListAPIView, SearchProductView #, ReviewCreateAPIView
 from .views.cancel_views import CancelOrderView, ReturnOrderItemView
 from .views.order_management_views import GuestOrderTrackingView
-from .views.referral_views import GenerateReferralView  # New
+from .views.referral_views import GenerateReferralView, MyReferralCouponsView
 
 urlpatterns = [
     path('category/', CategoryListView.as_view(), name="category"),
@@ -50,4 +50,5 @@ urlpatterns = [
     
     # Referral
     path('referral/generate/', GenerateReferralView.as_view(), name='generate-referral'),
+    path('referral/my-coupons/', MyReferralCouponsView.as_view(), name='my-referral-coupons'),
 ]

@@ -12,6 +12,7 @@ from store.models import Coupon
 from userauth.models import User
 from userauth.tasks import send_async_email
 import shortuuid
+from store.serializers import CouponSerializer
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -145,5 +146,33 @@ class ApplyReferralView(APIView):
             logger.error(f"Unexpected error in ApplyReferralView: {str(e)}", exc_info=True)
             return Response(
                 {"error": "Something went wrong. Please try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+
+class MyReferralCouponsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        logger.info(f"MyReferralCouponsView called by user: {request.user.id} ({request.user.email})")
+
+        try:
+            offers = ReferralOffer.objects.filter(
+                referring_user=request.user,
+                is_used=True
+            ).select_related('reward_coupon')
+
+            coupons = [
+                offer.reward_coupon for offer in offers
+                if offer.reward_coupon
+            ]
+
+            serializer = CouponSerializer(coupons, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error fetching referral coupons for user {request.user.id}: {str(e)}", exc_info=True)
+            return Response(
+                {"error": "Failed to fetch coupons. Please try again."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

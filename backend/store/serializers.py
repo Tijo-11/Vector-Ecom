@@ -1,4 +1,4 @@
-# store/serializers.py (Complete Fixed Version with ProductOfferSerializer)
+# store/serializers.py 
 
 from rest_framework import serializers
 from store.models import (
