@@ -139,3 +139,33 @@ class OrderItemDetailAPIView(generics.RetrieveUpdateAPIView):
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MarkOrderAsDeliveredView(generics.UpdateAPIView):
+    """
+    Allows vendors to mark an order item as delivered.
+    Updates product_delivered flag and delivery_status.
+    """
+    serializer_class = CartOrderItemSerializer
+    permission_classes = [AllowAny]
+    queryset = CartOrderItem.objects.all()
+
+    def get_object(self):
+        pk = self.kwargs['pk']
+        return CartOrderItem.objects.get(id=pk)
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Mark as delivered
+        instance.product_delivered = True
+        instance.delivery_status = "Delivered"
+        instance.product_arrived = True  # Also mark as arrived
+        
+        instance.save()
+
+        serializer = self.get_serializer(instance)
+        return Response({
+            "message": "Order item marked as delivered successfully",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)

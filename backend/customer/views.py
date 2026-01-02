@@ -43,7 +43,7 @@ class OrdersAPIView(generics.ListAPIView):
             raise
 
         orders = CartOrder.objects.filter(
-            Q(buyer=user) & (Q(payment_status="paid") | Q(payment_status="processing")))
+            Q(buyer=user) & (Q(payment_status="paid") | Q(payment_status="processing") | Q(payment_status="cancelled")))
         logger.info(f"Found {orders.count()} orders for user {user.username}")
         logger.info("=" * 50)
         return orders
@@ -73,7 +73,7 @@ class OrdersDetailAPIView(generics.RetrieveAPIView):
 
         try:
             order = CartOrder.objects.get(
-                Q(payment_status="paid") | Q(payment_status="processing"),
+                Q(payment_status="paid") | Q(payment_status="processing") | Q(payment_status="cancelled"),
                 buyer=user,
                 oid=order_oid
             )

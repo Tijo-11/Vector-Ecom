@@ -1,8 +1,10 @@
+// frontend/Register.jsx (Modified to handle ref token)
 import { useEffect, useState } from "react";
 import { register, verifyOtp, login, googleLogin } from "../../utils/auth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
-
+import Swal from "sweetalert2";
+import apiInstance from "../../utils/axios";
 export default function Register() {
   const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
@@ -13,10 +15,20 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
   const [uidb64, setUidb64] = useState("");
+  const [newUserId, setNewUserId] = useState(null);
   const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const navigate = useNavigate();
-
+  const [searchParams] = useSearchParams();
+  const refToken = searchParams.get("ref");
+  // Define Toast outside useEffect so it's accessible throughout component
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top",
+    showConfirmButton: false,
+    timer: 1500,
+    timerProgressBar: true,
+  });
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/");
@@ -30,8 +42,7 @@ export default function Register() {
       document.body.appendChild(script);
     };
     loadGoogleScript();
-  }, []);
-
+  }, [isLoggedIn, navigate]);
   useEffect(() => {
     if (isGoogleScriptLoaded && window.google && window.google.accounts) {
       window.google.accounts.id.initialize({
@@ -44,18 +55,31 @@ export default function Register() {
       );
     }
   }, [isGoogleScriptLoaded]);
-
   const handleGoogleResponse = async (response) => {
     setIsLoading(true);
     const { error } = await googleLogin(response.credential);
     if (error) {
-      alert(error);
+      Toast.fire({ icon: "error", title: error });
     } else {
       navigate("/");
     }
     setIsLoading(false);
   };
-
+  const applyReferral = async (token, userId) => {
+    try {
+      const response = await apiInstance.post("referral/apply/", {
+        token,
+        new_user_id: userId,
+      });
+      // Optional: show message
+      if (response.data.message) {
+        Toast.fire({ icon: "success", title: "Referral applied!" });
+      }
+    } catch (error) {
+      console.error("Referral apply failed:", error);
+      // Optional: silent or show error
+    }
+  };
   const resetForm = () => {
     setFullname("");
     setEmail("");
@@ -65,11 +89,10 @@ export default function Register() {
     setShowOtp(false);
     setOtp("");
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== password2) {
-      alert("Passwords do not match");
+      Toast.fire({ icon: "error", title: "Passwords do not match" });
       return;
     }
     setIsLoading(true);
@@ -80,30 +103,48 @@ export default function Register() {
       password,
       password2
     );
-    if (error) {
-      alert(error);
-    } else if (data.message.includes("OTP sent")) {
-      setUidb64(data.uidb64);
-      setShowOtp(true);
-    }
     setIsLoading(false);
+    if (error) {
+      Toast.fire({ icon: "error", title: error });
+    } else if (data && data.uidb64) {
+      // Successfully got response with uidb64
+      Toast.fire({ icon: "info", title: data.message || "OTP sent to email" });
+      setUidb64(data.uidb64);
+      setNewUserId(data.user_id); // Store new user_id
+      setShowOtp(true);
+    } else {
+      // Unexpected response format
+      Toast.fire({ icon: "error", title: "Unexpected response from server" });
+      console.error("Unexpected data format:", data);
+    }
   };
-
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     const { error } = await verifyOtp(otp, uidb64);
     if (error) {
-      alert(error);
+      setIsLoading(false);
+      Toast.fire({ icon: "error", title: error });
     } else {
       // Auto-login after verification
-      await login(email, password);
-      navigate("/");
-      resetForm();
+      const loginResult = await login(email, password);
+      setIsLoading(false);
+      if (loginResult.error) {
+        Toast.fire({
+          icon: "error",
+          title:
+            "Verification successful but login failed. Please login manually.",
+        });
+      } else {
+        // Apply referral if token present
+        if (refToken && newUserId) {
+          await applyReferral(refToken, newUserId);
+        }
+        navigate("/");
+        resetForm();
+      }
     }
-    setIsLoading(false);
   };
-
   return (
     <>
       <main className="mb-24 mt-12">
@@ -129,6 +170,7 @@ export default function Register() {
                             <input
                               type="text"
                               id="fullname"
+                              value={fullname}
                               onChange={(e) => setFullname(e.target.value)}
                               placeholder="Full Name"
                               required
@@ -145,6 +187,7 @@ export default function Register() {
                             <input
                               type="email"
                               id="email"
+                              value={email}
                               onChange={(e) => setEmail(e.target.value)}
                               placeholder="Email Address"
                               required
@@ -161,6 +204,7 @@ export default function Register() {
                             <input
                               type="text"
                               id="phone"
+                              value={phone}
                               onChange={(e) => setPhone(e.target.value)}
                               placeholder="Mobile Number"
                               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
@@ -176,6 +220,7 @@ export default function Register() {
                             <input
                               type="password"
                               id="password"
+                              value={password}
                               onChange={(e) => setPassword(e.target.value)}
                               placeholder="Password"
                               required
@@ -192,17 +237,18 @@ export default function Register() {
                             <input
                               type="password"
                               id="confirm-password"
+                              value={password2}
                               onChange={(e) => setPassword2(e.target.value)}
                               placeholder="Confirm Password"
                               required
                               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
-                          <p className="font-bold text-red-600">
-                            {password2 !== password
-                              ? "Passwords do not match"
-                              : ""}
-                          </p>
+                          {password2 && password !== password2 && (
+                            <p className="font-bold text-red-600 mb-4">
+                              Passwords do not match
+                            </p>
+                          )}
                           <button
                             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 disabled:opacity-50 flex items-center justify-center"
                             type="submit"
@@ -240,19 +286,23 @@ export default function Register() {
                       ) : (
                         <form onSubmit={handleOtpSubmit}>
                           <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-4">
+                              An OTP has been sent to <strong>{email}</strong>
+                            </p>
                             <label
                               htmlFor="otp"
                               className="block text-sm font-medium text-gray-700"
                             >
-                              Enter OTP (sent to email)
+                              Enter OTP
                             </label>
                             <input
                               type="text"
                               id="otp"
                               value={otp}
                               onChange={(e) => setOtp(e.target.value)}
-                              placeholder="OTP"
+                              placeholder="Enter 6-digit OTP"
                               required
+                              maxLength={6}
                               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
@@ -269,6 +319,13 @@ export default function Register() {
                             ) : (
                               "Verify OTP"
                             )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowOtp(false)}
+                            className="w-full mt-3 text-blue-600 hover:underline"
+                          >
+                            Back to registration
                           </button>
                         </form>
                       )}

@@ -46,3 +46,4 @@ staticfiles/
 
 # Cove
 node_modules
+backend/.elasticbeanstalk/

@@ -1,3 +1,4 @@
+// CartItem.jsx (Updated to show potential offer discount)
 import React, { useState, useEffect, useContext } from "react";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
@@ -7,14 +8,12 @@ import { toast } from "../../../utils/toast";
 import { CartContext } from "../../../plugin/Context";
 import Swal from "sweetalert2";
 import log from "loglevel";
-
 function CartItem({ cartItems, setCart, setCartTotal }) {
   const [productQuantities, setProductQuantities] = useState({});
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
   const currentAddress = UserCountry();
   const [cartCount, setCartCount] = useContext(CartContext);
-
   useEffect(() => {
     const initialQuantities = {};
     cartItems.forEach((c) => {
@@ -22,7 +21,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     });
     setProductQuantities(initialQuantities);
   }, [cartItems]);
-
   const handleQuantityChange = (e, product_id) => {
     const quantity = e.target.value;
     setProductQuantities((prev) => ({
@@ -30,7 +28,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       [product_id]: quantity,
     }));
   };
-
   const updateCart = async (
     product_id,
     qty_value,
@@ -41,11 +38,9 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
   ) => {
     const qty = Number(qty_value || 0);
     if (qty <= 0) return;
-
     // Find the cart item
     const cartItem = cartItems.find((c) => c.product.id === product_id);
     if (!cartItem) return;
-
     // ✅ Check stock before updating
     if (qty > cartItem.product.stock_qty) {
       Swal.fire({
@@ -56,11 +51,9 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       });
       return; // Stop updating
     }
-
     // Optimistic update for CartContext
     const previousCartCount = cartCount;
     setCartCount((prev) => prev + qty - (cartItem.qty || 0));
-
     const formData = {
       product: product_id,
       user: user?.user_id || null,
@@ -72,18 +65,15 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       cart_id: cart_id,
       country: currentAddress?.country || null,
     };
-
     try {
       const response = await apiInstance.post("/cart/", formData);
       toast.fire({ icon: "success", title: "Cart updated successfully" });
-
       // Refresh cart
       const url = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
       const updatedCart = await apiInstance.get(url);
       setCart(updatedCart.data || []);
-
       const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
       setCartTotal({
         itemCount: updatedCart.data.length || 0,
@@ -93,7 +83,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         service_fee: totalResponse.data?.service_fee || 0,
         total: totalResponse.data?.total || 0,
       });
-
       // Sync CartContext
       const totalQty = updatedCart.data.reduce(
         (sum, item) => sum + item.qty,
@@ -106,26 +95,21 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       toast.fire({ icon: "error", title: "Failed to update cart" }); // ✅ Single toast
     }
   };
-
   const handleDeleteCartItem = async (item_id) => {
     const previousCart = [...cartItems];
     const previousCartCount = cartCount;
-
     const url = user?.user_id
       ? `/cart-delete/${cart_id}/${item_id}/${user.user_id}/`
       : `/cart-delete/${cart_id}/${item_id}/`;
-
     try {
       // DELETE first
       const response = await apiInstance.delete(url);
       log.debug(response.data);
-
       // Then fetch updated cart (critical: do this regardless of totals)
       const cartUrl = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
       const cartResponse = await apiInstance.get(cartUrl);
-
       // Update cart & count immediately (since these succeed)
       setCart(cartResponse.data || []);
       const totalQty = cartResponse.data.reduce(
@@ -133,7 +117,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         0
       );
       setCartCount(totalQty);
-
       // Now try to fetch/update totals (non-blocking)
       try {
         const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
@@ -160,7 +143,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
           total: 0,
         });
       }
-
       // Success! (DELETE + cart update worked)
       toast.fire({ icon: "success", title: "Item removed from cart" });
     } catch (error) {
@@ -171,7 +153,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       toast.fire({ icon: "error", title: "Failed to remove item" });
     }
   };
-
   return (
     <>
       {cartItems.map((c, index) => (
@@ -240,6 +221,11 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
             <p className="w-96 text-xs leading-3 text-gray-600">
               Composition: {c.product.composition || "N/A"}
             </p>
+            {c.product.offer_discount > 0 && (
+              <p className="text-red-500 font-semibold mt-2 animate-pulse">
+                Potential {c.product.offer_discount}% OFF on this item!
+              </p>
+            )}
             <div className="flex items-center justify-between pt-5">
               <div className="flex items-center">
                 <p className="text-xs leading-3 underline text-gray-800 cursor-pointer">
@@ -262,5 +248,4 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     </>
   );
 }
-
 export default CartItem;

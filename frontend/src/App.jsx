@@ -19,6 +19,7 @@ import Checkout from "./views/shop/checkout/Checkout";
 import PaymentSuccess from "./views/shop/checkout/PaymentSuccess";
 import PaymentFailed from "./views/shop/checkout/PaymentFailed";
 import Search from "./views/shop/Search";
+import TrackOrder from "./views/shop/TrackOrder";
 import { CartContext } from "./plugin/Context.jsx";
 import CartId from "./views/shop/ProductDetail/cartId.jsx";
 import UserData from "./plugin/UserData.js";
@@ -48,6 +49,7 @@ import Shop from "./views/vendor/Shop";
 import VendorRegister from "./views/vendor/VendorRegister";
 import AddProduct from "./views/vendor/AddProduct";
 import UpdateProduct from "./views/vendor/UpdateProduct.jsx";
+import Offers from "./views/vendor/Offers.jsx"; // Added import for Offers
 import AdminRoute from "./layouts/AdminRoute.jsx";
 ///////---------------
 import AdminDashboard from "./views/admin/AdminDashboard.jsx";
@@ -90,10 +92,11 @@ export default function App() {
               element={<PaymentSuccess />}
             />
             <Route
-              path="/payments-failed/:session_id"
+              path="/payments-failed/:order_id"
               element={<PaymentFailed />}
             />
             <Route path="/view-order/:order_oid/" element={<ViewOrder />} />
+            <Route path="/track-order" element={<TrackOrder />} />
             {/*Customer Endpoints*/}
             <Route
               path="customer/account/"
@@ -264,6 +267,14 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <UpdateProduct />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/vendor/offers/"
+              element={
+                <PrivateRoute>
+                  <Offers />
                 </PrivateRoute>
               }
             />

@@ -94,3 +94,20 @@ RATING = (
     (4, "★★★★☆"),
     (5, "★★★★★"),
 )
+
+CANCELLATION_REASON_CHOICES = (
+    ("changed_mind", "Changed my mind"),
+    ("better_price", "Found better price elsewhere"),
+    ("ordered_mistake", "Ordered by mistake"),
+    ("delivery_time", "Delivery time too long"),
+    ("other", "Other"),
+)
+
+RETURN_REASON_CHOICES = (
+    ("defective", "Defective or damaged product"),
+    ("wrong_item", "Wrong item received"),
+    ("not_described", "Not as described"),
+    ("poor_quality", "Poor quality"),
+    ("changed_mind", "Changed my mind"),
+    ("other", "Other"),
+)

@@ -1,9 +1,50 @@
+// frontend/Account.jsx (Add My Coupons section and fetch logic)
+
 import Sidebar from "./Sidebar";
 import UseProfileData from "../../plugin/UserProfileData";
 import NotFound from "../../layouts/NotFound";
-
+import { useState, useEffect } from "react";
+import apiInstance from "../../utils/axios";
+import Swal from "sweetalert2";
 export default function Account() {
   const userProfile = UseProfileData();
+  const [referralLink, setReferralLink] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [coupons, setCoupons] = useState([]);
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top",
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+  });
+  const generateReferral = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await apiInstance.post("referral/generate/");
+      setReferralLink(response.data.referral_link);
+      Toast.fire({ icon: "success", title: "Referral link generated!" });
+    } catch (error) {
+      Toast.fire({ icon: "error", title: "Failed to generate link" });
+    }
+    setIsGenerating(false);
+  };
+  const copyLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    Toast.fire({ icon: "success", title: "Link copied to clipboard!" });
+  };
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        const response = await apiInstance.get("referral/my-coupons/");
+        setCoupons(response.data);
+      } catch (error) {
+        console.error("Error fetching coupons:", error);
+        Toast.fire({ icon: "error", title: "Failed to load coupons" });
+      }
+    };
+    fetchCoupons();
+  }, []);
   return (
     <div>
       {/* {userProfile === undefined ? ( */}
@@ -18,7 +59,6 @@ export default function Account() {
                   <div className="px-4">
                     {/* Section: Summary */}
                     <section></section>
-
                     {/* Section: MSC */}
                     <section>
                       <div className="rounded shadow p-4 bg-white">
@@ -45,6 +85,84 @@ export default function Account() {
                           </a>{" "}
                           information.
                         </div>
+                      </div>
+                    </section>
+                    {/* Referral Section */}
+                    <section className="mt-6">
+                      <div className="rounded shadow p-4 bg-white">
+                        <h2 className="text-xl font-semibold mb-4">
+                          Referral Program
+                        </h2>
+                        <p className="mb-4">
+                          Share your referral link with friends and earn coupons
+                          when they sign up!
+                        </p>
+                        <button
+                          onClick={generateReferral}
+                          disabled={isGenerating}
+                          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {isGenerating
+                            ? "Generating..."
+                            : "Generate Referral Link"}
+                        </button>
+                        {referralLink && (
+                          <div className="mt-4 flex items-center">
+                            <input
+                              type="text"
+                              value={referralLink}
+                              readOnly
+                              className="flex-1 px-4 py-2 border rounded-l"
+                            />
+                            <button
+                              onClick={copyLink}
+                              className="bg-green-600 text-white px-4 py-2 rounded-r hover:bg-green-700"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                    {/* My Coupons Section */}
+                    <section className="mt-6">
+                      <div className="rounded shadow p-4 bg-white">
+                        <h2 className="text-xl font-semibold mb-4">
+                          My Referral Coupons
+                        </h2>
+                        {coupons.length > 0 ? (
+                          <ul className="space-y-2">
+                            {coupons.map((coupon) => (
+                              <li
+                                key={coupon.id}
+                                className="p-2 border rounded flex justify-between items-center"
+                              >
+                                <div>
+                                  <strong>Code:</strong> {coupon.code}
+                                  <br />
+                                  <strong>Discount:</strong> {coupon.discount}%
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(coupon.code);
+                                    Toast.fire({
+                                      icon: "success",
+                                      title: "Coupon code copied!",
+                                    });
+                                  }}
+                                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                                >
+                                  Copy Code
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-gray-600">
+                            No referral coupons earned yet. Start referring
+                            friends!
+                          </p>
+                        )}
                       </div>
                     </section>
                   </div>

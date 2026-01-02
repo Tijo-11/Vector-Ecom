@@ -1,3 +1,5 @@
+# store/views/cart_views.py
+
 # Restframework Packages
 from rest_framework.response import Response
 from rest_framework import generics, status
@@ -14,21 +16,31 @@ from addon.models import Tax
 # Others Packages
 from decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_active_user_cart(user):
     """Helper: Get user's active cart_id or None if none exists."""
-    active_cart = Cart.objects.filter(user=user, is_active=True).first()
-    return active_cart.cart_id if active_cart else None
+    try:
+        # FIXED: Use 'date' instead of non-existent 'created_at'
+        active_carts = Cart.objects.filter(user=user, is_active=True).order_by('-date')
+        if active_carts.exists():
+            return active_carts.first().cart_id
+        return None
+    except Exception as e:
+        logger.error(f"Error in get_active_user_cart for user {user.id if user else 'None'}: {str(e)}")
+        return None
+
 
 class CartAPIView(generics.ListCreateAPIView):
-    queryset = Cart.objects.filter(is_active=True)  # Always active
+    queryset = Cart.objects.filter(is_active=True)
     serializer_class = CartSerializer
     permission_classes = (AllowAny,)
     
     def create(self, request, *args, **kwargs):
         try:
             payload = request.data
-            # Validation
             required = ['product', 'qty', 'price', 'shipping_amount', 'country', 'cart_id']
             if not all(k in payload for k in required):
                 raise ValidationError("Missing required fields: product, qty, price, shipping_amount, country, cart_id")
@@ -59,7 +71,7 @@ class CartAPIView(generics.ListCreateAPIView):
             tax_obj = Tax.objects.filter(country=country).first()
             tax_rate = (tax_obj.rate / 100) if tax_obj else Decimal('0.05')
             
-            # Service fee (hardcoded for now; swap with config if needed)
+            # Service fee
             service_fee_percentage = Decimal('0.02')
             
             cart = Cart.objects.filter(cart_id=cart_id, product=product, is_active=True).first()
@@ -73,7 +85,7 @@ class CartAPIView(generics.ListCreateAPIView):
                 cart.size = size
                 cart.color = color
                 cart.country = country
-                cart.tax_fee = (price * qty) * tax_rate  # Per item tax
+                cart.tax_fee = (price * qty) * tax_rate
                 cart.service_fee = cart.sub_total * service_fee_percentage
                 cart.total = (cart.sub_total + cart.shipping_amount + cart.service_fee + cart.tax_fee)
                 cart.save()
@@ -90,12 +102,17 @@ class CartAPIView(generics.ListCreateAPIView):
                 )
                 msg = "Cart created successfully"
             
-            return Response({"message": msg, "cart_id": cart.cart_id}, status=status.HTTP_201_CREATED if not cart.pk else status.HTTP_200_OK)
+            return Response(
+                {"message": msg, "cart_id": cart.cart_id},
+                status=status.HTTP_201_CREATED if 'created' in msg.lower() else status.HTTP_200_OK
+            )
         
         except (ValueError, ValidationError) as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e: #noqa
+        except Exception as e:
+            logger.error(f"Unexpected error in CartAPIView.create: {str(e)}", exc_info=True)
             return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class CartListView(generics.ListAPIView):
     serializer_class = CartSerializer
@@ -113,6 +130,7 @@ class CartListView(generics.ListAPIView):
             except (ValueError, User.DoesNotExist):
                 return Cart.objects.none()
         return Cart.objects.filter(cart_id=cart_id, is_active=True)
+
 
 class CartDetailView(generics.RetrieveAPIView):
     serializer_class = CartSerializer
@@ -145,6 +163,7 @@ class CartDetailView(generics.RetrieveAPIView):
         }
         return Response(totals)
 
+
 class CartItemDeleteAPIView(generics.DestroyAPIView):
     serializer_class = CartSerializer
     lookup_field = "cart_id"
@@ -166,10 +185,9 @@ class CartItemDeleteAPIView(generics.DestroyAPIView):
             raise Cart.DoesNotExist
     
     def perform_destroy(self, instance):
-        # Soft-delete: Set inactive instead of hard delete
         instance.is_active = False
         instance.save()
-        # Or hard-delete: super().perform_destroy(instance)
+
 
 class CartMergeAPIView(APIView):
     permission_classes = (AllowAny,)
@@ -187,11 +205,10 @@ class CartMergeAPIView(APIView):
             except (ValueError, User.DoesNotExist):
                 return Response({"error": "Invalid or not found user"}, status=status.HTTP_404_NOT_FOUND)
             
-            # Get user's active cart_id from backend
+            # Now uses correct '-date' ordering
             user_cart_id = get_active_user_cart(user)
             
             if user_cart_id:
-                # User has an active cart - return it
                 count = Cart.objects.filter(cart_id=user_cart_id, user=user, is_active=True).count()
                 return Response({
                     "cart_id": user_cart_id,
@@ -200,7 +217,6 @@ class CartMergeAPIView(APIView):
                     "cart_count": count
                 }, status=status.HTTP_200_OK)
             else:
-                # No active cart - signal to start new
                 return Response({
                     "cart_id": None,
                     "message": "No active cart; start new",
@@ -208,7 +224,6 @@ class CartMergeAPIView(APIView):
                     "cart_count": 0
                 }, status=status.HTTP_200_OK)
         
-        except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:#noqa
+        except Exception as e:
+            logger.error(f"Error in CartMergeAPIView: {str(e)}", exc_info=True)
             return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

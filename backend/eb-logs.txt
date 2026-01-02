@@ -1,0 +1,3 @@
+Retrieving logs...
+Logs were saved to E:\Coding and Other Learning\Brototype\Tasks\Max-Limit QA\MultiVendorE-com\backend\.elasticbeanstalk\logs\251006_201355
+Logs were saved to E:\Coding and Other Learning\Brototype\Tasks\Max-Limit QA\MultiVendorE-com\backend\.elasticbeanstalk\logs\251006_201355

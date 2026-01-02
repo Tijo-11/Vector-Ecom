@@ -1,3 +1,4 @@
+# vendor/urls.py (corrected import)
 from django.urls import path
 from .views.dashboard_views import DashboardStatsAPIView, MonthlyOrderChartAPIFBV, MonthlyProductsChartAPIFBV
 from .views.dashboard_views import ProductsAPIView, OrdersAPIView, RevenueAPIView, OrderDetailAPIView, FilterOrderAPIView
@@ -7,9 +8,12 @@ from .views.coupon_views import CouponListAPIView, CouponStats, CouponDetailAPIV
 from .views.notification_views import (NotificationMarkAsSeen, NotificationSeenListAPIView,
         NotificationSummaryAPIView,NotificationUnSeenListAPIView, )
 from .views.shop_views import (VendorProfileUpdateView, ShopProductsAPIView, ShopAPIView,
-            ShopUpdateView, VendorRegister, CourierListAPIView, OrderItemDetailAPIView)
+            ShopUpdateView, VendorRegister, CourierListAPIView, OrderItemDetailAPIView, MarkOrderAsDeliveredView)
 from .views.product_views import (ProductCreateView, ProductUpdateAPIView, ProductDeleteAPIView,
                                   FilterProductsAPIView)
+from .views.report_views import SalesReportAPIView, SalesReportPDFView, SalesReportExcelView
+from .views.offer_views import ProductOfferListCreateAPIView, ProductOfferDetailAPIView
+
 urlpatterns=[
     path('vendor/stats/<vendor_id>/', DashboardStatsAPIView.as_view(), name='vendor-stats'),
     path('vendor/products/<vendor_id>/', ProductsAPIView.as_view(), name='vendor-prdoucts'),
@@ -19,7 +23,6 @@ urlpatterns=[
     path('vendor/order-item-detail/<int:pk>/', OrderItemDetailAPIView.as_view()),
     path('vendor/orders-filter/<vendor_id>/', FilterOrderAPIView.as_view()),
     # ###
-
     path('vendor/yearly-report/<vendor_id>/', YearlyOrderReportChartAPIView.as_view(), name='vendor-yearly-report'),
     path('vendor-orders-report-chart/<vendor_id>/', MonthlyOrderChartAPIFBV, name='vendor-orders-report-chart'),
     ####
@@ -49,8 +52,13 @@ urlpatterns=[
     path('vendor-register/', VendorRegister.as_view(), name='vendor-register'),
      # # Tracking Feature
     path('vendor/couriers/', CourierListAPIView.as_view()),
-
-]
    
-
-    
+    # Order Management - Mark as Delivered
+    path('vendor/order-item-delivered/<int:pk>/', MarkOrderAsDeliveredView.as_view(), name='mark-order-delivered'),
+    # Sales Reports
+    path('vendor/sales-report/<vendor_id>/', SalesReportAPIView.as_view(), name='vendor-sales-report'),
+    path('vendor/sales-report-pdf/<vendor_id>/', SalesReportPDFView.as_view(), name='vendor-sales-report-pdf'),
+    path('vendor/sales-report-excel/<vendor_id>/', SalesReportExcelView.as_view(), name='vendor-sales-report-excel'),
+    path('vendor/offers/<int:vendor_id>/', ProductOfferListCreateAPIView.as_view(), name='vendor-offers'),
+    path('vendor/offers/<int:vendor_id>/<int:pk>/', ProductOfferDetailAPIView.as_view(), name='vendor-offer-delete'),
+]
