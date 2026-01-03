@@ -1,4 +1,4 @@
-# userauth/views.py (Modified to handle referral in registration if needed, but since separate, minimal change)
+# userauth/views.py (Updated with referral integration)
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -13,14 +13,16 @@ from rest_framework.decorators import permission_classes
 import shortuuid
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
-from django.conf import settings # For GOOGLE_CLIENT_ID
+from django.conf import settings
+from django.utils import timezone
 import logging
 from .tasks import send_async_email
+
 logger = logging.getLogger(__name__)
+
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
     def post(self, request, *args, **kwargs):
-        # Log the incoming request data (without password)
         logger.info("Token request received")
         logger.info(f"Request data keys: {list(request.data.keys())}")
         logger.info(f"Has email: {'email' in request.data}")
@@ -34,18 +36,28 @@ class MyTokenObtainPairView(TokenObtainPairView):
             return response
         except Exception as e:
             logger.error(f"Token generation failed: {str(e)}", exc_info=True)
-            # Return detailed error for debugging (remove in production)
             return Response({
                 'error': str(e),
                 'detail': 'Token generation failed',
                 'received_fields': list(request.data.keys())
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
+    
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
+        
+        # ============================================
+        # EXTRACT REFERRAL TOKEN
+        # ============================================
+        ref_token = request.data.get('ref_token')
+        if ref_token:
+            logger.info(f"Referral token received: {ref_token}")
+        
         if not email:
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
        
@@ -60,7 +72,7 @@ class RegisterView(generics.CreateAPIView):
                 user.otp = generate_otp()
                 user.save()
                 uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
-                # Send email with OTP
+                
                 subject = 'Verify Your Email - MyApp'
                 message = (
                     f"Hello {user.full_name or user.username},\n\n"
@@ -70,10 +82,10 @@ class RegisterView(generics.CreateAPIView):
                     f"Thank you!"
                 )
                 send_async_email.delay(
-                subject=subject,
-                message=message,
+                    subject=subject,
+                    message=message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
+                    recipient_list=[user.email],
                     fail_silently=False,
                 )
                 return Response({
@@ -87,8 +99,74 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
         user.otp = generate_otp()
         user.save()
+        
+        logger.info(f"User created successfully: {user.id} - {user.email}")
+        
         uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
-        # Send email with OTP
+        
+        # ============================================
+        # APPLY REFERRAL IF TOKEN EXISTS
+        # ============================================
+        if ref_token:
+            logger.info(f"Attempting to apply referral token {ref_token} for user {user.id}")
+            
+            try:
+                from store.models.offer import ReferralOffer
+                from store.models import Coupon
+                
+                # Find the referral offer
+                offer = ReferralOffer.objects.get(token=ref_token, is_used=False)
+                logger.info(f"Valid referral found: ID={offer.id}, referrer={offer.referring_user.email}")
+                
+                # Check if expired
+                if offer.expiry_date and offer.expiry_date < timezone.now():
+                    logger.warning(f"Referral token {ref_token} has expired")
+                else:
+                    # Generate coupon code
+                    coupon_code = shortuuid.uuid()[:8].upper()
+                    coupon = Coupon.objects.create(
+                        vendor=None,  # Platform-level coupon
+                        code=coupon_code,
+                        discount=10,  # 10% discount
+                        active=True
+                    )
+                    logger.info(f"Coupon created: {coupon_code} for referrer {offer.referring_user.email}")
+                    
+                    # Update referral offer
+                    offer.reward_coupon = coupon
+                    offer.is_used = True
+                    offer.save()
+                    logger.info(f"Referral marked as used: {offer.token}")
+                    
+                    # Send reward email to referrer
+                    subject = "Referral Reward - New User Signed Up!"
+                    message = (
+                        f"Hello {offer.referring_user.full_name or offer.referring_user.username},\n\n"
+                        f"Great news! A new user ({user.email}) has successfully signed up using your referral link.\n\n"
+                        f"As a thank you, here's your exclusive coupon:\n"
+                        f"Code: {coupon_code}\n"
+                        f"Discount: {coupon.discount}%\n\n"
+                        f"Use it on your next purchase!\n\n"
+                        f"Thank you for spreading the word!\n"
+                        f"— The Team"
+                    )
+                    
+                    send_async_email.delay(
+                        subject=subject,
+                        message=message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[offer.referring_user.email],
+                        fail_silently=False,
+                    )
+                    logger.info(f"Reward email queued for {offer.referring_user.email}")
+                    
+            except ReferralOffer.DoesNotExist:
+                logger.warning(f"Invalid or already used referral token: {ref_token}")
+            except Exception as e:
+                logger.error(f"Error applying referral: {str(e)}", exc_info=True)
+                # Don't fail registration if referral fails
+        
+        # Send verification email to new user
         subject = 'Verify Your Email - MyApp'
         message = (
             f"Hello {user.full_name or user.username},\n\n"
@@ -98,24 +176,30 @@ class RegisterView(generics.CreateAPIView):
             f"Thank you for registering!"
         )
         send_async_email.delay(
-    subject=subject,
-    message=message,
-    from_email=settings.DEFAULT_FROM_EMAIL,
-    recipient_list=[user.email],
-    fail_silently=False,
-)
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        
         return Response({
             "message": "User registered. OTP sent to email for verification.",
             "uidb64": uidb64,
-            "user_id": user.id  # Add user_id for referral apply
+            "user_id": user.id
         }, status=status.HTTP_201_CREATED)
+
+
 @api_view(['GET'])
 def getRoutes(request):
     routes = ['/api/token/', '/api/register/', '/api/token/refresh/', 'api/test']
     return Response(routes)
+
+
 class ProfileView(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = ProfileSerializer
+    
     def get_object(self):
         user_id = self.kwargs['user_id']
         try:
@@ -126,103 +210,126 @@ class ProfileView(generics.RetrieveAPIView):
             raise User.DoesNotExist
         user = User.objects.get(id=user_id_int)
         return user.profile
+
+
 def generate_otp():
     uuid_key = shortuuid.uuid()
     unique_key = uuid_key[:6]
     return unique_key
+
+
 class PasswordEmailVerify(generics.RetrieveAPIView):
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
+    
     def get(self, request, *args, **kwargs):
         email = self.kwargs.get("email")
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # Always return success message to avoid leaking user existence
             return Response({"message": "If this email exists, a reset link was sent."})
        
-        # Generate OTP
         user.otp = generate_otp()
         user.save()
-        # Encode user ID
         uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
         otp = user.otp
         link = f"http://localhost:5173/create-new-password?otp={otp}&uidb64={uidb64}"
-        # ----- Option 1: Simple plain text email -----
+        
         subject = "Password Reset Request"
         message = (
             f"Hello {user.full_name or user.username},\n\n"
             f"You requested a password reset for your account.\n\n"
             f"Your OTP code is: {otp}\n\n"
             f"Or reset your password using this link:\n{link}\n\n"
-            f"If you didn’t request this, please ignore this email."
+            f"If you didn't request this, please ignore this email."
         )
         send_async_email.delay(
-    subject=subject,
-    message=message,
-    from_email=settings.DEFAULT_FROM_EMAIL,
-    recipient_list=[user.email],
-    fail_silently=False,
-)
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
         return Response({"message": "If this email exists, a reset link was sent."})
+
+
 class PasswordChangeView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
+    
     def create(self, request, *args, **kwargs):
         payload = request.data
         otp = payload.get('otp')
         uidb64 = payload.get('uidb64')
         password = payload.get('password')
+        
         try:
             user_id = force_str(urlsafe_base64_decode(uidb64))
             user_id = int(user_id)
             user = User.objects.get(id=user_id, otp=otp)
         except (ValueError, User.DoesNotExist, TypeError):
             return Response({"message": "Invalid token or OTP"}, status=status.HTTP_400_BAD_REQUEST)
+        
         user.set_password(password)
         user.otp = ""
         user.save()
         return Response({"message": "Password Changed Successfully"}, status=status.HTTP_200_OK)
+
+
 class VerifyEmailOTP(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
+    
     def create(self, request, *args, **kwargs):
         payload = request.data
         otp = payload.get('otp')
         uidb64 = payload.get('uidb64')
+        
         try:
             user_id = force_str(urlsafe_base64_decode(uidb64))
             user_id = int(user_id)
             user = User.objects.get(id=user_id, otp=otp)
         except (ValueError, User.DoesNotExist, TypeError):
             return Response({"message": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+        
         user.email_verified = True
         user.otp = ""
         user.save()
         return Response({"message": "Email verified successfully"}, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def google_login(request):
     credential = request.data.get('credential')
     if not credential:
         return Response({"error": "Credential not provided"}, status=status.HTTP_400_BAD_REQUEST)
+    
     try:
-        id_info = google_id_token.verify_oauth2_token(credential, google_requests.Request(), settings.GOOGLE_CLIENT_ID)
+        id_info = google_id_token.verify_oauth2_token(
+            credential, 
+            google_requests.Request(), 
+            settings.GOOGLE_CLIENT_ID
+        )
         email = id_info['email']
         full_name = id_info.get('name', '')
         email_username, _ = email.split('@')
+        
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
                 'full_name': full_name,
                 'username': email_username,
-                'phone': '', # Phone not available from Google; leave blank
+                'phone': '',
             }
         )
+        
         if created:
-            user.set_unusable_password() # No password for social users
+            user.set_unusable_password()
+        
         user.email_verified = id_info.get('email_verified', False)
         user.save()
+        
         token = MyTokenObtainPairSerializer.get_token(user)
         return Response({
             "access": str(token.access_token),
