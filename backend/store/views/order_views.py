@@ -1,4 +1,4 @@
-# store/views/order_views.py 
+# store/views/order_views.py - COMPLETE FILE
 
 from django.db.models import Q
 from django.db import transaction
@@ -158,7 +158,7 @@ class CreateOrderView(generics.CreateAPIView):
             order.service_fee = total_service_fee
             order.initial_total = total_initial_total
             order.total = total_total
-            order.offer_saved = total_initial_total - total_total  # Total offer saved
+            order.offer_saved = total_initial_total - total_total
             order.coupon_saved = Decimal(0.00)
             order.saved = order.offer_saved
             order.save()
@@ -179,22 +179,6 @@ class CheckoutView(generics.RetrieveAPIView):
         return order
 
 
-
-from django.db.models import Q
-from django.db import transaction
-from rest_framework.response import Response
-from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
-from store.serializers import CartOrderSerializer, CouponSerializer
-from userauth.models import User
-from store.models import CartOrderItem, Cart, CartOrder, Coupon
-from decimal import Decimal
-from django.utils import timezone
-from django.db.models import Max
-
-
-# store/views/order_views.py (Updated CouponAPIView - replace existing with this)
-
 class CouponAPIView(generics.CreateAPIView):
     serializer_class = CouponSerializer
     queryset = Coupon.objects.all()
@@ -203,7 +187,7 @@ class CouponAPIView(generics.CreateAPIView):
     def create(self, request):
         payload = request.data
         order_oid = payload['order_oid']
-        coupon_code = payload['coupon_code'].upper().strip()  # Normalize code
+        coupon_code = payload['coupon_code'].upper().strip()
 
         try:
             order = CartOrder.objects.get(oid=order_oid)
@@ -214,7 +198,7 @@ class CouponAPIView(generics.CreateAPIView):
             )
 
         try:
-            coupon = Coupon.objects.get(code__iexact=coupon_code)  # Case-insensitive lookup
+            coupon = Coupon.objects.get(code__iexact=coupon_code)
             if not coupon.active:
                 return Response(
                     {"message": "This coupon is not active", "icon": "warning"},
@@ -226,8 +210,27 @@ class CouponAPIView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Get items for this coupon's vendor
-        order_items = CartOrderItem.objects.filter(order=order, vendor=coupon.vendor)
+        # ============================================
+        # CHECK IF USER ALREADY USED THIS COUPON
+        # ============================================
+        if order.buyer:
+            # Check if this user has already used this coupon in a paid/completed order
+            if coupon.used_by.filter(id=order.buyer.id).exists():
+                return Response(
+                    {"message": "You have already used this coupon", "icon": "warning"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # ============================================
+        # FIXED: Support platform-wide coupons (vendor=None)
+        # ============================================
+        if coupon.vendor is None:
+            # Platform-wide coupon (like referral coupons) - applies to ALL items
+            order_items = CartOrderItem.objects.filter(order=order)
+        else:
+            # Vendor-specific coupon - only applies to that vendor's items
+            order_items = CartOrderItem.objects.filter(order=order, vendor=coupon.vendor)
+        
         if not order_items.exists():
             return Response(
                 {"message": "No items from this coupon's vendor in the order", "icon": "warning"},
@@ -237,7 +240,7 @@ class CouponAPIView(generics.CreateAPIView):
         with transaction.atomic():
             total_old_discount = Decimal('0.00')
 
-            # Step 1: Reverse any existing coupon discount on these vendor items
+            # Step 1: Reverse any existing coupon discount on these items
             for item in order_items:
                 old_discount = item.coupon_saved
                 if old_discount > 0:
@@ -262,7 +265,7 @@ class CouponAPIView(generics.CreateAPIView):
             total_new_discount = Decimal('0.00')
             for item in order_items:
                 discount = item.total * (Decimal(coupon.discount) / Decimal('100'))
-                discount = discount.quantize(Decimal('0.00'))  # Round to 2 decimals
+                discount = discount.quantize(Decimal('0.00'))
                 total_new_discount += discount
 
                 item.coupon_saved = discount
@@ -277,14 +280,15 @@ class CouponAPIView(generics.CreateAPIView):
             order.sub_total -= total_new_discount
             order.saved += total_new_discount
             order.coupon_saved += total_new_discount
-
+            
+            # Link coupon to order
+            order.coupons.add(coupon)
             order.save()
 
         return Response(
             {"message": "Coupon Applied Successfully", "icon": "success"},
             status=status.HTTP_200_OK
         )
-# store/views/order_views.py (Updated RemoveCouponAPIView only - replace the existing one)
 
 class RemoveCouponAPIView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
@@ -320,18 +324,17 @@ class RemoveCouponAPIView(generics.CreateAPIView):
 
         with transaction.atomic():
             for item in order_items:
-                # Prefer stored coupon_saved if available (new orders)
+                # Prefer stored coupon_saved if available
                 discount = item.coupon_saved or Decimal('0.00')
 
-                # If no stored value (old orders before the field existed), calculate from coupon rate
+                # If no stored value, calculate from coupon rate
                 if discount <= 0 and item.coupon.exists():
-                    coupon = item.coupon.first()  # Safe since prevent multiple coupons
+                    coupon = item.coupon.first()
                     if coupon and coupon.discount:
                         rate = Decimal(coupon.discount) / Decimal('100')
                         if rate > 0 and rate < 1:
-                            # Reverse the percentage discount: discount = current_total * rate / (1 - rate)
                             discount = item.total * rate / (Decimal('1') - rate)
-                            discount = discount.quantize(Decimal('0.00'))  # Round to 2 decimals
+                            discount = discount.quantize(Decimal('0.00'))
 
                 if discount > 0:
                     # Reverse the discount
@@ -358,6 +361,8 @@ class RemoveCouponAPIView(generics.CreateAPIView):
             {"message": "Coupon Removed Successfully", "icon": "success"},
             status=status.HTTP_200_OK
         )
+
+
 class OrdersDetailAPIView(generics.RetrieveAPIView):
     serializer_class = CartOrderSerializer
     permission_classes = (AllowAny,)

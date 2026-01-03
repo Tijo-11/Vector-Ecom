@@ -258,6 +258,15 @@ class PaymentSuccessView(generics.CreateAPIView):
                             locked_order.payment_status = "paid"
                             locked_order.order_status = "Confirmed"
                             locked_order.paypal_capture_id = capture_id
+                            
+                            # ============================================
+                            # MARK COUPONS AS USED BY THIS USER
+                            # ============================================
+                            if locked_order.buyer and locked_order.coupons.exists():
+                                for coupon in locked_order.coupons.all():
+                                    coupon.used_by.add(locked_order.buyer)
+                                    logger.info(f"Marked coupon {coupon.code} as used by user {locked_order.buyer.id}")
+                            
                             locked_order.save()
                             deactivate_cart(locked_order.oid, locked_order.buyer_id if locked_order.buyer else None)
                             deduct_stock(order_items)
@@ -306,6 +315,15 @@ class PaymentSuccessView(generics.CreateAPIView):
                         locked_order.payment_status = "paid"
                         locked_order.order_status = "Confirmed"
                         locked_order.razorpay_payment_id = session_id
+                        
+                        # ============================================
+                        # MARK COUPONS AS USED BY THIS USER
+                        # ============================================
+                        if locked_order.buyer and locked_order.coupons.exists():
+                            for coupon in locked_order.coupons.all():
+                                coupon.used_by.add(locked_order.buyer)
+                                logger.info(f"Marked coupon {coupon.code} as used by user {locked_order.buyer.id}")
+                        
                         locked_order.save()
                         deactivate_cart(locked_order.oid, locked_order.buyer_id if locked_order.buyer else None)
                         deduct_stock(order_items)
@@ -346,6 +364,7 @@ class PaymentSuccessView(generics.CreateAPIView):
 
         logger.warning("Missing session_id or paypal_capture_id in payload")
         return Response({"message": "Missing session_id or paypal_capture_id"}, status=status.HTTP_400_BAD_REQUEST)
+# store/views/checkout_views.py - Updated PayPalWebhookView
 
 class PayPalWebhookView(generics.CreateAPIView):
     permission_classes = [AllowAny]
@@ -407,6 +426,15 @@ class PayPalWebhookView(generics.CreateAPIView):
                         if order.payment_status != "paid":
                             order.payment_status = "paid"
                             order.order_status = "Confirmed"
+                            
+                            # ============================================
+                            # MARK COUPONS AS USED BY THIS USER
+                            # ============================================
+                            if order.buyer and order.coupons.exists():
+                                for coupon in order.coupons.all():
+                                    coupon.used_by.add(order.buyer)
+                                    logger.info(f"Marked coupon {coupon.code} as used by user {order.buyer.id}")
+                            
                             order.save()
                             order_items = CartOrderItem.objects.filter(order=order)
                             deactivate_cart(order.oid, order.buyer_id if order.buyer else None)
