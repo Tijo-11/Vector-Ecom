@@ -32,7 +32,7 @@ class GenerateReferralView(APIView):
             # Create referral offer
             offer = ReferralOffer.objects.create(
                 referring_user=request.user,
-                token=token  # Explicitly set to avoid any default issues
+                token=token  
             )
             logger.info(f"ReferralOffer created successfully: ID={offer.id}, Token={offer.token}")
 
@@ -162,13 +162,26 @@ class MyReferralCouponsView(APIView):
                 is_used=True
             ).select_related('reward_coupon')
 
-            coupons = [
-                offer.reward_coupon for offer in offers
-                if offer.reward_coupon
-            ]
+            coupons_data = []
+            for offer in offers:
+                if offer.reward_coupon:
+                    coupon = offer.reward_coupon
+                    
+                    # Check if the current user has used this coupon
+                    is_used_by_me = coupon.used_by.filter(id=request.user.id).exists()
+                    
+                    coupons_data.append({
+                        'id': coupon.id,
+                        'code': coupon.code,
+                        'discount': coupon.discount,
+                        'active': coupon.active,
+                        'date': coupon.date,
+                        'is_used_by_me': is_used_by_me,  # NEW: Shows if user already used it
+                        'vendor': coupon.vendor.id if coupon.vendor else None,
+                    })
 
-            serializer = CouponSerializer(coupons, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            logger.info(f"Returning {len(coupons_data)} coupons for user {request.user.id}")
+            return Response(coupons_data, status=status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"Error fetching referral coupons for user {request.user.id}: {str(e)}", exc_info=True)
