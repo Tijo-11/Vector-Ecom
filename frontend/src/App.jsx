@@ -14,7 +14,8 @@ import Products from "./views/shop/Products/Products";
 import ProductDetail from "./views/shop/ProductDetail/ProductDetail";
 import MainWrapper from "./layouts/MainWrapper";
 import CategoryProducts from "./views/shop/Category/CategoryProducts";
-import Cart from "./views/shop/cart/cart";
+import Cart from "./views/shop/cart/Cart";
+import Address from "./views/shop/cart/Address";
 import Checkout from "./views/shop/checkout/Checkout";
 import PaymentSuccess from "./views/shop/checkout/PaymentSuccess";
 import PaymentFailed from "./views/shop/checkout/PaymentFailed";
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/product/:slug" element={<ProductDetail />} />
             <Route path="/category/:slug" element={<CategoryProducts />} />{" "}
             <Route path="/cart" element={<Cart />} />
+            <Route path="/address" element={<Address />} /> {/* New route */}
             <Route path="/checkout/:order_id" element={<Checkout />} />
             <Route path="/search" element={<Search />} />
             {/* Payment */}

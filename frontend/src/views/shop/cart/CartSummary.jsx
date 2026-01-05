@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
 import cartID from "../ProductDetail/cartId";
-import CheckoutForm from "./CheckoutForm";
 import log from "loglevel";
+import { Link, useLocation } from "react-router-dom";
 
 function CartSummary({ cartItems, setCartTotal }) {
   const [cart_total, setCartTotalLocal] = useState({
     itemCount: cartItems.length || 0,
+    original_total: 0,
     sub_total: 0,
     shipping: 0,
     tax: 0,
@@ -14,7 +15,9 @@ function CartSummary({ cartItems, setCartTotal }) {
     total: 0,
   });
   const cart_id = cartID();
+  const location = useLocation();
 
+  // Fetch calculated totals from API
   useEffect(() => {
     const fetchCartTotal = async () => {
       if (cart_id && cart_id !== "undefined") {
@@ -28,8 +31,8 @@ function CartSummary({ cartItems, setCartTotal }) {
             service_fee: response.data.service_fee || 0,
             total: response.data.total || 0,
           };
-          setCartTotalLocal(newTotals);
-          setCartTotal(newTotals);
+          setCartTotalLocal((prev) => ({ ...prev, ...newTotals }));
+          setCartTotal({ ...cart_total, ...newTotals });
         } catch (error) {
           log.error("Error fetching cart totals:", error);
         }
@@ -38,10 +41,17 @@ function CartSummary({ cartItems, setCartTotal }) {
     fetchCartTotal();
   }, [cart_id, cartItems, setCartTotal]);
 
-  const handleOrderSubmit = (formData) => {
-    // Pass form data to parent or handle additional logic if needed
-    log.debug("Order submitted with data:", { ...formData, cart_total });
-  };
+  // Calculate original_total from cartItems
+  useEffect(() => {
+    let original = 0;
+    cartItems.forEach((item) => {
+      original += item.product.original_price * item.qty; // Assuming field names; adjust if needed (e.g., item.product.original_price, item.qty)
+    });
+    setCartTotalLocal((prev) => ({ ...prev, original_total: original }));
+    setCartTotal((prev) => ({ ...prev, original_total: original }));
+  }, [cartItems, setCartTotal]);
+
+  const isAddressPage = location.pathname === "/address";
 
   return (
     <div id="summary" className="w-full sm:w-1/4 md:w-1/2 px-8 py-10">
@@ -50,6 +60,22 @@ function CartSummary({ cartItems, setCartTotal }) {
         <div className="flex justify-between mt-10">
           <span className="font-semibold text-sm uppercase text-gray-700">
             Items {cart_total.itemCount}
+          </span>
+          <span className="font-semibold text-sm">
+            ₹{cart_total.sub_total.toFixed(2)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="font-semibold text-sm uppercase text-gray-700">
+            Total Original Price
+          </span>
+          <span className="font-semibold text-sm">
+            ₹{cart_total.original_total.toFixed(2)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="font-semibold text-sm uppercase text-gray-700">
+            Total Offer Price
           </span>
           <span className="font-semibold text-sm">
             ₹{cart_total.sub_total.toFixed(2)}
@@ -80,7 +106,14 @@ function CartSummary({ cartItems, setCartTotal }) {
           </div>
         </div>
       </div>
-      <CheckoutForm onSubmit={handleOrderSubmit} />
+      {!isAddressPage && (
+        <Link
+          to="/address"
+          className="w-full mt-6 bg-blue-500 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition block text-center"
+        >
+          Proceed to Address
+        </Link>
+      )}
     </div>
   );
 }

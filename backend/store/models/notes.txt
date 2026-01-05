@@ -92,7 +92,3 @@ order.py: Contains Cart, CartOrder, CartOrderItem, Coupon, CouponUsers, Delivery
 user.py: Contains Wishlist, Address, and Notification models (renamed Notifications to Notification to match the model name).
 __init__.py: Imports all models for easy access.
 
-Keeping Foreign Keys
-All ForeignKey and ManyToManyField relationships in your models will remain unchanged. Where necessary,
- I'll replace direct imports (e.g., from .product import Product) with string-based references 
- (e.g., 'store.Product') to avoid circular imports. I'll note each instance where this is done.

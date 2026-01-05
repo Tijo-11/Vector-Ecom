@@ -9,6 +9,8 @@ import UserData from "../../../plugin/UserData";
 import cartID from "../ProductDetail/cartId";
 import Swal from "sweetalert2";
 import log from "loglevel";
+import { addToWishlist } from "../../../plugin/addToWishlist";
+import { useAuthStore } from "../../../store/auth";
 
 export default function CategoryProducts() {
   const Toast = Swal.mixin({
@@ -26,7 +28,23 @@ export default function CategoryProducts() {
   const [selectedSizes, setSelectedSizes] = useState({});
   const [quantityValue, setQuantityValue] = useState({});
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [wishlist, setWishlist] = useState([]);
   const { slug } = useParams(); // category slug from URL
+  const userData = UserData();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // Fetch wishlist
+  const fetchWishlist = async () => {
+    if (!userData?.user_id) return;
+    try {
+      const response = await apiInstance.get(
+        `customer/wishlist/${userData?.user_id}/`
+      );
+      setWishlist(response.data);
+    } catch (error) {
+      log.error("Error fetching wishlist:", error);
+    }
+  };
 
   // Find category title
   const category = categories.find((cat) => cat.slug === slug);
@@ -74,6 +92,12 @@ export default function CategoryProducts() {
       .catch((error) => log.error("Error fetching categories:", error));
   }, []);
 
+  useEffect(() => {
+    if (userData?.user_id) {
+      fetchWishlist();
+    }
+  }, [userData?.user_id]);
+
   const currentAddress = UserCountry();
   const user = UserData();
   const cart_id = cartID();
@@ -93,6 +117,15 @@ export default function CategoryProducts() {
     setSelectedProduct(productId);
   };
 
+  const handleAddToWishlist = async (product_id) => {
+    try {
+      await addToWishlist(product_id, userData?.user_id);
+      fetchWishlist(); // Refresh wishlist after adding/removing
+    } catch (error) {
+      log.error("Error updating wishlist:", error);
+    }
+  };
+
   // ✅ Updated Add to Cart with stock validation
   const handleAddToCart = async (product_id, price, shipping_amount, slug) => {
     const qty = Number(quantityValue[product_id] || 0);
@@ -103,6 +136,11 @@ export default function CategoryProducts() {
       const productRes = await apiInstance.get(`/products/${slug}/`);
       const stock_qty = productRes.data.stock_qty;
       const product_name = productRes.data.title;
+      const offer_discount = productRes.data.offer_discount;
+
+      // Calculate effective price
+      const effectivePrice =
+        offer_discount > 0 ? price * (1 - offer_discount / 100) : price;
 
       // 2️⃣ Fetch cart to check existing quantity
       const url = user?.user_id
@@ -131,7 +169,7 @@ export default function CategoryProducts() {
       formData.append("product", product_id);
       formData.append("user", user?.user_id || "");
       formData.append("qty", qty);
-      formData.append("price", price);
+      formData.append("price", effectivePrice);
       formData.append("shipping_amount", shipping_amount);
       formData.append("country", currentAddress?.country || "Unknown");
       formData.append("size", selectedSizes[product_id] || "");
@@ -165,6 +203,17 @@ export default function CategoryProducts() {
             ? `Explore handpicked products in ${category.title}`
             : "Because Memories Never Go out of Style"}
         </p>
+        {category?.offer_discount > 0 && (
+          <div className="mt-4">
+            <h2 className="text-2xl font-semibold mb-2">Special Offer!</h2>
+            <div className="bg-white p-4 rounded shadow mx-auto w-fit">
+              <p className="font-bold">{category.title}</p>
+              <p className="text-red-500 animate-pulse">
+                {category.offer_discount}% OFF
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Product grid */}
@@ -190,14 +239,34 @@ export default function CategoryProducts() {
               </Link>
 
               <div className="flex items-center gap-2">
+                {product.offer_discount > 0 ? (
+                  <>
+                    <p className="text-sm line-through text-gray-400">
+                      ₹{product.price}
+                    </p>
+                    <p className="mt-1 text-lg font-medium text-gray-900">
+                      ₹
+                      {(
+                        product.price *
+                        (1 - product.offer_discount / 100)
+                      ).toFixed(2)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-lg font-medium text-gray-900">
+                    ₹{product.price}
+                  </p>
+                )}
                 {product.old_price && (
                   <p className="text-sm line-through text-gray-400">
                     ₹{product.old_price}
                   </p>
                 )}
-                <p className="mt-1 text-lg font-medium text-gray-900">
-                  ₹{product.price}
-                </p>
+                {product.offer_discount > 0 && (
+                  <span className="text-red-500 font-bold animate-pulse">
+                    {product.offer_discount}% OFF
+                  </span>
+                )}
                 {product.stock_qty === 0 || !product.in_stock ? (
                   <p className="text-red-600 font-semibold mt-2">
                     Out of Stock
@@ -320,9 +389,23 @@ export default function CategoryProducts() {
                     : "Add to Cart"}
                 </button>
 
-                <button className="flex items-center justify-center gap-2 w-full rounded-lg border border-gray-300 py-2 hover:bg-gray-100 transition">
-                  <Heart size={18} /> Add to Wishlist
-                </button>
+                {isLoggedIn ? (
+                  <button
+                    onClick={() => handleAddToWishlist(product.id)}
+                    className={`flex items-center justify-center gap-2 w-full rounded-lg py-2 transition ${
+                      wishlist.some((item) => item.product.id === product.id)
+                        ? "bg-gray-400 text-white hover:bg-gray-500 border-none"
+                        : "bg-red-600 text-white hover:bg-red-700 border-none"
+                    }`}
+                  >
+                    <Heart size={18} />
+                    {wishlist.some((item) => item.product.id === product.id)
+                      ? "Remove from Wishlist"
+                      : "Add to Wishlist"}
+                  </button>
+                ) : (
+                  <></>
+                )}
               </div>
             </div>
           ))}

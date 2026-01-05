@@ -5,7 +5,7 @@ import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
 import cartID from "../ProductDetail/cartId";
 
-function CheckoutForm({ onSubmit }) {
+function CheckoutForm() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -136,7 +136,6 @@ function CheckoutForm({ onSubmit }) {
 
     try {
       const response = await apiInstance.post("/create-order/", data);
-      onSubmit(formData);
       navigate(`/checkout/${response.data.order_oid}`);
     } catch (error) {
       Swal.fire({

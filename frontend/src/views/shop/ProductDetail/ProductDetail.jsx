@@ -57,11 +57,13 @@ export default function ProductDetail() {
           {/* Product Images */}
           <div className="w-full md:w-1/2 px-4 mb-8">
             {mainImage && (
-              <img
-                src={mainImage}
-                alt={product.title || "Product"}
-                className="w-full h-auto rounded-lg shadow-md mb-4"
-              />
+              <div className="relative overflow-hidden rounded-lg shadow-md mb-4 group cursor-zoom-in">
+                <img
+                  src={mainImage}
+                  alt={product.title || "Product"}
+                  className="w-full h-auto transition-transform duration-300 ease-in-out group-hover:scale-150"
+                />
+              </div>
             )}
             <div className="flex gap-4 py-4 justify-center overflow-x-auto">
               {allImages.map((item) => (
@@ -83,11 +85,33 @@ export default function ProductDetail() {
             <h2 className="text-3xl font-bold mb-2">{product.title}</h2>
             <p className="text-gray-600 mb-4">SKU: {product.sku}</p>
 
-            <div className="mb-4">
-              <span className="text-2xl font-bold mr-2">₹{product.price}</span>
+            <div className="mb-4 flex items-center gap-2">
+              {product.offer_discount > 0 ? (
+                <>
+                  <span className="text-sm line-through text-gray-400">
+                    ₹{product.price}
+                  </span>
+                  <span className="text-2xl font-bold mr-2">
+                    ₹
+                    {(
+                      product.price *
+                      (1 - product.offer_discount / 100)
+                    ).toFixed(2)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-2xl font-bold mr-2">
+                  ₹{product.price}
+                </span>
+              )}
               {product.old_price && (
                 <span className="text-gray-500 line-through">
                   ₹{product.old_price}
+                </span>
+              )}
+              {product.offer_discount > 0 && (
+                <span className="text-red-500 font-bold animate-pulse">
+                  {product.offer_discount}% OFF
                 </span>
               )}
             </div>

@@ -190,8 +190,20 @@ CORS_ALLOW_HEADERS = [
     'x-request-id',  # Add this to allow X-Request-ID
 ]
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",   # React dev server
+    "http://localhost:5173",  #"https://894f9abfdc75.ngrok-free.app/",
 ]
+
+
+# CORS_ALLOWED_ORIGIN_REGEXES = [
+#     r"^https://[a-z0-9]+\.ngrok-free\.app$",  # Matches random subdomains like 894f9abfdc75.ngrok-free.app
+#     # Optional: also allow local development origins
+#     r"^http://localhost:\d+$",
+#     r"^http://127\.0\.0\.1:\d+$",
+# ]
+
+
+
+
 CORS_ALLOW_CREDENTIALS = True
 
 # Email Configuration

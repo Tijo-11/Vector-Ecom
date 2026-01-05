@@ -1,4 +1,3 @@
-// Products.jsx (Modified to show category offers in banner and product offers as shining text)
 import { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Heart } from "lucide-react";
@@ -105,6 +104,10 @@ export default function Products() {
       const productRes = await apiInstance.get(`/products/${slug}/`);
       const stock_qty = productRes.data.stock_qty;
       const product_name = productRes.data.title;
+      const offer_discount = productRes.data.offer_discount;
+      // Calculate effective price
+      const effectivePrice =
+        offer_discount > 0 ? price * (1 - offer_discount / 100) : price;
       // 2️⃣ Get current cart items
       const url = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
@@ -132,7 +135,7 @@ export default function Products() {
       formData.append("product", product_id);
       formData.append("user", user?.user_id || "");
       formData.append("qty", qty);
-      formData.append("price", price);
+      formData.append("price", effectivePrice);
       formData.append("shipping_amount", shipping_amount);
       formData.append("country", currentAddress?.country || "Unknown");
       formData.append("size", selectedSizes[product_id] || "");
@@ -214,14 +217,29 @@ export default function Products() {
                 <h3 className="mt-4 text-sm text-gray-700">{product.title}</h3>
               </Link>
               <div className="flex items-center gap-2">
+                {product.offer_discount > 0 ? (
+                  <>
+                    <p className="text-sm line-through text-gray-400">
+                      ₹{product.price}
+                    </p>
+                    <p className="mt-1 text-lg font-medium text-gray-900">
+                      ₹
+                      {(
+                        product.price *
+                        (1 - product.offer_discount / 100)
+                      ).toFixed(2)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-lg font-medium text-gray-900">
+                    ₹{product.price}
+                  </p>
+                )}
                 {product.old_price && (
                   <p className="text-sm line-through text-gray-400">
                     ₹{product.old_price}
                   </p>
                 )}
-                <p className="mt-1 text-lg font-medium text-gray-900">
-                  ₹{product.price}
-                </p>
                 {product.offer_discount > 0 && (
                   <span className="text-red-500 font-bold animate-pulse">
                     {product.offer_discount}% OFF
