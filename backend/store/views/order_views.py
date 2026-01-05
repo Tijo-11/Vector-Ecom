@@ -1,4 +1,4 @@
-# store/views/order_views.py - COMPLETE FILE
+# store/views/order_views.py - FIXED VERSION
 
 from django.db.models import Q
 from django.db import transaction
@@ -106,24 +106,26 @@ class CreateOrderView(generics.CreateAPIView):
                 discount_rate = max_discount / Decimal(100)
 
                 # === Pricing Calculations ===
-                original_sub_total = c.sub_total
-                discounted_sub_total = original_sub_total * (Decimal(1) - discount_rate)
+                original_sub_total = c.price * c.qty
+                offer_saved = original_sub_total * discount_rate
+                discounted_sub_total = original_sub_total - offer_saved
 
                 shipping = c.shipping_amount
                 total_shipping += shipping
 
                 # Service fee (2%)
-                service_fee = discounted_sub_total * Decimal('0.02')
+                service_rate = Decimal('0.02')
+                service_fee = discounted_sub_total * service_rate
                 total_service_fee += service_fee
 
-                # Tax (based on original ratio)
-                tax_rate = c.tax_fee / original_sub_total if original_sub_total > 0 else Decimal(0)
+                # Tax (based on cart ratio)
+                tax_rate = c.tax_fee / c.sub_total if c.sub_total > 0 else Decimal('0.05')
                 tax_fee = discounted_sub_total * tax_rate
                 total_tax += tax_fee
 
                 # Totals
                 total = discounted_sub_total + shipping + service_fee + tax_fee
-                initial_total = original_sub_total + shipping + (original_sub_total * Decimal('0.02')) + (original_sub_total * tax_rate)
+                initial_total = original_sub_total + shipping + (original_sub_total * service_rate) + (original_sub_total * tax_rate)
                 saved = initial_total - total
 
                 total_subtotal += discounted_sub_total
@@ -145,7 +147,7 @@ class CreateOrderView(generics.CreateAPIView):
                     tax_fee=tax_fee,
                     total=total,
                     initial_total=initial_total,
-                    offer_saved=saved,
+                    offer_saved=offer_saved,
                     coupon_saved=Decimal(0.00),
                     saved=saved
                 )
@@ -168,10 +170,9 @@ class CreateOrderView(generics.CreateAPIView):
             status=status.HTTP_201_CREATED
         )
 
-
 class CheckoutView(generics.RetrieveAPIView):
     serializer_class = CartOrderSerializer
-    lookup_field = 'order_oid'
+    lookup_field = 'oid'
 
     def get_object(self):
         order_oid = self.kwargs['order_oid']
@@ -210,25 +211,16 @@ class CouponAPIView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ============================================
-        # CHECK IF USER ALREADY USED THIS COUPON
-        # ============================================
         if order.buyer:
-            # Check if this user has already used this coupon in a paid/completed order
             if coupon.used_by.filter(id=order.buyer.id).exists():
                 return Response(
                     {"message": "You have already used this coupon", "icon": "warning"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # ============================================
-        # FIXED: Support platform-wide coupons (vendor=None)
-        # ============================================
         if coupon.vendor is None:
-            # Platform-wide coupon (like referral coupons) - applies to ALL items
             order_items = CartOrderItem.objects.filter(order=order)
         else:
-            # Vendor-specific coupon - only applies to that vendor's items
             order_items = CartOrderItem.objects.filter(order=order, vendor=coupon.vendor)
         
         if not order_items.exists():
@@ -238,50 +230,73 @@ class CouponAPIView(generics.CreateAPIView):
             )
 
         with transaction.atomic():
-            total_old_discount = Decimal('0.00')
-
             # Step 1: Reverse any existing coupon discount on these items
             for item in order_items:
                 old_discount = item.coupon_saved
                 if old_discount > 0:
-                    total_old_discount += old_discount
-                    item.total += old_discount
+                    old_sub_total = item.sub_total
+                    tax_rate = item.tax_fee / old_sub_total if old_sub_total > 0 else Decimal('0.05')
+                    service_rate = Decimal('0.02')
+
                     item.sub_total += old_discount
                     item.saved -= old_discount
                     item.coupon_saved = Decimal('0.00')
 
-                # Clear any existing coupon links
+                    # Recalculate fees after reversal
+                    new_sub_total = item.sub_total
+                    new_tax_fee = new_sub_total * tax_rate
+                    new_service_fee = new_sub_total * service_rate
+                    new_total = new_sub_total + item.shipping_amount + new_tax_fee + new_service_fee
+
+                    item.tax_fee = new_tax_fee
+                    item.service_fee = new_service_fee
+                    item.total = new_total
+
                 item.coupon.clear()
                 item.save()
 
-            # Reverse old discount on order level
-            if total_old_discount > 0:
-                order.total += total_old_discount
-                order.sub_total += total_old_discount
-                order.saved -= total_old_discount
-                order.coupon_saved -= total_old_discount
+            # Update order after reversal
+            order.sub_total = sum(i.sub_total for i in order_items)
+            order.tax_fee = sum(i.tax_fee for i in order_items)
+            order.service_fee = sum(i.service_fee for i in order_items)
+            order.total = sum(i.total for i in order_items)
+            order.saved = sum(i.saved for i in order_items)
+            order.coupon_saved = sum(i.coupon_saved for i in order_items)
+            order.save()
 
             # Step 2: Apply the new coupon
-            total_new_discount = Decimal('0.00')
+            rate = Decimal(coupon.discount) / Decimal(100)
             for item in order_items:
-                discount = item.total * (Decimal(coupon.discount) / Decimal('100'))
-                discount = discount.quantize(Decimal('0.00'))
-                total_new_discount += discount
+                original_sub_total = item.price * item.qty
+                offer_saved = item.offer_saved
+                discount = original_sub_total * rate
+
+                old_sub_total = item.sub_total  # after reversal, which is original - offer
+                tax_rate = item.tax_fee / old_sub_total if old_sub_total > 0 else Decimal('0.05')
+                service_rate = Decimal('0.02')
 
                 item.coupon_saved = discount
                 item.saved += discount
-                item.total -= discount
                 item.sub_total -= discount
+
+                final_sub_total = item.sub_total
+                new_tax_fee = final_sub_total * tax_rate
+                new_service_fee = final_sub_total * service_rate
+                new_total = final_sub_total + item.shipping_amount + new_tax_fee + new_service_fee
+
+                item.tax_fee = new_tax_fee
+                item.service_fee = new_service_fee
+                item.total = new_total
                 item.coupon.add(coupon)
                 item.save()
 
-            # Apply new discount on order level
-            order.total -= total_new_discount
-            order.sub_total -= total_new_discount
-            order.saved += total_new_discount
-            order.coupon_saved += total_new_discount
-            
-            # Link coupon to order
+            # Update order after application
+            order.sub_total = sum(i.sub_total for i in order_items)
+            order.tax_fee = sum(i.tax_fee for i in order_items)
+            order.service_fee = sum(i.service_fee for i in order_items)
+            order.total = sum(i.total for i in order_items)
+            order.saved = sum(i.saved for i in order_items)
+            order.coupon_saved = sum(i.coupon_saved for i in order_items)
             order.coupons.add(coupon)
             order.save()
 
@@ -311,7 +326,6 @@ class RemoveCouponAPIView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Find all items that have any coupon applied
         order_items = CartOrderItem.objects.filter(order=order, coupon__isnull=False)
 
         if not order_items.exists():
@@ -320,40 +334,39 @@ class RemoveCouponAPIView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        total_discount_to_reverse = Decimal('0.00')
-
         with transaction.atomic():
             for item in order_items:
-                # Prefer stored coupon_saved if available
-                discount = item.coupon_saved or Decimal('0.00')
+                discount = item.coupon_saved
+                old_sub_total = item.sub_total
+                old_tax = item.tax_fee
+                old_service = item.service_fee
 
-                # If no stored value, calculate from coupon rate
-                if discount <= 0 and item.coupon.exists():
-                    coupon = item.coupon.first()
-                    if coupon and coupon.discount:
-                        rate = Decimal(coupon.discount) / Decimal('100')
-                        if rate > 0 and rate < 1:
-                            discount = item.total * rate / (Decimal('1') - rate)
-                            discount = discount.quantize(Decimal('0.00'))
+                tax_rate = old_tax / old_sub_total if old_sub_total > 0 else Decimal('0.05')
+                service_rate = Decimal('0.02')
 
                 if discount > 0:
-                    # Reverse the discount
-                    item.total += discount
                     item.sub_total += discount
                     item.saved -= discount
                     item.coupon_saved = Decimal('0.00')
-                    total_discount_to_reverse += discount
 
-                # Always clear the coupon M2M relationship
+                    # Recalculate fees
+                    new_sub_total = item.sub_total
+                    new_tax = new_sub_total * tax_rate
+                    new_service = new_sub_total * service_rate
+                    new_total = new_sub_total + item.shipping_amount + new_tax + new_service
+
+                    item.tax_fee = new_tax
+                    item.service_fee = new_service
+                    item.total = new_total
+
                 item.coupon.clear()
                 item.save()
 
-            # Reverse on order level
-            if total_discount_to_reverse > 0:
-                order.total += total_discount_to_reverse
-                order.sub_total += total_discount_to_reverse
-                order.saved -= total_discount_to_reverse
-
+            order.sub_total = sum(i.sub_total for i in order_items)
+            order.tax_fee = sum(i.tax_fee for i in order_items)
+            order.service_fee = sum(i.service_fee for i in order_items)
+            order.total = sum(i.total for i in order_items)
+            order.saved = sum(i.saved for i in order_items)
             order.coupon_saved = Decimal('0.00')
             order.save()
 

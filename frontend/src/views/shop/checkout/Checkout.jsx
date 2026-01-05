@@ -1,5 +1,3 @@
-// Checkout.jsx (Updated with visible totals)
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
@@ -117,6 +115,10 @@ function Checkout() {
 
     return false;
   })();
+
+  // Calculate original subtotal
+  const originalSubTotal =
+    order.orderitem?.reduce((acc, item) => acc + item.price * item.qty, 0) || 0;
 
   if (loading) {
     return (
@@ -253,7 +255,7 @@ function Checkout() {
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>₹{parseFloat(order.sub_total || 0).toFixed(2)}</span>
+              <span>₹{originalSubTotal.toFixed(2)}</span>
             </div>
 
             {order.offer_saved > 0 && (
@@ -273,10 +275,20 @@ function Checkout() {
             <div className="flex justify-between">
               <span>Shipping</span>
               <span>
-                {order.shipping_price && order.shipping_price > 0
-                  ? `₹${parseFloat(order.shipping_price).toFixed(2)}`
+                {order.shipping_amount && order.shipping_amount > 0
+                  ? `₹${parseFloat(order.shipping_amount).toFixed(2)}`
                   : "Free"}
               </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Tax</span>
+              <span>₹{parseFloat(order.tax_fee || 0).toFixed(2)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Service Fee</span>
+              <span>₹{parseFloat(order.service_fee || 0).toFixed(2)}</span>
             </div>
 
             <hr />

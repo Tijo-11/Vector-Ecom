@@ -25,6 +25,7 @@ function CartSummary({ cartItems, setCartTotal }) {
           const response = await apiInstance.get(`/cart-detail/${cart_id}/`);
           const newTotals = {
             itemCount: cartItems.length || 0,
+            original_total: response.data.original_total || 0,
             sub_total: response.data.sub_total || 0,
             shipping: response.data.shipping || 0,
             tax: response.data.tax || 0,
@@ -40,16 +41,6 @@ function CartSummary({ cartItems, setCartTotal }) {
     };
     fetchCartTotal();
   }, [cart_id, cartItems, setCartTotal]);
-
-  // Calculate original_total from cartItems
-  useEffect(() => {
-    let original = 0;
-    cartItems.forEach((item) => {
-      original += item.product.original_price * item.qty; // Assuming field names; adjust if needed (e.g., item.product.original_price, item.qty)
-    });
-    setCartTotalLocal((prev) => ({ ...prev, original_total: original }));
-    setCartTotal((prev) => ({ ...prev, original_total: original }));
-  }, [cartItems, setCartTotal]);
 
   const isAddressPage = location.pathname === "/address";
 

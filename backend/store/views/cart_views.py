@@ -1,21 +1,20 @@
-# store/views/cart_views.py
+# store/views/cart_views.py - FIXED VERSION
 
-# Restframework Packages
 from rest_framework.response import Response
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 
-# Models
 from userauth.models import User
 from store.models import Product, Cart
 from store.serializers import CartSerializer
 from addon.models import Tax
 
-# Others Packages
 from decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q, Max
+from django.utils import timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 def get_active_user_cart(user):
     """Helper: Get user's active cart_id or None if none exists."""
     try:
-        # FIXED: Use 'date' instead of non-existent 'created_at'
         active_carts = Cart.objects.filter(user=user, is_active=True).order_by('-date')
         if active_carts.exists():
             return active_carts.first().cart_id
@@ -43,7 +41,7 @@ class CartAPIView(generics.ListCreateAPIView):
             payload = request.data
             required = ['product', 'qty', 'price', 'shipping_amount', 'country', 'cart_id']
             if not all(k in payload for k in required):
-                raise ValidationError("Missing required fields: product, qty, price, shipping_amount, country, cart_id")
+                raise ValidationError("Missing required fields")
             
             product_id = int(payload['product'])
             qty = int(payload['qty'])
@@ -56,7 +54,7 @@ class CartAPIView(generics.ListCreateAPIView):
             
             product = Product.objects.filter(status="published", id=product_id).first()
             if not product:
-                return Response({"error": "Product not found or not published"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             
             user = None
             user_id = payload.get('user')
@@ -67,38 +65,79 @@ class CartAPIView(generics.ListCreateAPIView):
                 except (ValueError, ObjectDoesNotExist):
                     return Response({"error": "Invalid user_id"}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Tax calc
+            # Tax
             tax_obj = Tax.objects.filter(country=country).first()
             tax_rate = (tax_obj.rate / 100) if tax_obj else Decimal('0.05')
-            
-            # Service fee
             service_fee_percentage = Decimal('0.02')
+            
+            # Calculate offer discount
+            now = timezone.now()
+            product_discount = Decimal(0)
+            category_discount = Decimal(0)
+            
+            if hasattr(product, 'product_offers'):
+                product_offers = product.product_offers.filter(
+                    start_date__lte=now
+                ).filter(
+                    Q(end_date__gte=now) | Q(end_date__isnull=True)
+                )
+                if product_offers.exists():
+                    max_product_discount = product_offers.aggregate(
+                        Max('discount_percentage')
+                    )['discount_percentage__max'] or 0
+                    product_discount = Decimal(max_product_discount)
+            
+            if product.category:
+                category_offers = product.category.category_offers.filter(
+                    start_date__lte=now
+                ).filter(
+                    Q(end_date__gte=now) | Q(end_date__isnull=True)
+                )
+                if category_offers.exists():
+                    max_category_discount = category_offers.aggregate(
+                        Max('discount_percentage')
+                    )['discount_percentage__max'] or 0
+                    category_discount = Decimal(max_category_discount)
+            
+            max_discount = max(product_discount, category_discount)
+            discount_rate = max_discount / Decimal(100)
+            
+            # Pricing calculations
+            original_price = price
+            original_sub_total = original_price * qty
+            offer_saved = original_sub_total * discount_rate
+            sub_total_after_offer = original_sub_total - offer_saved
+            total_shipping = shipping_amount * qty
+            service_fee = sub_total_after_offer * service_fee_percentage
+            tax_fee = sub_total_after_offer * tax_rate
+            total = sub_total_after_offer + total_shipping + service_fee + tax_fee
+            initial_total = original_sub_total + total_shipping + (original_sub_total * service_fee_percentage) + (original_sub_total * tax_rate)
             
             cart = Cart.objects.filter(cart_id=cart_id, product=product, is_active=True).first()
             if cart:
-                # Update existing
                 cart.user = user
                 cart.qty = qty
-                cart.price = price
-                cart.sub_total = price * qty
-                cart.shipping_amount = shipping_amount * qty
+                cart.price = original_price
+                cart.sub_total = sub_total_after_offer
+                cart.shipping_amount = total_shipping
                 cart.size = size
                 cart.color = color
                 cart.country = country
-                cart.tax_fee = (price * qty) * tax_rate
-                cart.service_fee = cart.sub_total * service_fee_percentage
-                cart.total = (cart.sub_total + cart.shipping_amount + cart.service_fee + cart.tax_fee)
+                cart.tax_fee = tax_fee
+                cart.service_fee = service_fee
+                cart.total = total
+                cart.initial_total = initial_total
+                cart.offer_saved = offer_saved
+                cart.saved = offer_saved
                 cart.save()
                 msg = "Cart updated successfully"
             else:
-                # Create new
                 cart = Cart.objects.create(
-                    product=product, user=user, qty=qty, price=price,
-                    sub_total=price * qty, shipping_amount=shipping_amount * qty,
+                    product=product, user=user, qty=qty, price=original_price,
+                    sub_total=sub_total_after_offer, shipping_amount=total_shipping,
                     size=size, color=color, country=country, cart_id=cart_id,
-                    tax_fee=(price * qty) * tax_rate,
-                    service_fee=(price * qty) * service_fee_percentage,
-                    total=(price * qty + shipping_amount * qty + (price * qty) * tax_rate + (price * qty) * service_fee_percentage)
+                    tax_fee=tax_fee, service_fee=service_fee, total=total,
+                    initial_total=initial_total, offer_saved=offer_saved, saved=offer_saved
                 )
                 msg = "Cart created successfully"
             
@@ -155,10 +194,12 @@ class CartDetailView(generics.RetrieveAPIView):
             return Response({"error": "No active cart found"}, status=status.HTTP_404_NOT_FOUND)
         
         totals = {
+            'original_total': sum((item.price * item.qty) for item in queryset),
+            'offer_saved': sum(item.offer_saved or Decimal('0') for item in queryset),
+            'sub_total': sum(item.sub_total or Decimal('0') for item in queryset),
             'shipping': sum(item.shipping_amount or Decimal('0') for item in queryset),
             'tax': sum(item.tax_fee or Decimal('0') for item in queryset),
             'service_fee': sum(item.service_fee or Decimal('0') for item in queryset),
-            'sub_total': sum(item.sub_total or Decimal('0') for item in queryset),
             'total': sum(item.total or Decimal('0') for item in queryset),
         }
         return Response(totals)
@@ -205,7 +246,6 @@ class CartMergeAPIView(APIView):
             except (ValueError, User.DoesNotExist):
                 return Response({"error": "Invalid or not found user"}, status=status.HTTP_404_NOT_FOUND)
             
-            # Now uses correct '-date' ordering
             user_cart_id = get_active_user_cart(user)
             
             if user_cart_id:

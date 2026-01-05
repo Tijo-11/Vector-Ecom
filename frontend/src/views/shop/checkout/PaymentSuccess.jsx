@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { v4 as uuidv4 } from "uuid";
@@ -166,6 +166,10 @@ function PaymentSuccess() {
     );
   }
 
+  // Calculate original subtotal
+  const originalSubTotal =
+    order.orderitem?.reduce((acc, item) => acc + item.price * item.qty, 0) || 0;
+
   return (
     <div className="container mx-auto mt-10 px-4">
       <div className="bg-white shadow-md rounded-md p-8">
@@ -228,10 +232,7 @@ function PaymentSuccess() {
                     {item.product?.title || "Product"} × {item.qty}
                   </span>
                   <span className="text-gray-700 font-medium">
-                    ₹
-                    {parseFloat(item.initial_total || item.total || 0).toFixed(
-                      2
-                    )}
+                    ₹{(item.price * item.qty).toFixed(2)}
                   </span>
                 </div>
               ))
@@ -244,14 +245,22 @@ function PaymentSuccess() {
               {/* Original Subtotal (before discount) */}
               <div className="flex justify-between text-lg font-semibold">
                 <span>Subtotal</span>
-                <span>₹{parseFloat(order.initial_total || 0).toFixed(2)}</span>
+                <span>₹{originalSubTotal.toFixed(2)}</span>
               </div>
 
               {/* Offer Discount */}
-              {order.saved && parseFloat(order.saved) > 0 && (
+              {order.offer_saved && parseFloat(order.offer_saved) > 0 && (
                 <div className="flex justify-between text-green-600 font-semibold">
-                  <span>Discount (Offers)</span>
-                  <span>-₹{parseFloat(order.saved).toFixed(2)}</span>
+                  <span>Offers Saved</span>
+                  <span>-₹{parseFloat(order.offer_saved).toFixed(2)}</span>
+                </div>
+              )}
+
+              {/* Coupon Discount */}
+              {order.coupon_saved && parseFloat(order.coupon_saved) > 0 && (
+                <div className="flex justify-between text-blue-600 font-semibold">
+                  <span>Coupon Saved</span>
+                  <span>-₹{parseFloat(order.coupon_saved).toFixed(2)}</span>
                 </div>
               )}
 
