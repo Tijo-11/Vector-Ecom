@@ -1,5 +1,4 @@
-# store/views/order_views.py - FIXED VERSION
-
+# store/views/order_views.py - FIXED VERSION (Removed tax_fee and service_fee from calculations)
 from django.db.models import Q
 from django.db import transaction
 from rest_framework.response import Response
@@ -12,12 +11,10 @@ from decimal import Decimal
 from django.utils import timezone
 from django.db.models import Max
 
-
 class CreateOrderView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     queryset = CartOrder.objects.all()
     permission_classes = (AllowAny,)
-
     def create(self, request, *args, **kwargs):
         payload = request.data
         full_name = payload['full_name']
@@ -30,7 +27,6 @@ class CreateOrderView(generics.CreateAPIView):
         postal_code = payload['pincode']
         cart_id = payload['cart_id']
         user_id = payload.get('user_id')
-
         # Handle user (optional)
         user = None
         if user_id and user_id != "0":
@@ -40,20 +36,16 @@ class CreateOrderView(generics.CreateAPIView):
                     {"error": "User with provided ID does not exist"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
         # Get active cart items
         cart_items = Cart.objects.filter(cart_id=cart_id, is_active=True)
         if user:
             cart_items = cart_items.filter(user=user)
-
         if not cart_items.exists():
             return Response(
                 {"error": "No active cart items found for the provided cart_id"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         now = timezone.now()
-
         with transaction.atomic():
             total_shipping = Decimal(0)
             total_tax = Decimal(0)
@@ -61,7 +53,6 @@ class CreateOrderView(generics.CreateAPIView):
             total_subtotal = Decimal(0)
             total_initial_total = Decimal(0)
             total_total = Decimal(0)
-
             order = CartOrder.objects.create(
                 full_name=full_name,
                 email=email,
@@ -73,7 +64,6 @@ class CreateOrderView(generics.CreateAPIView):
                 postal_code=postal_code,
                 buyer=user
             )
-
             for c in cart_items:
                 # === Calculate max discount from Product & Category Offers ===
                 product_discount = Decimal(0)
@@ -88,7 +78,6 @@ class CreateOrderView(generics.CreateAPIView):
                             Max('discount_percentage')
                         )['discount_percentage__max'] or 0
                         product_discount = Decimal(max_product_discount)
-
                 category_discount = Decimal(0)
                 if c.product.category:
                     category_offers = c.product.category.category_offers.filter(
@@ -101,37 +90,28 @@ class CreateOrderView(generics.CreateAPIView):
                             Max('discount_percentage')
                         )['discount_percentage__max'] or 0
                         category_discount = Decimal(max_category_discount)
-
                 max_discount = max(product_discount, category_discount)
                 discount_rate = max_discount / Decimal(100)
-
-                # === Pricing Calculations ===
+                # === Pricing Calculations (without tax and service fee) ===
                 original_sub_total = c.price * c.qty
                 offer_saved = original_sub_total * discount_rate
                 discounted_sub_total = original_sub_total - offer_saved
-
                 shipping = c.shipping_amount
                 total_shipping += shipping
-
-                # Service fee (2%)
-                service_rate = Decimal('0.02')
-                service_fee = discounted_sub_total * service_rate
+                # Service fee and tax set to 0
+                service_rate = Decimal('0.00')
+                service_fee = Decimal('0.00')
                 total_service_fee += service_fee
-
-                # Tax (based on cart ratio)
-                tax_rate = c.tax_fee / c.sub_total if c.sub_total > 0 else Decimal('0.05')
-                tax_fee = discounted_sub_total * tax_rate
+                tax_rate = Decimal('0.00')
+                tax_fee = Decimal('0.00')
                 total_tax += tax_fee
-
                 # Totals
-                total = discounted_sub_total + shipping + service_fee + tax_fee
-                initial_total = original_sub_total + shipping + (original_sub_total * service_rate) + (original_sub_total * tax_rate)
+                total = discounted_sub_total + shipping
+                initial_total = original_sub_total + shipping
                 saved = initial_total - total
-
                 total_subtotal += discounted_sub_total
                 total_initial_total += initial_total
                 total_total += total
-
                 # Create order item
                 CartOrderItem.objects.create(
                     order=order,
@@ -152,19 +132,17 @@ class CreateOrderView(generics.CreateAPIView):
                     saved=saved
                 )
                 order.vendor.add(c.product.vendor)
-
-            # Update order totals
+            # Update order totals (without tax and service fee)
             order.sub_total = total_subtotal
             order.shipping_amount = total_shipping
-            order.tax_fee = total_tax
-            order.service_fee = total_service_fee
+            order.tax_fee = Decimal('0.00')
+            order.service_fee = Decimal('0.00')
             order.initial_total = total_initial_total
             order.total = total_total
             order.offer_saved = total_initial_total - total_total
             order.coupon_saved = Decimal(0.00)
             order.saved = order.offer_saved
             order.save()
-
         return Response(
             {"message": "Order Created Successfully", "order_oid": order.oid},
             status=status.HTTP_201_CREATED
@@ -173,23 +151,19 @@ class CreateOrderView(generics.CreateAPIView):
 class CheckoutView(generics.RetrieveAPIView):
     serializer_class = CartOrderSerializer
     lookup_field = 'oid'
-
     def get_object(self):
         order_oid = self.kwargs['order_oid']
         order = CartOrder.objects.get(oid=order_oid)
         return order
 
-
 class CouponAPIView(generics.CreateAPIView):
     serializer_class = CouponSerializer
     queryset = Coupon.objects.all()
     permission_classes = (AllowAny,)
-
     def create(self, request):
         payload = request.data
         order_oid = payload['order_oid']
         coupon_code = payload['coupon_code'].upper().strip()
-
         try:
             order = CartOrder.objects.get(oid=order_oid)
         except CartOrder.DoesNotExist:
@@ -197,7 +171,6 @@ class CouponAPIView(generics.CreateAPIView):
                 {"message": "Order not found", "icon": "warning"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         try:
             coupon = Coupon.objects.get(code__iexact=coupon_code)
             if not coupon.active:
@@ -210,96 +183,69 @@ class CouponAPIView(generics.CreateAPIView):
                 {"message": "Invalid Coupon Code", "icon": "warning"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         if order.buyer:
             if coupon.used_by.filter(id=order.buyer.id).exists():
                 return Response(
                     {"message": "You have already used this coupon", "icon": "warning"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
         if coupon.vendor is None:
             order_items = CartOrderItem.objects.filter(order=order)
         else:
             order_items = CartOrderItem.objects.filter(order=order, vendor=coupon.vendor)
-        
+       
         if not order_items.exists():
             return Response(
                 {"message": "No items from this coupon's vendor in the order", "icon": "warning"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         with transaction.atomic():
             # Step 1: Reverse any existing coupon discount on these items
             for item in order_items:
                 old_discount = item.coupon_saved
                 if old_discount > 0:
                     old_sub_total = item.sub_total
-                    tax_rate = item.tax_fee / old_sub_total if old_sub_total > 0 else Decimal('0.05')
-                    service_rate = Decimal('0.02')
-
                     item.sub_total += old_discount
                     item.saved -= old_discount
                     item.coupon_saved = Decimal('0.00')
-
-                    # Recalculate fees after reversal
+                    # No fees to recalculate since set to 0
                     new_sub_total = item.sub_total
-                    new_tax_fee = new_sub_total * tax_rate
-                    new_service_fee = new_sub_total * service_rate
-                    new_total = new_sub_total + item.shipping_amount + new_tax_fee + new_service_fee
-
-                    item.tax_fee = new_tax_fee
-                    item.service_fee = new_service_fee
+                    new_total = new_sub_total + item.shipping_amount
                     item.total = new_total
-
                 item.coupon.clear()
                 item.save()
-
             # Update order after reversal
             order.sub_total = sum(i.sub_total for i in order_items)
-            order.tax_fee = sum(i.tax_fee for i in order_items)
-            order.service_fee = sum(i.service_fee for i in order_items)
+            order.tax_fee = Decimal('0.00')
+            order.service_fee = Decimal('0.00')
             order.total = sum(i.total for i in order_items)
             order.saved = sum(i.saved for i in order_items)
             order.coupon_saved = sum(i.coupon_saved for i in order_items)
             order.save()
-
             # Step 2: Apply the new coupon
             rate = Decimal(coupon.discount) / Decimal(100)
             for item in order_items:
                 original_sub_total = item.price * item.qty
                 offer_saved = item.offer_saved
                 discount = original_sub_total * rate
-
-                old_sub_total = item.sub_total  # after reversal, which is original - offer
-                tax_rate = item.tax_fee / old_sub_total if old_sub_total > 0 else Decimal('0.05')
-                service_rate = Decimal('0.02')
-
+                old_sub_total = item.sub_total # after reversal, which is original - offer
                 item.coupon_saved = discount
                 item.saved += discount
                 item.sub_total -= discount
-
                 final_sub_total = item.sub_total
-                new_tax_fee = final_sub_total * tax_rate
-                new_service_fee = final_sub_total * service_rate
-                new_total = final_sub_total + item.shipping_amount + new_tax_fee + new_service_fee
-
-                item.tax_fee = new_tax_fee
-                item.service_fee = new_service_fee
+                new_total = final_sub_total + item.shipping_amount
                 item.total = new_total
                 item.coupon.add(coupon)
                 item.save()
-
             # Update order after application
             order.sub_total = sum(i.sub_total for i in order_items)
-            order.tax_fee = sum(i.tax_fee for i in order_items)
-            order.service_fee = sum(i.service_fee for i in order_items)
+            order.tax_fee = Decimal('0.00')
+            order.service_fee = Decimal('0.00')
             order.total = sum(i.total for i in order_items)
             order.saved = sum(i.saved for i in order_items)
             order.coupon_saved = sum(i.coupon_saved for i in order_items)
             order.coupons.add(coupon)
             order.save()
-
         return Response(
             {"message": "Coupon Applied Successfully", "icon": "success"},
             status=status.HTTP_200_OK
@@ -307,17 +253,14 @@ class CouponAPIView(generics.CreateAPIView):
 
 class RemoveCouponAPIView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
-
     def create(self, request):
         payload = request.data
         order_oid = payload.get('order_oid')
-
         if not order_oid:
             return Response(
                 {"message": "order_oid is required", "icon": "warning"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         try:
             order = CartOrder.objects.get(oid=order_oid)
         except CartOrder.DoesNotExist:
@@ -325,61 +268,41 @@ class RemoveCouponAPIView(generics.CreateAPIView):
                 {"message": "Order not found", "icon": "warning"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         order_items = CartOrderItem.objects.filter(order=order, coupon__isnull=False)
-
         if not order_items.exists():
             return Response(
                 {"message": "No coupon applied to this order", "icon": "warning"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         with transaction.atomic():
             for item in order_items:
                 discount = item.coupon_saved
                 old_sub_total = item.sub_total
-                old_tax = item.tax_fee
-                old_service = item.service_fee
-
-                tax_rate = old_tax / old_sub_total if old_sub_total > 0 else Decimal('0.05')
-                service_rate = Decimal('0.02')
-
                 if discount > 0:
                     item.sub_total += discount
                     item.saved -= discount
                     item.coupon_saved = Decimal('0.00')
-
-                    # Recalculate fees
+                    # No fees to recalculate
                     new_sub_total = item.sub_total
-                    new_tax = new_sub_total * tax_rate
-                    new_service = new_sub_total * service_rate
-                    new_total = new_sub_total + item.shipping_amount + new_tax + new_service
-
-                    item.tax_fee = new_tax
-                    item.service_fee = new_service
+                    new_total = new_sub_total + item.shipping_amount
                     item.total = new_total
-
                 item.coupon.clear()
                 item.save()
-
             order.sub_total = sum(i.sub_total for i in order_items)
-            order.tax_fee = sum(i.tax_fee for i in order_items)
-            order.service_fee = sum(i.service_fee for i in order_items)
+            order.tax_fee = Decimal('0.00')
+            order.service_fee = Decimal('0.00')
             order.total = sum(i.total for i in order_items)
             order.saved = sum(i.saved for i in order_items)
             order.coupon_saved = Decimal('0.00')
             order.save()
-
         return Response(
             {"message": "Coupon Removed Successfully", "icon": "success"},
             status=status.HTTP_200_OK
         )
 
-
 class OrdersDetailAPIView(generics.RetrieveAPIView):
     serializer_class = CartOrderSerializer
     permission_classes = (AllowAny,)
-
     def get_object(self):
         order_id = self.kwargs['order_id']
         order = CartOrder.objects.get(

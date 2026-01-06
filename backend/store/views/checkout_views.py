@@ -1,3 +1,4 @@
+# checkout_views.py (Removed tax_fee and service_fee from calculations)
 import razorpay
 from decouple import config
 import os
@@ -7,21 +8,18 @@ from django.db import transaction
 import json
 # Django Packages
 from django.conf import settings
-
 from django.template.loader import render_to_string
 # Restframework Packages
 from rest_framework.response import Response
 from rest_framework import generics,status
-from rest_framework.permissions import AllowAny#, IsAuthenticated
+from rest_framework.permissions import AllowAny
 # Serializers
-from store.serializers import   CartOrderSerializer
+from store.serializers import CartOrderSerializer
 from userauth.tasks import send_async_email
-
 # Models
-from store.models import  CartOrderItem,Notification, CartOrder, Cart
+from store.models import CartOrderItem,Notification, CartOrder, Cart
 #other packages
 import time
-# import threading
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -78,12 +76,10 @@ def send_all_notifications(order, order_items):
                 send_email(subject, text_body, html_body, settings.DEFAULT_FROM_EMAIL, order.email)
         except Exception as e:
             logger.error(f"Buyer notification failed: {str(e)}")
-
     vendor_groups = {}
     for item in order_items:
         if item.vendor and item.vendor.email and "@" in item.vendor.email:
             vendor_groups.setdefault(item.vendor.id, []).append(item)
-
     for vendor_id, items in vendor_groups.items():
         vendor_email = items[0].vendor.email
         try:
@@ -128,7 +124,6 @@ class RazorpayCheckoutView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     permission_classes = [AllowAny]
     queryset = CartOrder.objects.all()
-
     def create(self, request, *args, **kwargs):
         logger.info("Entering RazorpayCheckoutView.create")
         order_id = self.kwargs['order_id']
@@ -141,7 +136,6 @@ class RazorpayCheckoutView(generics.CreateAPIView):
         except CartOrder.DoesNotExist:
             logger.error(f"Order not found: {order_id}")
             return Response({'message': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-
         key_id = os.environ.get('RAZORPAY_KEY_ID', config('RAZORPAY_KEY_ID'))
         key_secret = os.environ.get('RAZORPAY_KEY_SECRET', config('RAZORPAY_KEY_SECRET'))
         if not key_id or not key_secret:
@@ -150,14 +144,13 @@ class RazorpayCheckoutView(generics.CreateAPIView):
                 {'message': 'Razorpay API credentials are missing or invalid'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
         try:
             logger.info("Initializing Razorpay client")
             client = razorpay.Client(auth=(key_id, key_secret))
             client.set_app_details({"title": config('APP_TITLE', 'Django'), "version": config('APP_VERSION', '4.2')})
             logger.info(f"Creating Razorpay order for amount: {int(order.total * 100)}")
             razorpay_order = client.order.create({
-                'amount': int(order.total * 100),  # In paise
+                'amount': int(order.total * 100), # In paise
                 'currency': 'INR',
                 'payment_capture': 1,
                 'notes': {'store_name': config('STORE_NAME', 'RetroRelics')}
@@ -198,34 +191,28 @@ class PaymentSuccessView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     queryset = CartOrder.objects.all()
     permission_classes = [AllowAny]
-
     def post(self, request, *args, **kwargs):
         logger.info("Entering PaymentSuccessView.post")
-        start_time = time.time()  # noqa
+        start_time = time.time() # noqa
         payload = request.data
         order_id = payload.get("order_id")
-        session_id = payload.get("session_id")  # Razorpay payment_id
-        capture_id = payload.get("paypal_capture_id")  # PayPal
+        session_id = payload.get("session_id") # Razorpay payment_id
+        capture_id = payload.get("paypal_capture_id") # PayPal
         logger.debug(f"Processing payment for order_id: {order_id}, session_id: {session_id}, capture_id: {capture_id}")
-
         if not order_id:
             logger.warning("Missing order_id in payload")
             return Response({"message": "Missing order_id"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             order = CartOrder.objects.get(oid=order_id)
             logger.info(f"Retrieved order: {order.oid}")
         except CartOrder.DoesNotExist:
             logger.error(f"Order not found: {order_id}")
             return Response({"message": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
-
         if order.payment_status == "paid":
             logger.warning(f"Order {order_id} already paid")
             return Response({"message": "already_paid"}, status=status.HTTP_200_OK)
-
         order_items = CartOrderItem.objects.filter(order=order)
         logger.debug(f"Found {order_items.count()} order items")
-
         # --- PayPal flow ---
         if capture_id:
             logger.info(f"Processing PayPal payment with capture_id: {capture_id}")
@@ -241,14 +228,12 @@ class PaymentSuccessView(generics.CreateAPIView):
                 }
                 response = requests.get(paypal_api_url, headers=headers)
                 logger.info(f"PayPal API response status: {response.status_code}")
-
                 if response.status_code == 200:
                     paypal_data = response.json()
                     status_val = paypal_data.get("status")
                     logger.info(f"PayPal payment status: {status_val}")
                     logger.info(f"PayPal status details: {paypal_data.get('status_details')}")
                     is_sandbox = "sandbox" in paypal_api_url
-
                     if status_val == "COMPLETED" or (status_val == "PENDING" and is_sandbox):
                         with transaction.atomic():
                             locked_order = CartOrder.objects.select_for_update().get(oid=order_id)
@@ -258,7 +243,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                             locked_order.payment_status = "paid"
                             locked_order.order_status = "Confirmed"
                             locked_order.paypal_capture_id = capture_id
-                            
+                           
                             # ============================================
                             # MARK COUPONS AS USED BY THIS USER
                             # ============================================
@@ -266,7 +251,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                                 for coupon in locked_order.coupons.all():
                                     coupon.used_by.add(locked_order.buyer)
                                     logger.info(f"Marked coupon {coupon.code} as used by user {locked_order.buyer.id}")
-                            
+                           
                             locked_order.save()
                             deactivate_cart(locked_order.oid, locked_order.buyer_id if locked_order.buyer else None)
                             deduct_stock(order_items)
@@ -296,7 +281,6 @@ class PaymentSuccessView(generics.CreateAPIView):
             except Exception as e:
                 logger.error(f"PayPal processing error: {str(e)}")
                 return Response({"message": "PayPal processing error"}, status=status.HTTP_400_BAD_REQUEST)
-
         # --- Razorpay flow ---
         if session_id:
             logger.info(f"Processing Razorpay payment with session_id: {session_id}")
@@ -305,7 +289,6 @@ class PaymentSuccessView(generics.CreateAPIView):
                 payment = client.payment.fetch(session_id)
                 payment_status = payment["status"]
                 logger.info(f"Razorpay payment status: {payment_status}")
-
                 if payment_status == "captured":
                     with transaction.atomic():
                         locked_order = CartOrder.objects.select_for_update().get(oid=order_id)
@@ -315,7 +298,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                         locked_order.payment_status = "paid"
                         locked_order.order_status = "Confirmed"
                         locked_order.razorpay_payment_id = session_id
-                        
+                       
                         # ============================================
                         # MARK COUPONS AS USED BY THIS USER
                         # ============================================
@@ -323,7 +306,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                             for coupon in locked_order.coupons.all():
                                 coupon.used_by.add(locked_order.buyer)
                                 logger.info(f"Marked coupon {coupon.code} as used by user {locked_order.buyer.id}")
-                        
+                       
                         locked_order.save()
                         deactivate_cart(locked_order.oid, locked_order.buyer_id if locked_order.buyer else None)
                         deduct_stock(order_items)
@@ -333,15 +316,12 @@ class PaymentSuccessView(generics.CreateAPIView):
                         logger.error(f"Notification failed: {str(e)}")
                     logger.info(f"Razorpay payment successful for order {order_id}")
                     return Response({"message": "payment_successful"}, status=status.HTTP_200_OK)
-
                 elif payment_status == "authorized":
                     logger.info(f"Razorpay payment authorized for order {order_id}")
                     return Response({"message": "processing"}, status=status.HTTP_202_ACCEPTED)
-
                 elif payment_status in ["failed", "cancelled"]:
                     logger.warning(f"Razorpay payment {payment_status} for order {order_id}")
                     return Response({"message": "cancelled"}, status=status.HTTP_400_BAD_REQUEST)
-
                 elif payment_status in ["created", "pending"]:
                     with transaction.atomic():
                         locked_order = CartOrder.objects.select_for_update().get(oid=order_id)
@@ -353,22 +333,18 @@ class PaymentSuccessView(generics.CreateAPIView):
                         locked_order.save()
                     logger.info(f"Razorpay payment {payment_status} for order {order_id}")
                     return Response({"message": "processing"}, status=status.HTTP_202_ACCEPTED)
-
                 else:
                     logger.warning(f"Unknown Razorpay payment status: {payment_status}")
                     return Response({"message": f"Payment status: {payment_status}"}, status=status.HTTP_400_BAD_REQUEST)
-
             except Exception as e:
                 logger.error(f"Razorpay processing error: {str(e)}")
                 return Response({"message": "Razorpay processing error"}, status=status.HTTP_400_BAD_REQUEST)
-
         logger.warning("Missing session_id or paypal_capture_id in payload")
         return Response({"message": "Missing session_id or paypal_capture_id"}, status=status.HTTP_400_BAD_REQUEST)
-# store/views/checkout_views.py - Updated PayPalWebhookView
 
+# store/views/checkout_views.py - Updated PayPalWebhookView
 class PayPalWebhookView(generics.CreateAPIView):
     permission_classes = [AllowAny]
-
     def post(self, request, *args, **kwargs):
         logger.info("Entering PayPalWebhookView.post")
         payload = request.body
@@ -378,15 +354,12 @@ class PayPalWebhookView(generics.CreateAPIView):
         webhook_id = config('PAYPAL_WEBHOOK_ID')
         cert_url = request.META.get('HTTP_PAYPAL_CERT_URL')
         auth_algo = request.META.get('HTTP_PAYPAL_AUTH_ALGO')
-
         event_body = payload.decode('utf-8')
         event = None
-
         try:
             client_id = os.environ.get('PAYPAL_CLIENT_ID', config('PAYPAL_CLIENT_ID'))
             secret_id = os.environ.get('PAYPAL_CLIENT_SECRET', config('PAYPAL_CLIENT_SECRET'))
             access_token = get_paypal_access_token(client_id, secret_id)
-
             verify_url = "https://api-m.sandbox.paypal.com/v1/notifications/verify-webhook-signature"
             headers = {
                 "Content-Type": "application/json",
@@ -411,11 +384,9 @@ class PayPalWebhookView(generics.CreateAPIView):
         except Exception as e:
             logger.error(f"PayPal webhook verification error: {str(e)}")
             return Response(status=status.HTTP_400_BAD_REQUEST)
-
         # Process event
         event_type = event.get('event_type')
         logger.info(f"Processing PayPal event: {event_type}")
-
         if event_type == 'PAYMENT.CAPTURE.COMPLETED':
             capture_id = event['resource'].get('id')
             status = event['resource'].get('status')
@@ -426,7 +397,7 @@ class PayPalWebhookView(generics.CreateAPIView):
                         if order.payment_status != "paid":
                             order.payment_status = "paid"
                             order.order_status = "Confirmed"
-                            
+                           
                             # ============================================
                             # MARK COUPONS AS USED BY THIS USER
                             # ============================================
@@ -434,7 +405,7 @@ class PayPalWebhookView(generics.CreateAPIView):
                                 for coupon in order.coupons.all():
                                     coupon.used_by.add(order.buyer)
                                     logger.info(f"Marked coupon {coupon.code} as used by user {order.buyer.id}")
-                            
+                           
                             order.save()
                             order_items = CartOrderItem.objects.filter(order=order)
                             deactivate_cart(order.oid, order.buyer_id if order.buyer else None)
@@ -446,7 +417,6 @@ class PayPalWebhookView(generics.CreateAPIView):
                     logger.error(f"Order not found for PayPal capture_id: {capture_id}")
                 except Exception as e:
                     logger.error(f"Error processing completed capture: {str(e)}")
-
         elif event_type == 'PAYMENT.CAPTURE.DENIED':
             capture_id = event['resource'].get('id')
             try:
@@ -461,5 +431,4 @@ class PayPalWebhookView(generics.CreateAPIView):
                 logger.error(f"Order not found for PayPal capture_id: {capture_id}")
             except Exception as e:
                 logger.error(f"Error processing denied capture: {str(e)}")
-
         return Response(status=status.HTTP_200_OK)

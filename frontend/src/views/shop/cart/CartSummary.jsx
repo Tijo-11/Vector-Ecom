@@ -1,3 +1,4 @@
+// CartSummary.jsx (Use renamed fields, consistent labels)
 import React, { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
 import cartID from "../ProductDetail/cartId";
@@ -7,16 +8,13 @@ import { Link, useLocation } from "react-router-dom";
 function CartSummary({ cartItems, setCartTotal }) {
   const [cart_total, setCartTotalLocal] = useState({
     itemCount: cartItems.length || 0,
-    original_total: 0,
-    sub_total: 0,
+    mrp_total: 0,
+    discounted_total: 0,
     shipping: 0,
-    tax: 0,
-    service_fee: 0,
-    total: 0,
+    grand_total: 0,
   });
   const cart_id = cartID();
   const location = useLocation();
-
   // Fetch calculated totals from API
   useEffect(() => {
     const fetchCartTotal = async () => {
@@ -25,12 +23,10 @@ function CartSummary({ cartItems, setCartTotal }) {
           const response = await apiInstance.get(`/cart-detail/${cart_id}/`);
           const newTotals = {
             itemCount: cartItems.length || 0,
-            original_total: response.data.original_total || 0,
-            sub_total: response.data.sub_total || 0,
+            mrp_total: response.data.mrp_total || 0,
+            discounted_total: response.data.discounted_total || 0,
             shipping: response.data.shipping || 0,
-            tax: response.data.tax || 0,
-            service_fee: response.data.service_fee || 0,
-            total: response.data.total || 0,
+            grand_total: response.data.grand_total || 0,
           };
           setCartTotalLocal((prev) => ({ ...prev, ...newTotals }));
           setCartTotal({ ...cart_total, ...newTotals });
@@ -41,35 +37,25 @@ function CartSummary({ cartItems, setCartTotal }) {
     };
     fetchCartTotal();
   }, [cart_id, cartItems, setCartTotal]);
-
   const isAddressPage = location.pathname === "/address";
-
   return (
     <div id="summary" className="w-full sm:w-1/4 md:w-1/2 px-8 py-10">
       <h1 className="font-semibold text-2xl border-b pb-8">Order Summary</h1>
       <div className="space-y-4">
         <div className="flex justify-between mt-10">
           <span className="font-semibold text-sm uppercase text-gray-700">
-            Items {cart_total.itemCount}
+            MRP ({cart_total.itemCount} items)
           </span>
           <span className="font-semibold text-sm">
-            ₹{cart_total.sub_total.toFixed(2)}
+            ₹{cart_total.mrp_total.toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between">
           <span className="font-semibold text-sm uppercase text-gray-700">
-            Total Original Price
+            Discounted Price
           </span>
           <span className="font-semibold text-sm">
-            ₹{cart_total.original_total.toFixed(2)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="font-semibold text-sm uppercase text-gray-700">
-            Total Offer Price
-          </span>
-          <span className="font-semibold text-sm">
-            ₹{cart_total.sub_total.toFixed(2)}
+            ₹{cart_total.discounted_total.toFixed(2)}
           </span>
         </div>
         <div>
@@ -84,16 +70,8 @@ function CartSummary({ cartItems, setCartTotal }) {
         </div>
         <div className="border-t mt-8 pt-4">
           <div className="flex font-semibold justify-between py-4 text-sm uppercase text-gray-700">
-            <span>Tax</span>
-            <span>₹{cart_total.tax.toFixed(2)}</span>
-          </div>
-          <div className="flex font-semibold justify-between py-4 text-sm uppercase text-gray-700">
-            <span>Service Fee</span>
-            <span>₹{cart_total.service_fee.toFixed(2)}</span>
-          </div>
-          <div className="flex font-semibold justify-between py-4 text-sm uppercase text-gray-700">
-            <span>Total cost</span>
-            <span>₹{cart_total.total.toFixed(2)}</span>
+            <span>Grand Total</span>
+            <span>₹{cart_total.grand_total.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -108,5 +86,4 @@ function CartSummary({ cartItems, setCartTotal }) {
     </div>
   );
 }
-
 export default CartSummary;

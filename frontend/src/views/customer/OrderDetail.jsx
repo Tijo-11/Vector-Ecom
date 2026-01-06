@@ -1,17 +1,17 @@
+// OrderDetail.jsx (Consistent display: Original Total, Saved, Subtotal, Shipping, Grand Total)
 import React, { useState, useEffect } from "react";
-import Sidebar from "./Sidebar";
+import { X, AlertCircle, CheckCircle } from "lucide-react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
 import { Link, useParams } from "react-router-dom";
 import log from "loglevel";
-import { X, AlertCircle, CheckCircle } from "lucide-react";
 
 function OrderDetail() {
   const [order, setOrder] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal states
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -23,11 +23,9 @@ function OrderDetail() {
   const [returnDetail, setReturnDetail] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
-
   const axios = apiInstance;
   const userData = UserData();
   const param = useParams();
-
   const fetchOrderDetails = () => {
     axios
       .get(`customer/order/detail/${userData?.user_id}/${param?.order_oid}`)
@@ -41,11 +39,9 @@ function OrderDetail() {
         setLoading(false);
       });
   };
-
   useEffect(() => {
     fetchOrderDetails();
   }, []);
-
   const cancelReasons = [
     { value: "changed_mind", label: "Changed my mind" },
     { value: "better_price", label: "Found better price elsewhere" },
@@ -53,7 +49,6 @@ function OrderDetail() {
     { value: "delivery_time", label: "Delivery time too long" },
     { value: "other", label: "Other" },
   ];
-
   const returnReasons = [
     { value: "defective", label: "Defective or damaged product" },
     { value: "wrong_item", label: "Wrong item received" },
@@ -62,7 +57,6 @@ function OrderDetail() {
     { value: "changed_mind", label: "Changed my mind" },
     { value: "other", label: "Other" },
   ];
-
   const handleCancelOrder = (type, itemId = null) => {
     setCancelType(type);
     setSelectedItemId(itemId);
@@ -71,7 +65,6 @@ function OrderDetail() {
     setShowCancelModal(true);
     setMessage({ type: "", text: "" });
   };
-
   const handleReturnItem = (itemId) => {
     setSelectedItemId(itemId);
     setReturnReason("");
@@ -79,13 +72,14 @@ function OrderDetail() {
     setShowReturnModal(true);
     setMessage({ type: "", text: "" });
   };
-
   const submitCancellation = async () => {
     if (!cancelReason) {
-      setMessage({ type: "error", text: "Please select a reason for cancellation" });
+      setMessage({
+        type: "error",
+        text: "Please select a reason for cancellation",
+      });
       return;
     }
-
     setActionLoading(true);
     try {
       const payload = {
@@ -95,10 +89,12 @@ function OrderDetail() {
         user_id: userData?.user_id,
         item_ids: cancelType === "item" ? [selectedItemId] : [],
       };
-
       await axios.post("/cancel-order/", payload);
-      
-      setMessage({ type: "success", text: "Cancellation request submitted successfully!" });
+
+      setMessage({
+        type: "success",
+        text: "Cancellation request submitted successfully!",
+      });
       setTimeout(() => {
         setShowCancelModal(false);
         fetchOrderDetails(); // Refresh order details
@@ -107,19 +103,22 @@ function OrderDetail() {
       log.error("Error cancelling order:", err);
       setMessage({
         type: "error",
-        text: err.response?.data?.error || "Failed to cancel order. Please try again.",
+        text:
+          err.response?.data?.error ||
+          "Failed to cancel order. Please try again.",
       });
     } finally {
       setActionLoading(false);
     }
   };
-
   const submitReturn = async () => {
     if (!returnReason) {
-      setMessage({ type: "error", text: "Please select a reason for return (required)" });
+      setMessage({
+        type: "error",
+        text: "Please select a reason for return (required)",
+      });
       return;
     }
-
     setActionLoading(true);
     try {
       const payload = {
@@ -128,10 +127,12 @@ function OrderDetail() {
         reason_detail: returnDetail,
         user_id: userData?.user_id,
       };
-
       await axios.post("/return-order-item/", payload);
-      
-      setMessage({ type: "success", text: "Return request submitted successfully!" });
+
+      setMessage({
+        type: "success",
+        text: "Return request submitted successfully!",
+      });
       setTimeout(() => {
         setShowReturnModal(false);
         fetchOrderDetails(); // Refresh order details
@@ -140,13 +141,14 @@ function OrderDetail() {
       log.error("Error submitting return:", err);
       setMessage({
         type: "error",
-        text: err.response?.data?.error || "Failed to submit return request. Please try again.",
+        text:
+          err.response?.data?.error ||
+          "Failed to submit return request. Please try again.",
       });
     } finally {
       setActionLoading(false);
     }
   };
-
   return (
     <div>
       {loading === false && (
@@ -154,7 +156,6 @@ function OrderDetail() {
           <div className="container mx-auto">
             <section>
               <div className="flex flex-col lg:flex-row">
-                <Sidebar />
                 <div className="lg:w-3/4 mt-1 lg:ml-4">
                   <main className="mb-5">
                     <div className="px-4">
@@ -186,9 +187,9 @@ function OrderDetail() {
                           <div className="rounded-lg shadow bg-teal-100 p-4">
                             <div className="flex items-center">
                               <div>
-                                <p className="mb-1 text-sm">Total</p>
+                                <p className="mb-1 text-sm">Original Total</p>
                                 <h2 className="text-xl font-semibold">
-                                  ₹{order.total}
+                                  ₹{order.initial_total}
                                 </h2>
                               </div>
                             </div>
@@ -196,9 +197,9 @@ function OrderDetail() {
                           <div className="rounded-lg shadow bg-purple-100 p-4">
                             <div className="flex items-center">
                               <div>
-                                <p className="mb-1 text-sm">Payment Status</p>
+                                <p className="mb-1 text-sm">Saved</p>
                                 <h2 className="text-xl font-semibold">
-                                  {order.payment_status?.toUpperCase()}
+                                  -₹{order.saved}
                                 </h2>
                               </div>
                             </div>
@@ -206,9 +207,11 @@ function OrderDetail() {
                           <div className="rounded-lg shadow bg-blue-100 p-4">
                             <div className="flex items-center">
                               <div>
-                                <p className="mb-1 text-sm">Order Status</p>
+                                <p className="mb-1 text-sm">
+                                  Subtotal (after discounts)
+                                </p>
                                 <h2 className="text-xl font-semibold">
-                                  {order.order_status}
+                                  ₹{order.sub_total}
                                 </h2>
                               </div>
                             </div>
@@ -223,32 +226,12 @@ function OrderDetail() {
                               </div>
                             </div>
                           </div>
-                          <div className="rounded-lg shadow bg-cyan-100 p-4 mt-4">
-                            <div className="flex items-center">
-                              <div>
-                                <p className="mb-1 text-sm">Tax Fee</p>
-                                <h2 className="text-xl font-semibold">
-                                  ₹{order.tax_fee}
-                                </h2>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="rounded-lg shadow bg-pink-100 p-4 mt-4">
-                            <div className="flex items-center">
-                              <div>
-                                <p className="mb-1 text-sm">Service Fee</p>
-                                <h2 className="text-xl font-semibold">
-                                  ₹{order.service_fee}
-                                </h2>
-                              </div>
-                            </div>
-                          </div>
                           <div className="rounded-lg shadow bg-indigo-100 p-4 mt-4">
                             <div className="flex items-center">
                               <div>
-                                <p className="mb-1 text-sm">Discount Fee</p>
+                                <p className="mb-1 text-sm">Grand Total</p>
                                 <h2 className="text-xl font-semibold">
-                                  -₹{order.saved}
+                                  ₹{order.total}
                                 </h2>
                               </div>
                             </div>
@@ -265,8 +248,8 @@ function OrderDetail() {
                                   <th className="p-3">Product</th>
                                   <th className="p-3">Price</th>
                                   <th className="p-3">Qty</th>
-                                  <th className="p-3">Total</th>
-                                  <th className="p-3 text-red-600">Discount</th>
+                                  <th className="p-3">Subtotal</th>
+                                  <th className="p-3 text-red-600">Saved</th>
                                   <th className="p-3">Tracking</th>
                                   <th className="p-3">Actions</th>
                                 </tr>
@@ -293,7 +276,9 @@ function OrderDetail() {
                                       ₹{orderItem.product.price}
                                     </td>
                                     <td className="p-3">{orderItem.qty}</td>
-                                    <td className="p-3">₹{orderItem.sub_total}</td>
+                                    <td className="p-3">
+                                      ₹{orderItem.sub_total}
+                                    </td>
                                     <td className="p-3 text-red-600">
                                       -₹{orderItem.saved}
                                     </td>
@@ -328,22 +313,28 @@ function OrderDetail() {
                                         ) : (
                                           <>
                                             {/* Cancel Item Button */}
-                                            {order.order_status !== "Cancelled" &&
+                                            {order.order_status !==
+                                              "Cancelled" &&
                                               !orderItem.product_delivered && (
                                                 <button
                                                   onClick={() =>
-                                                    handleCancelOrder("item", orderItem.id)
+                                                    handleCancelOrder(
+                                                      "item",
+                                                      orderItem.id
+                                                    )
                                                   }
                                                   className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs"
                                                 >
                                                   Cancel Item
                                                 </button>
                                               )}
-                                            
+
                                             {/* Return Item Button */}
                                             {orderItem.product_delivered && (
                                               <button
-                                                onClick={() => handleReturnItem(orderItem.id)}
+                                                onClick={() =>
+                                                  handleReturnItem(orderItem.id)
+                                                }
                                                 className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs"
                                               >
                                                 Return Item
@@ -368,7 +359,6 @@ function OrderDetail() {
           </div>
         </main>
       )}
-
       {loading === true && (
         <div className="container mx-auto text-center">
           <img
@@ -378,7 +368,6 @@ function OrderDetail() {
           />
         </div>
       )}
-
       {/* Cancel Order Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -394,7 +383,6 @@ function OrderDetail() {
                 <X size={24} />
               </button>
             </div>
-
             {message.text && (
               <div
                 className={`flex items-center gap-2 p-3 rounded-lg mb-4 ${
@@ -411,7 +399,6 @@ function OrderDetail() {
                 <span className="text-sm">{message.text}</span>
               </div>
             )}
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -431,7 +418,6 @@ function OrderDetail() {
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Additional Details (Optional)
@@ -444,7 +430,6 @@ function OrderDetail() {
                   placeholder="Provide any additional details..."
                 />
               </div>
-
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowCancelModal(false)}
@@ -464,7 +449,6 @@ function OrderDetail() {
           </div>
         </div>
       )}
-
       {/* Return Order Modal */}
       {showReturnModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -478,7 +462,6 @@ function OrderDetail() {
                 <X size={24} />
               </button>
             </div>
-
             {message.text && (
               <div
                 className={`flex items-center gap-2 p-3 rounded-lg mb-4 ${
@@ -495,7 +478,6 @@ function OrderDetail() {
                 <span className="text-sm">{message.text}</span>
               </div>
             )}
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -515,7 +497,6 @@ function OrderDetail() {
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Additional Details (Optional)
@@ -528,7 +509,6 @@ function OrderDetail() {
                   placeholder="Provide any additional details..."
                 />
               </div>
-
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowReturnModal(false)}
@@ -551,5 +531,4 @@ function OrderDetail() {
     </div>
   );
 }
-
 export default OrderDetail;

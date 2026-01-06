@@ -1,3 +1,4 @@
+// Checkout.jsx (Consistent display: Original Subtotal, Offers Saved, Coupon Saved, Shipping, Grand Total)
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
@@ -12,13 +13,11 @@ function Checkout() {
   const [couponCode, setCouponCode] = useState("");
   const [loading, setLoading] = useState(true);
   const { order_id } = useParams();
-
   const fetchOrderData = async () => {
     try {
       setLoading(true);
       const response = await apiInstance.get(`/checkout/${order_id}/`);
       console.log("=== FULL ORDER RESPONSE ===", response.data);
-
       setOrder(response.data || {});
     } catch (error) {
       log.error("Error fetching order:", error);
@@ -26,11 +25,9 @@ function Checkout() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (order_id) fetchOrderData();
   }, [order_id]);
-
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
       Swal.fire({
@@ -39,11 +36,9 @@ function Checkout() {
       });
       return;
     }
-
     const formdata = new FormData();
     formdata.append("order_oid", order_id);
     formdata.append("coupon_code", couponCode);
-
     try {
       const response = await apiInstance.post("coupon/", formdata);
       Swal.fire({
@@ -69,15 +64,12 @@ function Checkout() {
       }
     }
   };
-
   const removeCoupon = async () => {
     const formdata = new FormData();
     formdata.append("order_oid", order_id);
-
     try {
       const response = await apiInstance.post("coupon/remove/", formdata);
       await fetchOrderData();
-
       Swal.fire({
         icon: response.data.icon,
         title: response.data.message,
@@ -97,14 +89,11 @@ function Checkout() {
       }
     }
   };
-
   // Coupon detection logic
   const isCouponApplied = (() => {
     if (parseFloat(order.coupon_saved || 0) > 0) return true;
-
     if (order.orderitem?.some((item) => parseFloat(item.coupon_saved || 0) > 0))
       return true;
-
     if (
       order.orderitem?.some(
         (item) =>
@@ -112,14 +101,11 @@ function Checkout() {
       )
     )
       return true;
-
     return false;
   })();
-
   // Calculate original subtotal
   const originalSubTotal =
     order.orderitem?.reduce((acc, item) => acc + item.price * item.qty, 0) || 0;
-
   if (loading) {
     return (
       <div className="container mx-auto mt-10 px-4">
@@ -129,7 +115,6 @@ function Checkout() {
       </div>
     );
   }
-
   return (
     <div className="container mx-auto mt-10 px-4">
       <div className="flex flex-col lg:flex-row gap-6 my-10">
@@ -139,7 +124,6 @@ function Checkout() {
             <h1 className="font-semibold text-2xl">Checkout</h1>
             <span className="text-sm text-gray-600">Order: {order_id}</span>
           </div>
-
           {/* Shipping */}
           <div className="mb-8">
             <h2 className="font-semibold text-xl mb-4 flex items-center">
@@ -172,13 +156,11 @@ function Checkout() {
               </p>
             </div>
           </div>
-
           {/* Items */}
           <div>
             <h2 className="font-semibold text-xl mb-4 flex items-center">
               <span className="mr-2">🛍️</span> Order Items
             </h2>
-
             <div className="space-y-4">
               {order.orderitem?.length ? (
                 order.orderitem.map((item, index) => (
@@ -192,18 +174,15 @@ function Checkout() {
                       </p>
                       <span className="text-sm text-gray-500">#{item.oid}</span>
                     </div>
-
                     <div className="mt-4 pt-4 border-t space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Price</span>
                         <span>₹{parseFloat(item.price).toFixed(2)}</span>
                       </div>
-
                       <div className="flex justify-between text-sm">
                         <span>Quantity</span>
                         <span>{item.qty}</span>
                       </div>
-
                       {item.offer_saved && parseFloat(item.offer_saved) > 0 && (
                         <div className="flex justify-between text-sm bg-green-50 p-2 rounded mt-2">
                           <span className="text-green-700 font-medium">
@@ -214,7 +193,6 @@ function Checkout() {
                           </span>
                         </div>
                       )}
-
                       {item.coupon_saved &&
                         parseFloat(item.coupon_saved) > 0 && (
                           <div className="flex justify-between text-sm bg-blue-50 p-2 rounded">
@@ -226,7 +204,6 @@ function Checkout() {
                             </span>
                           </div>
                         )}
-
                       <div className="flex justify-between font-semibold text-base pt-3 border-t mt-3">
                         <span>Total for this item</span>
                         <span>
@@ -247,31 +224,30 @@ function Checkout() {
             </div>
           </div>
         </div>
-
         {/* Right side */}
         <div className="w-full lg:w-1/3 bg-white rounded-lg shadow-md px-6 py-8 sm:px-8 sm:py-10 h-fit sticky top-4">
           <h2 className="font-semibold text-xl mb-4">Order Summary</h2>
-
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span>Subtotal</span>
+              <span>Original Subtotal</span>
               <span>₹{originalSubTotal.toFixed(2)}</span>
             </div>
-
             {order.offer_saved > 0 && (
               <div className="flex justify-between text-green-700">
                 <span>Offers Saved</span>
                 <span>-₹{parseFloat(order.offer_saved).toFixed(2)}</span>
               </div>
             )}
-
             {order.coupon_saved > 0 && (
               <div className="flex justify-between text-blue-700">
                 <span>Coupon Saved</span>
                 <span>-₹{parseFloat(order.coupon_saved).toFixed(2)}</span>
               </div>
             )}
-
+            <div className="flex justify-between">
+              <span>Subtotal (after discounts)</span>
+              <span>₹{parseFloat(order.sub_total || 0).toFixed(2)}</span>
+            </div>
             <div className="flex justify-between">
               <span>Shipping</span>
               <span>
@@ -280,31 +256,17 @@ function Checkout() {
                   : "Free"}
               </span>
             </div>
-
-            <div className="flex justify-between">
-              <span>Tax</span>
-              <span>₹{parseFloat(order.tax_fee || 0).toFixed(2)}</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span>Service Fee</span>
-              <span>₹{parseFloat(order.service_fee || 0).toFixed(2)}</span>
-            </div>
-
             <hr />
-
             <div className="flex justify-between font-bold text-lg">
               <span>Grand Total</span>
               <span>₹{parseFloat(order.total || 0).toFixed(2)}</span>
             </div>
           </div>
-
           {/* Coupon Section */}
           <div className="mt-6 bg-gray-50 p-5 rounded-lg border border-gray-200">
             <label className="font-semibold block mb-3 text-sm uppercase text-gray-700">
               Promo Code
             </label>
-
             {!isCouponApplied ? (
               <>
                 <input
@@ -340,7 +302,6 @@ function Checkout() {
               </div>
             )}
           </div>
-
           {/* Payment */}
           <div className="mt-6 space-y-3">
             <RazorpayButton order={order} order_id={order_id} />
@@ -351,5 +312,4 @@ function Checkout() {
     </div>
   );
 }
-
 export default Checkout;

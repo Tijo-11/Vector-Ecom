@@ -1,12 +1,11 @@
+# models.py/order.py (Kept fields but they will be set to 0 in views)
 #Cart, CartOrder, CartOrderItem, CancelOrder, Coupon, CouponUsers, DeliveryCountries
-
-
-from django.db import models 
-from django.utils.html import mark_safe 
+from django.db import models
+from django.utils.html import mark_safe
 from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator 
+from django.core.validators import MinValueValidator, MaxValueValidator
 from userauth.models import User
-from vendor.models import Vendor 
+from vendor.models import Vendor
 from shortuuid.django_fields import ShortUUIDField
 from .product import Product
 from .choices import PAYMENT_STATUS, ORDER_STATUS, DELIVERY_STATUS
@@ -45,7 +44,7 @@ class Cart(models.Model):
         return f'{self.cart_id} - {self.product.title}'
     #Including product.title helps quickly recognize what item is in the cart, especially when multiple carts
     # exist — improves readability and debugging.
-    
+   
 # Model for Cart Orders
 class CartOrder(models.Model):
     # Vendors associated with the order
@@ -62,14 +61,14 @@ class CartOrder(models.Model):
     service_fee = models.DecimalField(default=0.00, max_digits=12, decimal_places=2)
     # Total cost of the order
     total = models.DecimalField(default=0.00, max_digits=12, decimal_places=2)
-    
+   
     # Order status attributes
     payment_status = models.CharField(max_length=100, choices=PAYMENT_STATUS, default="initiated")
     order_status = models.CharField(max_length=100, choices=ORDER_STATUS, default="Pending")
     # Discounts
     initial_total = models.DecimalField(default=0.00, max_digits=12, decimal_places=2, help_text="The original total before discounts")
     #helptext is # Tooltip shown in admin panel for clarity on field purpose
-    #help_text improves usability in Django admin/forms by explaining what the field represents — especially useful for non-developers managing data.
+    #help_text improves usability in Django admin/forms by explaining what the field represents — especially useful for non-developers.
     saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True, help_text="Amount saved by customer")
     # Optional field showing how much the customer saved; null in DB, blank in forms; tooltip for admin
     offer_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
@@ -78,7 +77,7 @@ class CartOrder(models.Model):
     full_name = models.CharField(max_length=1000)
     email = models.CharField(max_length=1000)
     mobile = models.CharField(max_length=1000)
-    
+   
     # Shipping Address
     address = models.CharField(max_length=1000, null=True, blank=True)
     city = models.CharField(max_length=1000, null=True, blank=True) # use it instead of zip_code
@@ -88,23 +87,23 @@ class CartOrder(models.Model):
         max_length=10,null=True, blank=True,
         validators=[RegexValidator('^[0-9]{6}$', _('Invalid postal code'))],
     )
-    
+   
     coupons = models.ManyToManyField('store.Coupon', blank=True)
-    
-    
+   
+   
     razorpay_session_id = models.CharField(max_length=200,null=True, blank=True)# Stores Razorpay order ID
     oid = ShortUUIDField(length=10, max_length=25, alphabet="abcdefghijklmnopqrstuvxyz")
     date = models.DateTimeField(default=timezone.now)
-    
+   
     class Meta:
         ordering = ["-date"]
         verbose_name_plural = "Cart Order"
-        
+       
     def __str__(self):
         return self.oid
     def get_order_items(self):
         return CartOrderItem.objects.filter(order=self)
-    
+   
 # Define a model for Cart Order Item
 class CartOrderItem(models.Model):
     # A foreign key relationship to the CartOrder model with CASCADE deletion
@@ -125,14 +124,12 @@ class CartOrderItem(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Grand Total of all amount listed above")
     offer_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     coupon_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    
+   
     expected_delivery_date_from = models.DateField(auto_now_add=False, null=True, blank=True)
     expected_delivery_date_to = models.DateField(auto_now_add=False, null=True, blank=True)
-
-
     initial_total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Grand Total of all amount listed above before discount")
     saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True, help_text="Amount saved by customer")
-    
+   
     # Order stages
     order_placed = models.BooleanField(default=False)
     processing_order = models.BooleanField(default=False)
@@ -140,36 +137,35 @@ class CartOrderItem(models.Model):
     product_shipped = models.BooleanField(default=False)
     product_arrived = models.BooleanField(default=False)
     product_delivered = models.BooleanField(default=False)
-
     # Various fields for delivery status, delivery couriers, tracking ID, coupons, and more
     delivery_status = models.CharField(max_length=100, choices=DELIVERY_STATUS, default="On Hold")
     delivery_couriers = models.ForeignKey("store.DeliveryCouriers", on_delete=models.SET_NULL, null=True, blank=True)
     tracking_id = models.CharField(max_length=100000, null=True, blank=True)
-    
+   
     coupon = models.ManyToManyField("store.Coupon", blank=True)
     applied_coupon = models.BooleanField(default=False)
     oid = ShortUUIDField(length=10, max_length=25, alphabet="abcdefghijklmnopqrstuvxyz")
     # A foreign key relationship to the Vendor model with SET_NULL option
     vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True)
     date = models.DateTimeField(default=timezone.now)
-    
+   
     class Meta:
         verbose_name_plural = "Cart Order Item"
         ordering = ["-date"]
-        
+       
     # Method to generate an HTML image tag for the order item
     def order_img(self):
         return mark_safe('<img src="%s" width="50" height="50" style="object-fit:cover; border-radius: 6px;" />' % (self.product.image.url))
-   
+  
     # Method to return a formatted order ID
     def order_id(self):
         return f"Order ID #{self.order.oid}"
-    
+   
     # Method to return a string representation of the object
     def __str__(self):
         return self.oid
-    
-    
+   
+   
 # Define a model for Cancelled Order
 class CancelledOrder(models.Model):
     # A foreign key relationship to the User model with CASCADE deletion
@@ -180,17 +176,16 @@ class CancelledOrder(models.Model):
     email = models.CharField(max_length=100)
     # Boolean field for the refunded status
     refunded = models.BooleanField(default=False)
-    
+   
     class Meta:
         verbose_name_plural = "Cancelled Order"
-    
+   
     # Method to return a string representation of the object
     def __str__(self):
         if self.user:
             return str(self.user.username)
         else:
             return "Cancelled Order"
-
 # Define a model for Coupon
 class Coupon(models.Model):
     # A foreign key relationship to the Vendor model with SET_NULL option, allowing null values, and specifying a related name
@@ -209,20 +204,19 @@ class Coupon(models.Model):
     # valid_to = models.DateField()
     # ShortUUID field
     cid = ShortUUIDField(length=10, max_length=25, alphabet="abcdefghijklmnopqrstuvxyz")
-    
+   
     # Method to calculate and save the percentage discount
     def save(self, *args, **kwargs):
         new_discount = int(self.discount) / 100
         self.get_percent = new_discount
-        super(Coupon, self).save(*args, **kwargs) 
-    
+        super(Coupon, self).save(*args, **kwargs)
+   
     # Method to return a string representation of the object
     def __str__(self):
         return self.code
-    
+   
     class Meta:
         ordering =['-id']
-
 # Define a model for Coupon Users
 class CouponUsers(models.Model):
     # A foreign key relationship to the Coupon model with CASCADE deletion
@@ -233,25 +227,22 @@ class CouponUsers(models.Model):
     full_name = models.CharField(max_length=1000)
     email = models.CharField(max_length=1000)
     mobile = models.CharField(max_length=1000)
-    
+   
     # Method to return a string representation of the coupon code
     def __str__(self):
         return str(self.coupon.code)
-    
+   
     class Meta:
         ordering =['-id']
-
 # Define a model for Delivery Couriers
 class DeliveryCouriers(models.Model):
     name = models.CharField(max_length=1000, null=True, blank=True)
     tracking_website = models.URLField(null=True, blank=True)
     url_parameter = models.CharField(null=True, blank=True, max_length=100)
-    
+   
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "Delivery Couriers"
-    
+   
     def __str__(self):
         return self.name
-    
-    

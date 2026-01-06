@@ -1,3 +1,4 @@
+// ViewOrder.jsx (Consistent display: Original Total, Saved, Subtotal, Shipping, Grand Total)
 import React, { useState, useEffect } from "react";
 import apiInstance from "../../utils/axios";
 import { Link, useParams } from "react-router-dom";
@@ -7,10 +8,8 @@ function ViewOrder() {
   const [order, setOrder] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const axios = apiInstance;
   const { order_oid } = useParams(); // Get order ID from URL
-
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -23,10 +22,8 @@ function ViewOrder() {
         setLoading(false);
       }
     };
-
     fetchOrder();
   }, [order_oid, axios]);
-
   if (loading) {
     return (
       <div className="container mx-auto text-center">
@@ -38,11 +35,9 @@ function ViewOrder() {
       </div>
     );
   }
-
   if (!order) {
     return <div className="text-center mt-10">Order not found.</div>;
   }
-
   return (
     <div>
       <main className="mt-5">
@@ -61,9 +56,9 @@ function ViewOrder() {
                       <div className="rounded-lg shadow bg-teal-100 p-4">
                         <div className="flex items-center">
                           <div>
-                            <p className="mb-1 text-sm">Total</p>
+                            <p className="mb-1 text-sm">Original Total</p>
                             <h2 className="text-xl font-semibold">
-                              ₹{order.total}
+                              ₹{order.initial_total}
                             </h2>
                           </div>
                         </div>
@@ -71,9 +66,9 @@ function ViewOrder() {
                       <div className="rounded-lg shadow bg-purple-100 p-4">
                         <div className="flex items-center">
                           <div>
-                            <p className="mb-1 text-sm">Payment Status</p>
+                            <p className="mb-1 text-sm">Saved</p>
                             <h2 className="text-xl font-semibold">
-                              {order.payment_status?.toUpperCase()}
+                              -₹{order.saved}
                             </h2>
                           </div>
                         </div>
@@ -81,9 +76,11 @@ function ViewOrder() {
                       <div className="rounded-lg shadow bg-blue-100 p-4">
                         <div className="flex items-center">
                           <div>
-                            <p className="mb-1 text-sm">Order Status</p>
+                            <p className="mb-1 text-sm">
+                              Subtotal (after discounts)
+                            </p>
                             <h2 className="text-xl font-semibold">
-                              {order.order_status}
+                              ₹{order.sub_total}
                             </h2>
                           </div>
                         </div>
@@ -98,39 +95,18 @@ function ViewOrder() {
                           </div>
                         </div>
                       </div>
-                      <div className="rounded-lg shadow bg-cyan-100 p-4 mt-4">
-                        <div className="flex items-center">
-                          <div>
-                            <p className="mb-1 text-sm">Tax Fee</p>
-                            <h2 className="text-xl font-semibold">
-                              ₹{order.tax_fee}
-                            </h2>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="rounded-lg shadow bg-pink-100 p-4 mt-4">
-                        <div className="flex items-center">
-                          <div>
-                            <p className="mb-1 text-sm">Service Fee</p>
-                            <h2 className="text-xl font-semibold">
-                              ₹{order.service_fee}
-                            </h2>
-                          </div>
-                        </div>
-                      </div>
                       <div className="rounded-lg shadow bg-indigo-100 p-4 mt-4">
                         <div className="flex items-center">
                           <div>
-                            <p className="mb-1 text-sm">Discount Fee</p>
+                            <p className="mb-1 text-sm">Grand Total</p>
                             <h2 className="text-xl font-semibold">
-                              -₹{order.saved}
+                              ₹{order.total}
                             </h2>
                           </div>
                         </div>
                       </div>
                     </div>
                   </section>
-
                   {/* Section: Order Items */}
                   <section>
                     <div className="rounded-lg shadow p-3 bg-white">
@@ -141,8 +117,8 @@ function ViewOrder() {
                               <th className="p-3">Product</th>
                               <th className="p-3">Price</th>
                               <th className="p-3">Qty</th>
-                              <th className="p-3">Total</th>
-                              <th className="p-3 text-red-600">Discount</th>
+                              <th className="p-3">Subtotal</th>
+                              <th className="p-3 text-red-600">Saved</th>
                               <th className="p-3">Action</th>
                             </tr>
                           </thead>
@@ -205,5 +181,4 @@ function ViewOrder() {
     </div>
   );
 }
-
 export default ViewOrder;

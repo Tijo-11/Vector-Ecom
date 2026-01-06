@@ -1,5 +1,5 @@
+// Invoice.jsx (Consistent display: Original Subtotal, Saved, Subtotal, Shipping, Grand Total)
 import { useState, useEffect, useRef } from "react";
-import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
@@ -14,7 +14,6 @@ export default function Invoice() {
   const userData = UserData();
   const param = useParams();
   const invoiceRef = useRef();
-
   useEffect(() => {
     axios
       .get(`customer/order/detail/${userData?.user_id}/${param?.order_oid}`)
@@ -26,10 +25,8 @@ export default function Invoice() {
         }
       });
   }, []);
-
   const handlePrint = () => {
     if (!invoiceRef.current) return;
-
     const element = invoiceRef.current;
     const options = {
       margin: 0.5,
@@ -38,10 +35,8 @@ export default function Invoice() {
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
     };
-
     html2pdf().set(options).from(element).save();
   };
-
   return (
     <div className="flex justify-center p-4">
       {/* Invoice Container */}
@@ -72,7 +67,6 @@ export default function Invoice() {
               <p className="text-sm">📍 123 Main Street</p>
             </div>
           </div>
-
           {/* Customer Info */}
           <div className="text-right">
             <h5 className="text-lg font-semibold">Customer Details</h5>
@@ -84,7 +78,6 @@ export default function Invoice() {
             </div>
           </div>
         </div>
-
         {/* Table */}
         <div className="mt-6 overflow-x-auto">
           <table className="w-full border border-gray-300 text-sm text-left">
@@ -94,7 +87,7 @@ export default function Invoice() {
                 <th className="p-3 border">Price</th>
                 <th className="p-3 border">Qty</th>
                 <th className="p-3 border">Sub Total</th>
-                <th className="p-3 border">Discount</th>
+                <th className="p-3 border">Saved</th>
               </tr>
             </thead>
             <tbody>
@@ -110,32 +103,30 @@ export default function Invoice() {
             </tbody>
           </table>
         </div>
-
         {/* Summary */}
         <div className="mt-6 flex flex-col md:flex-row justify-between">
           <div></div>
           <div className="text-right">
             <h5 className="text-lg font-semibold">Summary</h5>
             <p className="text-sm">
-              <b>Sub Total: </b> ₹{order.sub_total}
+              <b>Original Subtotal: </b> ₹
+              {order.initial_total - order.shipping_amount}
+            </p>
+            <p className="text-sm">
+              <b>Saved: </b> -₹{order.saved}
+            </p>
+            <p className="text-sm">
+              <b>Subtotal (after discounts): </b> ₹{order.sub_total}
             </p>
             <p className="text-sm">
               <b>Shipping: </b> ₹{order.shipping_amount}
             </p>
-            <p className="text-sm">
-              <b>Tax: </b> ₹{order.tax_fee}
-            </p>
-            <p className="text-sm">
-              <b>Service Fee: </b> ₹{order.service_fee}
-            </p>
             <p className="text-base font-bold mt-2">
-              <b>Total: </b> ₹{order.total}
+              <b>Grand Total: </b> ₹{order.total}
             </p>
           </div>
         </div>
-
         <hr className="my-6" />
-
         {/* Print Button */}
         <div className="flex justify-center">
           <button
