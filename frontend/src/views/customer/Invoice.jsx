@@ -1,10 +1,8 @@
-// Invoice.jsx (Consistent display: Original Subtotal, Saved, Subtotal, Shipping, Grand Total)
 import { useState, useEffect, useRef } from "react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
 import { Link, useParams } from "react-router-dom";
-import html2pdf from "html2pdf.js";
 
 export default function Invoice() {
   const [order, setOrder] = useState([]);
@@ -13,7 +11,9 @@ export default function Invoice() {
   const axios = apiInstance;
   const userData = UserData();
   const param = useParams();
-  const invoiceRef = useRef();
+  const handlePrint = () => {
+    window.print();
+  };
   useEffect(() => {
     axios
       .get(`customer/order/detail/${userData?.user_id}/${param?.order_oid}`)
@@ -25,29 +25,17 @@ export default function Invoice() {
         }
       });
   }, []);
-  const handlePrint = () => {
-    if (!invoiceRef.current) return;
-    const element = invoiceRef.current;
-    const options = {
-      margin: 0.5,
-      filename: `invoice-${order?.oid || "order"}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-    };
-    html2pdf().set(options).from(element).save();
-  };
   return (
-    <div className="flex justify-center p-4">
+    <>
       {/* Invoice Container */}
       <div
-        ref={invoiceRef}
+        id="invoice-section"
         // ✅ Force safe HEX/RGB colors here so html2pdf works
         style={{
           backgroundColor: "#ffffff",
           color: "#000000",
         }}
-        className="w-full md:w-2/3 lg:w-1/2 shadow-lg rounded-xl p-6"
+        className="w-full md:w-2/3 lg:w-1/2 mx-auto shadow-lg rounded-xl p-6"
       >
         {/* Header */}
         <div className="flex justify-between items-start">
@@ -127,19 +115,39 @@ export default function Invoice() {
           </div>
         </div>
         <hr className="my-6" />
-        {/* Print Button */}
-        <div className="flex justify-center">
-          <button
-            onClick={handlePrint}
-            id="printButton"
-            style={{ backgroundColor: "#1f2937" }}
-            className="text-white px-6 py-2 rounded-lg hover:opacity-90 flex items-center gap-2"
-          >
-            <i className="fas fa-print" />
-            Download
-          </button>
-        </div>
       </div>
-    </div>
+      {/* Print Button outside the printable area */}
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={handlePrint}
+          id="printButton"
+          style={{ backgroundColor: "#1f2937" }}
+          className="text-white px-6 py-2 rounded-lg hover:opacity-90 flex items-center gap-2"
+        >
+          <i className="fas fa-print" />
+          Download
+        </button>
+      </div>
+      {/* Print CSS */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #invoice-section,
+          #invoice-section * {
+            visibility: visible;
+          }
+          #invoice-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+          }
+        }
+      `}</style>
+    </>
   );
 }

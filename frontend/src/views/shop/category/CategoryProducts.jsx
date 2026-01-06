@@ -412,9 +412,9 @@ export default function CategoryProducts() {
         </div>
       </div>
 
-      {categories && categories.length > 0 ? (
+      {/* {categories && categories.length > 0 ? (
         <Categories categories={categories} />
-      ) : null}
+      ) : null} */}
     </div>
   );
 }
