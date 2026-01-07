@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { v4 as uuidv4 } from "uuid";
 import log from "loglevel";
+import cartID from "../ProductDetail/cartId";
+import { useAuthStore } from "../../../store/auth";
+import { CartContext } from "../../../plugin/Context";
 
 function PaymentSuccess() {
   const { order_id } = useParams();
@@ -12,6 +15,9 @@ function PaymentSuccess() {
   const [retryCount, setRetryCount] = useState(0);
   const [hasRun, setHasRun] = useState(false);
   const navigate = useNavigate();
+  const cart_id = cartID();
+  const user = useAuthStore((state) => state.user);
+  const [cartCount, setCartCount] = useContext(CartContext);
 
   const MAX_RETRIES = 5;
   const RETRY_DELAY = 2000;
@@ -19,6 +25,34 @@ function PaymentSuccess() {
   const urlParams = new URLSearchParams(location.search);
   const razorpayPaymentId = urlParams.get("session_id");
   const paypalCaptureId = urlParams.get("paypal_capture_id");
+
+  const clearCart = async () => {
+    try {
+      const cartUrl = user?.user_id
+        ? `/cart-list/${cart_id}/${user.user_id}/`
+        : `/cart-list/${cart_id}/`;
+      const cartResponse = await apiInstance.get(cartUrl);
+      const items = cartResponse.data || [];
+
+      for (const item of items) {
+        const deleteUrl = user?.user_id
+          ? `/cart-delete/${cart_id}/${item.id}/${user.user_id}/`
+          : `/cart-delete/${cart_id}/${item.id}/`;
+        await apiInstance.delete(deleteUrl);
+      }
+
+      setCartCount(0);
+
+      if (!user?.user_id) {
+        localStorage.removeItem("random_string");
+      }
+
+      log.debug("Cart cleared successfully");
+    } catch (error) {
+      log.error("Error clearing cart:", error);
+      // Optional: Add toast notification for error if desired
+    }
+  };
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -58,6 +92,7 @@ function PaymentSuccess() {
             ) {
               window.dispatchEvent(new Event("paymentSuccess"));
               setStatus(responseStatus);
+              await clearCart(); // Clear cart on success
             } else if (
               responseStatus === "unpaid" &&
               attempt < MAX_RETRIES - 1
@@ -70,13 +105,6 @@ function PaymentSuccess() {
             }
           }
 
-          // Clear guest cart after success
-          const userData = localStorage.getItem("userData");
-          const userObj = userData ? JSON.parse(userData) : null;
-          if (!userObj?.user_id) {
-            localStorage.removeItem("random_string");
-          }
-
           // Fetch full order details
           const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
           setOrder(orderResponse.data || {});
@@ -86,6 +114,7 @@ function PaymentSuccess() {
           if (error.response?.data?.message === "already_paid") {
             window.dispatchEvent(new Event("paymentSuccess"));
             setStatus("already_paid");
+            await clearCart(); // Clear cart on already_paid
             try {
               const orderResponse = await apiInstance.get(
                 `/checkout/${order_id}/`
@@ -108,7 +137,7 @@ function PaymentSuccess() {
     };
 
     verifyPayment();
-  }, [order_id, razorpayPaymentId, paypalCaptureId, hasRun]);
+  }, [order_id, razorpayPaymentId, paypalCaptureId, hasRun, cart_id, user]);
 
   if (status === "verifying") {
     return (
@@ -171,147 +200,176 @@ function PaymentSuccess() {
     order.orderitem?.reduce((acc, item) => acc + item.price * item.qty, 0) || 0;
 
   return (
-    <div className="container mx-auto mt-10 px-4">
-      <div className="bg-white shadow-md rounded-md p-8">
-        <h1 className="font-semibold text-2xl mb-4 text-green-600">
-          <i className="fas fa-check-circle mr-2"></i>
-          {status === "already_paid"
-            ? "Payment Already Confirmed"
-            : "Thank you for shopping with us!"}
-        </h1>
+    <>
+      <div id="invoice-section" className="container mx-auto mt-10 px-4">
+        <div className="bg-white shadow-md rounded-md p-8">
+          <h1 className="font-semibold text-2xl mb-4 text-green-600 print:hidden">
+            <i className="fas fa-check-circle mr-2"></i>
+            {status === "already_paid"
+              ? "Payment Already Confirmed"
+              : "Thank you for shopping with us!"}
+          </h1>
+          <h1 className="hidden print:block font-semibold text-2xl mb-4 text-green-600">
+            <i className="fas fa-file-invoice-dollar mr-2"></i>
+            Invoice #{order_id}
+          </h1>
 
-        <p className="text-gray-700 mb-2">
-          Order ID: <strong>#{order_id}</strong>
-        </p>
-        {razorpayPaymentId && (
           <p className="text-gray-700 mb-2">
-            Razorpay Payment ID: <strong>{razorpayPaymentId}</strong>
+            Order ID: <strong>#{order_id}</strong>
           </p>
-        )}
-        {paypalCaptureId && (
-          <p className="text-gray-700 mb-2">
-            PayPal Capture ID: <strong>{paypalCaptureId}</strong>
+          {razorpayPaymentId && (
+            <p className="text-gray-700 mb-2">
+              Razorpay Payment ID: <strong>{razorpayPaymentId}</strong>
+            </p>
+          )}
+          {paypalCaptureId && (
+            <p className="text-gray-700 mb-2">
+              PayPal Capture ID: <strong>{paypalCaptureId}</strong>
+            </p>
+          )}
+          <p className="text-gray-700 mb-4">
+            Order confirmation sent to: <strong>{order.email || "N/A"}</strong>
           </p>
-        )}
-        <p className="text-gray-700 mb-4">
-          Order confirmation sent to: <strong>{order.email || "N/A"}</strong>
-        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          {/* Customer Details */}
-          <div>
-            <h2 className="font-semibold text-xl mb-4">Customer Details</h2>
-            <p>
-              <strong>Name:</strong> {order.full_name || "N/A"}
-            </p>
-            <p>
-              <strong>Email:</strong> {order.email || "N/A"}
-            </p>
-            <p>
-              <strong>Mobile:</strong> {order.mobile || "N/A"}
-            </p>
-            <p>
-              <strong>Address:</strong> {order.address || "N/A"},{" "}
-              {order.city || "N/A"}, {order.state || "N/A"},{" "}
-              {order.country || "N/A"}
-            </p>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            {/* Customer Details */}
+            <div>
+              <h2 className="font-semibold text-xl mb-4">Customer Details</h2>
+              <p>
+                <strong>Name:</strong> {order.full_name || "N/A"}
+              </p>
+              <p>
+                <strong>Email:</strong> {order.email || "N/A"}
+              </p>
+              <p>
+                <strong>Mobile:</strong> {order.mobile || "N/A"}
+              </p>
+              <p>
+                <strong>Address:</strong> {order.address || "N/A"},{" "}
+                {order.city || "N/A"}, {order.state || "N/A"},{" "}
+                {order.country || "N/A"}
+              </p>
+            </div>
 
-          {/* Payment Summary */}
-          <div>
-            <h2 className="font-semibold text-xl mb-4">Payment Summary</h2>
+            {/* Payment Summary */}
+            <div>
+              <h2 className="font-semibold text-xl mb-4">Payment Summary</h2>
 
-            {/* Order Items - Show original price per item */}
-            {order.orderitem && order.orderitem.length > 0 ? (
-              order.orderitem.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between mb-2 p-2 bg-gray-50 rounded-md"
-                >
-                  <span className="text-gray-700">
-                    {item.product?.title || "Product"} × {item.qty}
-                  </span>
-                  <span className="text-gray-700 font-medium">
-                    ₹{(item.price * item.qty).toFixed(2)}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 italic">Loading items...</p>
-            )}
-
-            {/* Totals */}
-            <div className="mt-6 border-t pt-4 space-y-2">
-              {/* Original Subtotal (before discount) */}
-              <div className="flex justify-between text-lg font-semibold">
-                <span>Subtotal</span>
-                <span>₹{originalSubTotal.toFixed(2)}</span>
-              </div>
-
-              {/* Offer Discount */}
-              {order.offer_saved && parseFloat(order.offer_saved) > 0 && (
-                <div className="flex justify-between text-green-600 font-semibold">
-                  <span>Offers Saved</span>
-                  <span>-₹{parseFloat(order.offer_saved).toFixed(2)}</span>
-                </div>
+              {/* Order Items - Show original price per item */}
+              {order.orderitem && order.orderitem.length > 0 ? (
+                order.orderitem.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between mb-2 p-2 bg-gray-50 rounded-md"
+                  >
+                    <span className="text-gray-700">
+                      {item.product?.title || "Product"} × {item.qty}
+                    </span>
+                    <span className="text-gray-700 font-medium">
+                      ₹{(item.price * item.qty).toFixed(2)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">Loading items...</p>
               )}
 
-              {/* Coupon Discount */}
-              {order.coupon_saved && parseFloat(order.coupon_saved) > 0 && (
-                <div className="flex justify-between text-blue-600 font-semibold">
-                  <span>Coupon Saved</span>
-                  <span>-₹{parseFloat(order.coupon_saved).toFixed(2)}</span>
+              {/* Totals */}
+              <div className="mt-6 border-t pt-4 space-y-2">
+                {/* Original Subtotal (before discount) */}
+                <div className="flex justify-between text-lg font-semibold">
+                  <span>Subtotal</span>
+                  <span>₹{originalSubTotal.toFixed(2)}</span>
                 </div>
-              )}
 
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Shipping</span>
-                <span>
-                  ₹{parseFloat(order.shipping_amount || 0).toFixed(2)}
-                </span>
-              </div>
+                {/* Offer Discount */}
+                {order.offer_saved && parseFloat(order.offer_saved) > 0 && (
+                  <div className="flex justify-between text-green-600 font-semibold">
+                    <span>Offers Saved</span>
+                    <span>-₹{parseFloat(order.offer_saved).toFixed(2)}</span>
+                  </div>
+                )}
 
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Tax</span>
-                <span>₹{parseFloat(order.tax_fee || 0).toFixed(2)}</span>
-              </div>
+                {/* Coupon Discount */}
+                {order.coupon_saved && parseFloat(order.coupon_saved) > 0 && (
+                  <div className="flex justify-between text-blue-600 font-semibold">
+                    <span>Coupon Saved</span>
+                    <span>-₹{parseFloat(order.coupon_saved).toFixed(2)}</span>
+                  </div>
+                )}
 
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Service Fee</span>
-                <span>₹{parseFloat(order.service_fee || 0).toFixed(2)}</span>
-              </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Shipping</span>
+                  <span>
+                    ₹{parseFloat(order.shipping_amount || 0).toFixed(2)}
+                  </span>
+                </div>
 
-              {/* Final Total */}
-              <div className="flex justify-between text-xl font-bold border-t pt-3 mt-4 text-gray-900">
-                <span>Total Paid</span>
-                <span>₹{parseFloat(order.total || 0).toFixed(2)}</span>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Tax</span>
+                  <span>₹{parseFloat(order.tax_fee || 0).toFixed(2)}</span>
+                </div>
+
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Service Fee</span>
+                  <span>₹{parseFloat(order.service_fee || 0).toFixed(2)}</span>
+                </div>
+
+                {/* Final Total */}
+                <div className="flex justify-between text-xl font-bold border-t pt-3 mt-4 text-gray-900">
+                  <span>Total Paid</span>
+                  <span>₹{parseFloat(order.total || 0).toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-          <button
-            onClick={() => navigate(`/view-order/${order_id}/`)}
-            className="bg-blue-600 text-white py-3 px-6 rounded-md font-semibold hover:bg-blue-700 transition"
-          >
-            View Order Details
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="bg-green-600 text-white py-3 px-6 rounded-md font-semibold hover:bg-green-700 transition"
-          >
-            Print Invoice
-          </button>
-          <a
-            href="/"
-            className="bg-gray-600 text-white py-3 px-6 rounded-md font-semibold hover:bg-gray-700 transition text-center block"
-          >
-            Continue Shopping
-          </a>
+          <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4 print:hidden">
+            <button
+              onClick={() => navigate(`/view-order/${order_id}/`)}
+              className="bg-blue-600 text-white py-3 px-6 rounded-md font-semibold hover:bg-blue-700 transition"
+            >
+              View Order Details
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="bg-green-600 text-white py-3 px-6 rounded-md font-semibold hover:bg-green-700 transition"
+            >
+              Print Invoice
+            </button>
+            <a
+              href="/"
+              className="bg-gray-600 text-white py-3 px-6 rounded-md font-semibold hover:bg-gray-700 transition text-center block"
+            >
+              Continue Shopping
+            </a>
+          </div>
         </div>
       </div>
-    </div>
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #invoice-section,
+          #invoice-section * {
+            visibility: visible;
+          }
+          #invoice-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 20px;
+            margin: 0;
+            box-shadow: none;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
+    </>
   );
 }
 

@@ -219,7 +219,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                 </div>
               </div>
               <p className="text-xs leading-3 text-gray-600 pt-2">
-                Height: {c.product.height || "N/A"}
+                {/* Height: {c.product.height || "N/A"} */}
               </p>
               {c.size && c.size !== "no size" && (
                 <p className="text-xs leading-3 text-gray-600 py-4">
@@ -232,13 +232,13 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                 </p>
               )}
               <p className="w-96 text-xs leading-3 text-gray-600">
-                Composition: {c.product.composition || "N/A"}
+                {/* Composition: {c.product.composition || "N/A"} */}
               </p>
               <div className="flex items-center justify-between pt-5">
                 <div className="flex items-center">
-                  <p className="text-xs leading-3 underline text-gray-800 cursor-pointer">
+                  {/* <p className="text-xs leading-3 underline text-gray-800 cursor-pointer">
                     Add to favorites
-                  </p>
+                  </p> */}
                   <p
                     onClick={() => handleDeleteCartItem(c.id)}
                     className="text-xs leading-3 underline text-red-500 hover:text-red-600 pl-5 cursor-pointer"

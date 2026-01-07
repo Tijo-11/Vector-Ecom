@@ -1,36 +1,44 @@
-import { useState, useEffect, useRef } from "react";
-import apiInstance from "../../utils/axios";
-import UserData from "../../plugin/UserData";
-import moment from "moment";
-import { Link, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 export default function Invoice() {
-  const [order, setOrder] = useState([]);
-  const [orderItems, setOrderItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const axios = apiInstance;
-  const userData = UserData();
-  const param = useParams();
+  const [order, setOrder] = useState({
+    full_name: "John Doe",
+    email: "john@example.com",
+    mobile: "+91 9876543210",
+    oid: "ORD-2024-001",
+    initial_total: 5000,
+    shipping_amount: 100,
+    saved: 500,
+    sub_total: 4500,
+    total: 4600,
+  });
+
+  const [orderItems, setOrderItems] = useState([
+    {
+      product: { title: "Vintage Camera" },
+      price: 2500,
+      qty: 1,
+      sub_total: 2500,
+      saved: 250,
+    },
+    {
+      product: { title: "Retro Radio" },
+      price: 2500,
+      qty: 1,
+      sub_total: 2500,
+      saved: 250,
+    },
+  ]);
+
   const handlePrint = () => {
     window.print();
   };
-  useEffect(() => {
-    axios
-      .get(`customer/order/detail/${userData?.user_id}/${param?.order_oid}`)
-      .then((res) => {
-        setOrder(res.data);
-        setOrderItems(res.data.orderitem);
-        if (order) {
-          setLoading(false);
-        }
-      });
-  }, []);
+
   return (
     <>
       {/* Invoice Container */}
       <div
         id="invoice-section"
-        // ✅ Force safe HEX/RGB colors here so html2pdf works
         style={{
           backgroundColor: "#ffffff",
           color: "#000000",
@@ -71,21 +79,25 @@ export default function Invoice() {
           <table className="w-full border border-gray-300 text-sm text-left">
             <thead style={{ backgroundColor: "#f3f4f6", color: "#374151" }}>
               <tr>
-                <th className="p-3 border">Product</th>
-                <th className="p-3 border">Price</th>
-                <th className="p-3 border">Qty</th>
-                <th className="p-3 border">Sub Total</th>
-                <th className="p-3 border">Saved</th>
+                <th className="p-3 border border-gray-300">Product</th>
+                <th className="p-3 border border-gray-300">Price</th>
+                <th className="p-3 border border-gray-300">Qty</th>
+                <th className="p-3 border border-gray-300">Sub Total</th>
+                <th className="p-3 border border-gray-300">Saved</th>
               </tr>
             </thead>
             <tbody>
               {orderItems.map((item, id) => (
-                <tr key={id} className="border">
-                  <td className="p-3 border">{item.product?.title}</td>
-                  <td className="p-3 border">₹{item.price}</td>
-                  <td className="p-3 border">{item.qty}</td>
-                  <td className="p-3 border">₹{item.sub_total}</td>
-                  <td className="p-3 border">-₹{item.saved}</td>
+                <tr key={id} className="border border-gray-300">
+                  <td className="p-3 border border-gray-300">
+                    {item.product?.title}
+                  </td>
+                  <td className="p-3 border border-gray-300">₹{item.price}</td>
+                  <td className="p-3 border border-gray-300">{item.qty}</td>
+                  <td className="p-3 border border-gray-300">
+                    ₹{item.sub_total}
+                  </td>
+                  <td className="p-3 border border-gray-300">-₹{item.saved}</td>
                 </tr>
               ))}
             </tbody>
@@ -117,7 +129,7 @@ export default function Invoice() {
         <hr className="my-6" />
       </div>
       {/* Print Button outside the printable area */}
-      <div className="flex justify-center mt-4">
+      <div className="flex justify-center mt-4 print:hidden">
         <button
           onClick={handlePrint}
           id="printButton"
@@ -125,7 +137,7 @@ export default function Invoice() {
           className="text-white px-6 py-2 rounded-lg hover:opacity-90 flex items-center gap-2"
         >
           <i className="fas fa-print" />
-          Download
+          Download Invoice
         </button>
       </div>
       {/* Print CSS */}
@@ -143,8 +155,12 @@ export default function Invoice() {
             left: 0;
             top: 0;
             width: 100%;
-            padding: 0;
+            padding: 20px;
             margin: 0;
+            box-shadow: none;
+          }
+          .print\\:hidden {
+            display: none !important;
           }
         }
       `}</style>
