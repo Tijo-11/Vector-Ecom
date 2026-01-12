@@ -93,7 +93,9 @@ class CreateOrderView(generics.CreateAPIView):
                 max_discount = max(product_discount, category_discount)
                 discount_rate = max_discount / Decimal(100)
                 # === Pricing Calculations (without tax and service fee) ===
-                original_sub_total = c.price * c.qty
+                # Use old_price (MSRP) as base if available, otherwise fall back to product.price
+                base_price = c.product.old_price if c.product.old_price and c.product.old_price > 0 else c.product.price
+                original_sub_total = base_price * c.qty
                 offer_saved = original_sub_total * discount_rate
                 discounted_sub_total = original_sub_total - offer_saved
                 shipping = c.shipping_amount
@@ -120,7 +122,7 @@ class CreateOrderView(generics.CreateAPIView):
                     qty=c.qty,
                     color=c.color,
                     size=c.size,
-                    price=c.price,
+                    price=base_price,  # Store the MSRP base price
                     sub_total=discounted_sub_total,
                     shipping_amount=shipping,
                     service_fee=service_fee,
@@ -227,8 +229,8 @@ class CouponAPIView(generics.CreateAPIView):
             for item in order_items:
                 original_sub_total = item.price * item.qty
                 offer_saved = item.offer_saved
-                discount = original_sub_total * rate
-                old_sub_total = item.sub_total # after reversal, which is original - offer
+                discount = item.sub_total * rate
+                old_sub_total = item.sub_total
                 item.coupon_saved = discount
                 item.saved += discount
                 item.sub_total -= discount

@@ -40,7 +40,15 @@ class CartAPIView(generics.ListCreateAPIView):
            
             product_id = int(payload['product'])
             qty = int(payload['qty'])
-            price = Decimal(payload['price'])
+            
+            # Fetch product first to get the correct price
+            product = Product.objects.filter(status="published", id=product_id).first()
+            if not product:
+                return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Use DB price instead of payload price to prevent client-side manipulation/double discounting
+            price = product.price 
+            
             shipping_amount = Decimal(payload['shipping_amount'])
             country = payload['country']
             size = payload.get('size', '')
@@ -97,7 +105,7 @@ class CartAPIView(generics.ListCreateAPIView):
             discount_rate = max_discount / Decimal(100)
            
             # Pricing calculations (without tax and service fee)
-            original_price = price
+            original_price = product.old_price if product.old_price and product.old_price > 0 else product.price
             original_sub_total = original_price * qty
             offer_saved = original_sub_total * discount_rate
             sub_total_after_offer = original_sub_total - offer_saved
@@ -191,7 +199,9 @@ class CartDetailView(generics.RetrieveAPIView):
         for item in queryset:
             product = item.product
             qty = item.qty
-            price = item.price  # assuming MRP
+            # Use old_price (MSRP) as base if available, otherwise fall back to product.price
+            base_price = product.old_price if product.old_price and product.old_price > 0 else product.price
+            
             # calculate discount
             product_discount = Decimal(0)
             if hasattr(product, 'product_offers'):
@@ -219,7 +229,7 @@ class CartDetailView(generics.RetrieveAPIView):
                     category_discount = Decimal(max_category_discount)
             max_discount = max(product_discount, category_discount)
             discount_rate = max_discount / Decimal(100)
-            original_sub_total = price * qty
+            original_sub_total = base_price * qty
             item_offer_saved = original_sub_total * discount_rate
             item_discounted = original_sub_total - item_offer_saved
             item_shipping = item.shipping_amount

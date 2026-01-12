@@ -136,11 +136,12 @@ export default function CategoryProducts() {
       const productRes = await apiInstance.get(`/products/${slug}/`);
       const stock_qty = productRes.data.stock_qty;
       const product_name = productRes.data.title;
-      const offer_discount = productRes.data.offer_discount;
+      // const offer_discount = productRes.data.offer_discount;
 
-      // Calculate effective price
-      const effectivePrice =
-        offer_discount > 0 ? price * (1 - offer_discount / 100) : price;
+      // Calculate effective price - REMOVED: Backend handles discount now
+      // const effectivePrice =
+      //   offer_discount > 0 ? price * (1 - offer_discount / 100) : price;
+      const effectivePrice = price;
 
       // 2️⃣ Fetch cart to check existing quantity
       const url = user?.user_id
@@ -247,7 +248,7 @@ export default function CategoryProducts() {
                     <p className="mt-1 text-lg font-medium text-gray-900">
                       ₹
                       {(
-                        product.price *
+                      product.price *
                         (1 - product.offer_discount / 100)
                       ).toFixed(2)}
                     </p>
@@ -362,10 +363,10 @@ export default function CategoryProducts() {
                       return;
                     }
 
-                    // ✅ Pass slug for stock check
+                    // ✅ Pass slug for stock check AND base price for backend calculation
                     handleAddToCart(
                       product.id,
-                      product.price,
+                      product.price, // Pass base price, let backend handle discount
                       product.shipping_amount,
                       product.slug
                     );

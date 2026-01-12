@@ -104,10 +104,11 @@ export default function Products() {
       const productRes = await apiInstance.get(`/products/${slug}/`);
       const stock_qty = productRes.data.stock_qty;
       const product_name = productRes.data.title;
-      const offer_discount = productRes.data.offer_discount;
-      // Calculate effective price
-      const effectivePrice =
-        offer_discount > 0 ? price * (1 - offer_discount / 100) : price;
+      // const offer_discount = productRes.data.offer_discount;
+      // Calculate effective price - REMOVED: Backend handles discount
+      // const effectivePrice =
+      //   offer_discount > 0 ? price * (1 - offer_discount / 100) : price;
+      const effectivePrice = price;
       // 2️⃣ Get current cart items
       const url = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
@@ -335,7 +336,7 @@ export default function Products() {
                     }
                     handleAddToCart(
                       product.id,
-                      product.price,
+                      product.price, // Pass base price
                       product.shipping_amount,
                       product.slug // 👈 pass slug here
                     );
