@@ -5,7 +5,6 @@ products = Product.objects.filter(status="published")[:5]
 for p in products:
     print(f"ID: {p.id} | Title: {p.title}")
     print(f"  Price: {p.price} (Base Price)")
-    print(f"  Old Price: {p.old_price}")
     
     offers = ProductOffer.objects.filter(products=p)
     if offers.exists():

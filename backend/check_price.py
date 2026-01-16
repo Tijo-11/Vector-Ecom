@@ -15,7 +15,6 @@ def check_prices():
     for p in products:
         print(f"ID: {p.id} | Title: {p.title}")
         print(f"  Price: {p.price} (Base Price)")
-        print(f"  Old Price: {p.old_price}")
         
         # Check offers
         offers = ProductOffer.objects.filter(products=p)

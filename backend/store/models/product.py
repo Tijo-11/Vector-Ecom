@@ -30,7 +30,6 @@ class Product(models.Model):
     
     '''*************# Price and other financial details*****************'''
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)
-    old_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True)
     shipping_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     
     # Stock quantity and availability status
@@ -79,11 +78,8 @@ class Product(models.Model):
     def category_count(self):
         return Product.objects.filter(category=self.category).count()
     
-    # Calculates the discount percentage between old and new prices
+    # Calculates the discount percentage (returns 0 as old_price has been removed)
     def get_percentage(self):
-        if self.old_price and self.old_price > 0:
-            percentage = ((self.old_price - self.price)/self.old_price)*100
-            return round(percentage, 0)
         return 0
     
     # Calculates the average rating of the product

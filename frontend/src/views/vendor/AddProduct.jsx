@@ -28,7 +28,6 @@ function AddProduct() {
     tags: "",
     brand: "",
     price: "",
-    old_price: "",
     shipping_amount: "",
     stock_qty: "",
     vendor: userData?.vendor_id,

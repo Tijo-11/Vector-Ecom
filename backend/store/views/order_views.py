@@ -93,8 +93,7 @@ class CreateOrderView(generics.CreateAPIView):
                 max_discount = max(product_discount, category_discount)
                 discount_rate = max_discount / Decimal(100)
                 # === Pricing Calculations (without tax and service fee) ===
-                # Use old_price (MSRP) as base if available, otherwise fall back to product.price
-                base_price = c.product.old_price if c.product.old_price and c.product.old_price > 0 else c.product.price
+                base_price = c.product.price
                 original_sub_total = base_price * c.qty
                 offer_saved = original_sub_total * discount_rate
                 discounted_sub_total = original_sub_total - offer_saved

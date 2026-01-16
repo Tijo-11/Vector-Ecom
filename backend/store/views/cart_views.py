@@ -105,7 +105,7 @@ class CartAPIView(generics.ListCreateAPIView):
             discount_rate = max_discount / Decimal(100)
            
             # Pricing calculations (without tax and service fee)
-            original_price = product.old_price if product.old_price and product.old_price > 0 else product.price
+            original_price = product.price
             original_sub_total = original_price * qty
             offer_saved = original_sub_total * discount_rate
             sub_total_after_offer = original_sub_total - offer_saved
@@ -199,8 +199,7 @@ class CartDetailView(generics.RetrieveAPIView):
         for item in queryset:
             product = item.product
             qty = item.qty
-            # Use old_price (MSRP) as base if available, otherwise fall back to product.price
-            base_price = product.old_price if product.old_price and product.old_price > 0 else product.price
+            base_price = product.price
             
             # calculate discount
             product_discount = Decimal(0)
