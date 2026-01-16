@@ -18,6 +18,13 @@ from django.utils import timezone
 import logging
 from .tasks import send_async_email
 
+
+from store.models import Address
+from store.serializers import AddressSerializer
+from rest_framework import viewsets
+from rest_framework.views import APIView
+
+
 logger = logging.getLogger(__name__)
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -337,3 +344,144 @@ def google_login(request):
         }, status=status.HTTP_200_OK)
     except ValueError as e:#noqa
         return Response({"error": "Invalid credential"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+# Address Management ViewSet
+class AddressViewSet(viewsets.ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        instance = serializer.save(user=self.request.user)
+        if instance.status:
+            Address.objects.filter(user=self.request.user).exclude(pk=instance.pk).update(status=False)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if 'status' in serializer.validated_data and serializer.validated_data['status']:
+            Address.objects.filter(user=self.request.user).exclude(pk=instance.pk).update(status=False)
+
+# Profile View (show details + addresses)
+class UserProfileDetailView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileSerializer
+
+    def get(self, request, *args, **kwargs):
+        profile = request.user.profile
+        addresses = Address.objects.filter(user=request.user)
+        
+        data = {
+            'profile': ProfileSerializer(profile, context={'request': request}).data,
+            'addresses': AddressSerializer(addresses, many=True, context={'request': request}).data,
+        }
+        return Response(data)
+
+# Edit Profile (existing fields only, email/password handled separately)
+class UserProfileUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileSerializer
+
+    def get_object(self):
+        return self.request.user.profile
+
+# Change Password (only for email/password users)
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.has_usable_password():
+            return Response({"error": "Password change not available for Google login users."}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+        new_password2 = request.data.get("new_password2")
+
+        if not request.user.check_password(old_password):
+            return Response({"error": "Old password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_password != new_password2:
+            return Response({"error": "New passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.set_password(new_password)
+        request.user.save()
+        return Response({"message": "Password changed successfully."})
+
+# Request Email Change (send OTP to new email)
+class ChangeEmailRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        new_email = request.data.get("new_email")
+
+        if not new_email:
+            return Response({"error": "New email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_email.lower() == request.user.email.lower():
+            return Response({"error": "This is your current email."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(email__iexact=new_email).exists():
+            return Response({"error": "This email is already registered."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not request.user.has_usable_password():
+            return Response({"error": "Email change not available for Google login users."}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+
+        otp = generate_otp()
+        request.user.otp = otp
+        request.user.pending_email = new_email
+        request.user.save()
+
+        subject = "Verify Your New Email Address"
+        message = f"Hello {request.user.full_name or 'User'},\n\nYour OTP to change email is: {otp}\n\nThis OTP is valid for 10 minutes."
+        send_async_email.delay(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[new_email],
+        )
+
+        return Response({"message": "OTP sent to new email address."})
+
+# Verify Email Change
+class VerifyEmailChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        otp = request.data.get("otp")
+
+        if not request.user.otp or not request.user.pending_email:
+            return Response({"error": "No pending email change request."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.user.otp != otp:
+            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+
+        old_email = request.user.email
+        request.user.email = request.user.pending_email
+        request.user.pending_email = None
+        request.user.otp = None
+        request.user.email_verified = True
+        
+        # Update username from new email
+        email_username = request.user.email.split('@')[0]
+        base_username = email_username
+        counter = 1
+        while User.objects.filter(username=base_username).exclude(pk=request.user.pk).exists():
+            base_username = f"{email_username}{counter}"
+            counter += 1
+        request.user.username = base_username
+        
+        request.user.save()
+
+        return Response({"message": f"Email successfully changed from {old_email} to {request.user.email}."})

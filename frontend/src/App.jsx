@@ -61,6 +61,8 @@ import Reports from "./views/admin/Reports.jsx";
 import AdminNotifications from "./views/admin/AdminNotifications.jsx";
 import AdminSettings from "./views/admin/AdminSettings.jsx";
 import VendorManagement from "./views/admin/VendorManagement.jsx";
+import Addresses from "./views/customer/Addresses.jsx";
+import Profile from "./views/customer/Profile.jsx";
 
 export default function App() {
   const [cartCount, setCartCount] = useState(0);
@@ -129,6 +131,22 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <Notifications />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/customer/profile/"
+              element={
+                <PrivateRoute>
+                  <Profile />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/customer/addresses/"
+              element={
+                <PrivateRoute>
+                  <Addresses />
                 </PrivateRoute>
               }
             />

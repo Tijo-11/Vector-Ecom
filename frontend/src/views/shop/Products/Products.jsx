@@ -47,39 +47,59 @@ export default function Products() {
     }
   };
   useEffect(() => {
-    setLoading(true);
-    // Fetch products
-    apiInstance.get(`products/`).then((response) => {
-      const initialQuantities = response.data.reduce(
-        (acc, product) => ({
-          ...acc,
-          [product.id]: "0",
-        }),
-        {}
-      );
-      setProducts(response.data);
-      setQuantityValue(initialQuantities);
-      setLoading(false);
-    });
-    // Fetch categories for offers
-    apiInstance.get(`category/`).then((response) => {
-      setCategories(response.data);
-    });
-  }, []);
-  useEffect(() => {
-    if (userData?.user_id) {
-      fetchWishlist();
-    }
-  }, [userData?.user_id]);
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const viewportHeight = window.innerHeight;
-      setShowScrollTop(scrollY > viewportHeight);
+    const fetchData = async (isInitial = false) => {
+      if (isInitial) setLoading(true);
+
+      try {
+        const timestamp = Date.now(); // Unique cache-buster
+
+        const [prodResponse, catResponse] = await Promise.all([
+          apiInstance.get(`products/?_=${timestamp}`),
+          apiInstance.get(`category/?_=${timestamp}`),
+        ]);
+
+        // Preserve existing user selections before updating state
+        const currentQuantities = { ...quantityValue };
+        const currentColors = { ...selectedColors };
+        const currentSizes = { ...selectedSizes };
+
+        // Update products and categories
+        setProducts(prodResponse.data);
+        setCategories(catResponse.data);
+
+        // Rebuild selections only for products that still exist
+        const newQuantities = {};
+        const newColors = {};
+        const newSizes = {};
+
+        prodResponse.data.forEach((product) => {
+          newQuantities[product.id] = currentQuantities[product.id] ?? "0";
+          newColors[product.id] = currentColors[product.id];
+          newSizes[product.id] = currentSizes[product.id];
+        });
+
+        setQuantityValue(newQuantities);
+        setSelectedColors(newColors);
+        setSelectedSizes(newSizes);
+      } catch (error) {
+        log.error("Error fetching products/categories:", error);
+      } finally {
+        if (isInitial) setLoading(false);
+      }
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    // Initial fetch
+    fetchData(true);
+
+    // Poll every 30 seconds for live updates
+    const intervalId = setInterval(() => {
+      fetchData(false);
+    }, 30000);
+
+    // Cleanup on unmount
+    return () => clearInterval(intervalId);
   }, []);
+
   const currentAddress = UserCountry();
   const user = UserData();
   const cart_id = cartID();

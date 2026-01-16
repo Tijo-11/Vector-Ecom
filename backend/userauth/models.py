@@ -37,6 +37,7 @@ class User(AbstractUser):
     otp = models.CharField(max_length=1000, null=True, blank=True)
     reset_token = models.CharField(max_length=1000, null=True, blank=True)
     email_verified = models.BooleanField(default=False)  # New field for email verification
+    pending_email = models.EmailField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']

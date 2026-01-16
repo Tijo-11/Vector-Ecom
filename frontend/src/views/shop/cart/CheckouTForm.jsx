@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// src/components/checkout/CheckoutForm.jsx (or wherever your checkout form is located)
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import apiInstance from "../../../utils/axios";
@@ -17,24 +18,89 @@ function CheckoutForm() {
     pincode: "",
   });
 
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [loadingLocation, setLoadingLocation] = useState(false);
 
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
 
+  // Fetch saved addresses
+  useEffect(() => {
+    if (user?.user_id) {
+      const fetchAddresses = async () => {
+        try {
+          const res = await apiInstance.get("user/addresses/");
+          setSavedAddresses(res.data);
+        } catch (err) {
+          console.error("Error fetching addresses:", err);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "Failed to load saved addresses.",
+          });
+        } finally {
+          setLoadingAddresses(false);
+        }
+      };
+      fetchAddresses();
+    } else {
+      setLoadingAddresses(false);
+    }
+  }, [user?.user_id]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    let processedValue = value;
+    if (name === "pincode") {
+      processedValue = value.replace(/\D/g, "").slice(0, 6);
+    }
+    setFormData((prev) => ({ ...prev, [name]: processedValue }));
   };
 
-  // ✅ Email validation
-  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  // Select saved address → autofill
+  const selectAddress = (addr) => {
+    setSelectedAddress(addr.id);
+    setFormData({
+      fullName: addr.full_name || "",
+      email: addr.email || "",
+      mobile: addr.mobile || "",
+      address: addr.address || "",
+      city: addr.town_city || "",
+      state: addr.state || "",
+      country: addr.country || "",
+      pincode: addr.zip || "",
+    });
+    Swal.fire({
+      icon: "success",
+      title: "Address Selected",
+      text: "Form autofilled with selected address.",
+      timer: 1500,
+    });
+  };
 
-  // ✅ Mobile validation (10 digits)
+  // Clear selection
+  const clearSelection = () => {
+    setSelectedAddress(null);
+    setFormData({
+      fullName: "",
+      email: "",
+      mobile: "",
+      address: "",
+      city: "",
+      state: "",
+      country: "",
+      pincode: "",
+    });
+  };
+
+  // Email & Mobile validation
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const isValidMobile = (mobile) => /^[0-9]{10}$/.test(mobile);
 
-  // 📍 Autofill address using browser location + OpenStreetMap
+  // Geolocation autofill
   const autofillAddress = () => {
     if (!navigator.geolocation) {
       Swal.fire({
@@ -46,7 +112,6 @@ function CheckoutForm() {
     }
 
     setLoadingLocation(true);
-
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
@@ -68,23 +133,23 @@ function CheckoutForm() {
           Swal.fire({
             icon: "success",
             title: "Address Autofilled",
-            text: "City, state, country, and pincode have been filled automatically.",
+            text: "Location-based details filled.",
           });
         } catch (error) {
           Swal.fire({
             icon: "error",
             title: "Location Error",
-            text: "Unable to fetch address details.",
+            text: "Unable to fetch address.",
           });
         } finally {
           setLoadingLocation(false);
         }
       },
-      (error) => {
+      () => {
         Swal.fire({
           icon: "error",
-          title: "Location Access Denied",
-          text: "Please allow location access to autofill address.",
+          title: "Access Denied",
+          text: "Please allow location access.",
         });
         setLoadingLocation(false);
       }
@@ -94,12 +159,11 @@ function CheckoutForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation for all fields
     if (Object.values(formData).some((val) => !val.trim())) {
       Swal.fire({
         icon: "error",
         title: "Missing Fields",
-        text: "All fields are required before checkout.",
+        text: "All fields are required.",
       });
       return;
     }
@@ -108,7 +172,7 @@ function CheckoutForm() {
       Swal.fire({
         icon: "error",
         title: "Invalid Email",
-        text: "Please enter a valid email address.",
+        text: "Please enter a valid email.",
       });
       return;
     }
@@ -116,8 +180,8 @@ function CheckoutForm() {
     if (!isValidMobile(formData.mobile)) {
       Swal.fire({
         icon: "error",
-        title: "Invalid Mobile Number",
-        text: "Mobile number must be 10 digits.",
+        title: "Invalid Mobile",
+        text: "Mobile must be 10 digits.",
       });
       return;
     }
@@ -141,14 +205,73 @@ function CheckoutForm() {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Failed to create order. Please try again.",
+        text: "Failed to create order.",
       });
-      console.error("Error creating order:", error);
+      console.error("Order error:", error);
     }
   };
 
   return (
     <div className="mt-8">
+      {/* Saved Addresses (Amazon-style) */}
+      {user?.user_id && (
+        <div className="mb-8">
+          <h2 className="font-semibold text-xl mb-4">Select Saved Address</h2>
+          {loadingAddresses ? (
+            <p className="text-gray-600">Loading addresses...</p>
+          ) : savedAddresses.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {savedAddresses.map((addr) => (
+                <div
+                  key={addr.id}
+                  onClick={() => selectAddress(addr)}
+                  className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
+                    selectedAddress === addr.id
+                      ? "border-blue-600 bg-blue-50 shadow-xl"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}
+                >
+                  {addr.status && (
+                    <span className="inline-block mb-3 px-4 py-1 text-sm font-semibold text-white bg-green-600 rounded-full">
+                      Default Address
+                    </span>
+                  )}
+                  <p className="font-bold text-lg">{addr.full_name}</p>
+                  <p className="mt-2">{addr.address}</p>
+                  <p>
+                    {addr.town_city}
+                    {addr.state ? `, ${addr.state}` : ""} - {addr.zip}
+                  </p>
+                  <p>{addr.country}</p>
+                  <p className="mt-3">
+                    <strong>Mobile:</strong> {addr.mobile}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {addr.email}
+                  </p>
+                  <p className="mt-4 text-blue-600 font-semibold">
+                    Use this address →
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600">
+              No saved addresses. Please enter details below.
+            </p>
+          )}
+
+          {selectedAddress && (
+            <button
+              onClick={clearSelection}
+              className="mt-6 text-blue-600 underline hover:no-underline"
+            >
+              ← Use a different address
+            </button>
+          )}
+        </div>
+      )}
+
       <h1 className="font-semibold text-2xl border-b pb-4">
         Contact Information
       </h1>
@@ -169,6 +292,7 @@ function CheckoutForm() {
             onChange={handleChange}
             placeholder={`Enter your ${field}`}
             className="p-2 text-sm w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
           />
         </div>
       ))}
@@ -177,14 +301,14 @@ function CheckoutForm() {
         Shipping Details
       </h1>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end mb-4">
         <button
           type="button"
           onClick={autofillAddress}
           disabled={loadingLocation}
-          className="bg-green-500 text-white text-xs px-3 py-2 rounded-md hover:bg-green-600 transition mt-2"
+          className="bg-green-500 text-white text-xs px-4 py-2 rounded-md hover:bg-green-600 transition"
         >
-          {loadingLocation ? "Fetching location..." : "Autofill Address"}
+          {loadingLocation ? "Fetching..." : "Autofill Address"}
         </button>
       </div>
 
@@ -197,25 +321,20 @@ function CheckoutForm() {
             type="text"
             name={field}
             value={formData[field]}
-            onChange={(e) => {
-              let value = e.target.value;
-              if (field === "pincode") {
-                value = value.replace(/\D/g, "").slice(0, 6);
-              }
-              handleChange({ target: { name: field, value } });
-            }}
+            onChange={handleChange}
             placeholder={`Enter your ${field}`}
             className="p-2 text-sm w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
           />
         </div>
       ))}
 
       <button
         onClick={handleSubmit}
-        className="w-full mt-6 bg-blue-500 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+        className="w-full mt-8 bg-blue-600 text-white py-3 rounded-md text-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
         disabled={Object.values(formData).some((val) => !val.trim())}
       >
-        Proceed to Checkout
+        Proceed to Payment
       </button>
     </div>
   );
