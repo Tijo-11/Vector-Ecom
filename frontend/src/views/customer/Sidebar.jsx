@@ -1,6 +1,7 @@
+// src/components/customer/Sidebar.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import UserProfileData from "../../plugin/UserProfileData"; // Returns { profile, loading, error }
+import UserProfileData from "../../plugin/UserProfileData";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import log from "loglevel";
@@ -12,7 +13,6 @@ export default function Sidebar() {
     error: profileError,
   } = UserProfileData();
   const userData = UserData();
-
   const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
@@ -40,19 +40,16 @@ export default function Sidebar() {
       setLoading(false);
       return;
     }
-
     const fetchData = async () => {
       try {
         const ordersRes = await apiInstance.get(
           `customer/orders/${userData.user_id}/`
         );
         setOrderCount(ordersRes.data.length || 0);
-
         const wishlistRes = await apiInstance.get(
           `customer/wishlist/${userData.user_id}/`
         );
         setWishlistCount(wishlistRes.data.length || 0);
-
         const notificationsRes = await apiInstance.get(
           `customer/notifications/${userData.user_id}/`
         );
@@ -63,7 +60,6 @@ export default function Sidebar() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [userData?.user_id]);
 
@@ -85,16 +81,20 @@ export default function Sidebar() {
           </h3>
           <p className="mt-1 text-sm text-blue-600">
             <Link to="/customer/settings/">
-              <i className="fas fa-edit mr-2"></i> Edit Account
+              <i className="fas fa-edit mr-2"></i> Edit Profile
             </Link>
           </p>
         </div>
       </div>
-
       <ol className="space-y-2">
         <li className="flex justify-between items-center bg-white p-3 rounded shadow">
           <Link to="/customer/account/" className="font-bold text-gray-800">
-            <i className="fas fa-user mr-2"></i> Account
+            <i className="fas fa-home mr-2"></i> Dashboard
+          </Link>
+        </li>
+        <li className="flex justify-between items-center bg-white p-3 rounded shadow">
+          <Link to="/customer/profile/" className="font-bold text-gray-800">
+            <i className="fas fa-user mr-2"></i> Profile
           </Link>
         </li>
         <li className="flex justify-between items-center bg-white p-3 rounded shadow">
@@ -118,20 +118,25 @@ export default function Sidebar() {
             to="/customer/notifications/"
             className="font-bold text-gray-800"
           >
-            <i className="fas fa-bell mr-2 animate-bounce"></i> Notification
+            <i className="fas fa-bell mr-2 animate-bounce"></i> Notifications
           </Link>
           <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
             {notificationCount}
           </span>
         </li>
         <li className="flex justify-between items-center bg-white p-3 rounded shadow">
+          <Link to="/customer/addresses/" className="font-bold text-gray-800">
+            <i className="fas fa-map-marker-alt mr-2"></i> Addresses
+          </Link>
+        </li>
+        <li className="flex justify-between items-center bg-white p-3 rounded shadow">
           <Link to="/customer/settings/" className="font-bold text-gray-800">
-            <i className="fas fa-gear mr-2 animate-spin"></i> Setting
+            <i className="fas fa-cog mr-2 animate-spin"></i> Settings
           </Link>
         </li>
         <li className="flex justify-between items-center bg-white p-3 rounded shadow">
           <Link to="/logout" className="font-bold text-red-600">
-            <i className="fas fa-sign-out mr-2"></i> Logout
+            <i className="fas fa-sign-out-alt mr-2"></i> Logout
           </Link>
         </li>
       </ol>

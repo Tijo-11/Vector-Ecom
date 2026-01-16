@@ -1,6 +1,5 @@
 # Wishlist, Address, Notifications
 
-#country in address is commented out, rerun migrations after adding add-on tax application
 from django.db import models 
 from userauth.models import User
 from vendor.models import Vendor 
@@ -59,8 +58,9 @@ class Address(models.Model):
     full_name = models.CharField(max_length=200)
     mobile = models.CharField(max_length=50)
     email = models.CharField(max_length=100)
-    country = models.ForeignKey("addon.Tax", on_delete=models.SET_NULL, null=True, related_name="address_country", blank=True)
+    country = models.CharField(max_length=100, blank=True, null=True)
     town_city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100, blank=True, null=True)
     address = models.CharField(max_length=100)
     zip = models.CharField(max_length=100)
     status = models.BooleanField(default=False)

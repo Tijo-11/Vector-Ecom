@@ -1,3 +1,4 @@
+// src/components/customer/Settings.jsx
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
@@ -8,17 +9,30 @@ import log from "loglevel";
 function Settings() {
   const [profileData, setProfileData] = useState({
     full_name: "",
-    mobile: "",
-    email: "",
     about: "",
     country: "",
     city: "",
     state: "",
     postal_code: "",
     address: "",
-    p_image: "",
+    p_image: null,
   });
+  const [imagePreview, setImagePreview] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    old_password: "",
+    new_password: "",
+    new_password2: "",
+  });
+
+  // Email change state
+  const [emailData, setEmailData] = useState({
+    new_email: "",
+    otp: "",
+  });
+  const [otpSent, setOtpSent] = useState(false);
 
   const axios = apiInstance;
   const userData = UserData();
@@ -26,26 +40,23 @@ function Settings() {
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!userData?.user_id) return;
-
       try {
         const res = await axios.get(`user/profile/${userData.user_id}/`);
         setProfileData({
           full_name: res.data?.full_name || "",
-          email: res.data.user?.email || "",
-          phone: res.data.user?.phone || "",
           about: res.data?.about || "",
           country: res.data?.country || "",
           city: res.data?.city || "",
           state: res.data?.state || "",
           postal_code: res.data?.postal_code || "",
           address: res.data?.address || "",
-          p_image: res.data?.image || "",
+          p_image: null,
         });
+        setImagePreview(res.data?.image || "");
       } catch (error) {
         log.error("Error fetching profile data:", error);
       }
     };
-
     fetchProfileData();
   }, [userData?.user_id]);
 
@@ -57,34 +68,28 @@ function Settings() {
   };
 
   const handleFileChange = (e) => {
-    setProfileData({
-      ...profileData,
-      [e.target.name]: e.target.files[0],
-    });
+    const file = e.target.files[0];
+    setProfileData({ ...profileData, p_image: file });
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+    }
   };
 
-  const handleFormSubmit = async (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const res = await axios.get(`user/profile/${userData?.user_id}/`);
       const formData = new FormData();
-
-      if (profileData.p_image && profileData.p_image !== res.data.image) {
+      if (profileData.p_image) {
         formData.append("image", profileData.p_image);
       }
-
-      Object.entries({
-        full_name: profileData.full_name,
-        about: profileData.about,
-        country: profileData.country,
-        city: profileData.city,
-        state: profileData.state,
-        postal_code: profileData.postal_code,
-        address: profileData.address,
-      }).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+      Object.entries(profileData).forEach(([key, value]) => {
+        if (
+          key !== "p_image" &&
+          value !== undefined &&
+          value !== null &&
+          value !== ""
+        ) {
           formData.append(key, value);
         }
       });
@@ -93,9 +98,7 @@ function Settings() {
         `customer/setting/${userData?.user_id}/`,
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         }
       );
 
@@ -105,15 +108,10 @@ function Settings() {
       });
     } catch (error) {
       log.error("Error updating profile:", error);
-
-      // ✅ Show error notification
       let errorMessage = "Something went wrong!";
       if (error.response?.data) {
-        // Show first validation error from backend if exists
-        const errors = error.response.data;
-        errorMessage = Object.values(errors).flat().join("\n");
+        errorMessage = Object.values(error.response.data).flat().join("\n");
       }
-
       Swal.fire({
         icon: "error",
         title: "Profile update failed",
@@ -121,6 +119,56 @@ function Settings() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`user/change-password/`, passwordData);
+      Swal.fire("Success", "Password changed successfully", "success");
+      setPasswordData({
+        old_password: "",
+        new_password: "",
+        new_password2: "",
+      });
+    } catch (err) {
+      Swal.fire(
+        "Error",
+        err.response?.data?.error || "Failed to change password",
+        "error"
+      );
+    }
+  };
+
+  const handleEmailRequest = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`user/change-email/request/`, {
+        new_email: emailData.new_email,
+      });
+      setOtpSent(true);
+      Swal.fire("Success", "OTP sent to your new email", "success");
+    } catch (err) {
+      Swal.fire(
+        "Error",
+        err.response?.data?.error || "Failed to send OTP",
+        "error"
+      );
+    }
+  };
+
+  const handleEmailVerify = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`user/change-email/verify/`, { otp: emailData.otp });
+      Swal.fire("Success", "Email changed successfully", "success");
+      setEmailData({ new_email: "", otp: "" });
+      setOtpSent(false);
+      // Optionally refresh profile data
+      window.location.reload();
+    } catch (err) {
+      Swal.fire("Error", err.response?.data?.error || "Invalid OTP", "error");
     }
   };
 
@@ -134,29 +182,38 @@ function Settings() {
               <main className="mb-5">
                 <div className="px-4">
                   <h3 className="mb-6 flex items-center text-xl font-semibold">
-                    <i className="fas fa-gear fa-spin mr-2" /> Settings
+                    <i className="fas fa-cog fa-spin mr-2" /> Settings
                   </h3>
 
+                  {/* Profile Image Preview */}
+                  {imagePreview && (
+                    <div className="mb-6 text-center">
+                      <img
+                        src={imagePreview}
+                        alt="Profile Preview"
+                        className="w-32 h-32 rounded-full object-cover mx-auto"
+                      />
+                    </div>
+                  )}
+
+                  {/* Profile Update Form */}
                   <form
-                    onSubmit={handleFormSubmit}
-                    method="POST"
+                    onSubmit={handleProfileSubmit}
                     encType="multipart/form-data"
                     className="space-y-6"
                   >
-                    {/* Profile Image */}
                     <div>
                       <label className="block mb-2 font-medium">
                         Profile Image
                       </label>
                       <input
                         type="file"
-                        className="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer focus:outline-none"
-                        onChange={handleFileChange}
                         name="p_image"
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer focus:outline-none"
                       />
                     </div>
 
-                    {/* Full Name */}
                     <div>
                       <label className="block mb-2 font-medium">
                         Full Name
@@ -164,39 +221,23 @@ function Settings() {
                       <input
                         type="text"
                         name="full_name"
-                        value={profileData?.full_name}
+                        value={profileData.full_name}
                         onChange={handleInputChange}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300"
                       />
                     </div>
 
-                    {/* Email + Mobile */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block mb-2 font-medium">
-                          Email Address
-                        </label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={profileData?.email}
-                          readOnly
-                          className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-2 font-medium">Mobile</label>
-                        <input
-                          type="text"
-                          name="phone"
-                          value={profileData?.phone}
-                          readOnly
-                          className="w-full bg-gray-100 rounded-lg border border-gray-300 px-3 py-2"
-                        />
-                      </div>
+                    <div>
+                      <label className="block mb-2 font-medium">About</label>
+                      <textarea
+                        name="about"
+                        value={profileData.about}
+                        onChange={handleInputChange}
+                        rows="4"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300"
+                      />
                     </div>
 
-                    {/* Address / City / State / Country */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block mb-2 font-medium">
@@ -205,9 +246,9 @@ function Settings() {
                         <input
                           type="text"
                           name="address"
-                          value={profileData?.address}
+                          value={profileData.address}
                           onChange={handleInputChange}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
                       </div>
                       <div>
@@ -215,9 +256,19 @@ function Settings() {
                         <input
                           type="text"
                           name="city"
-                          value={profileData?.city}
+                          value={profileData.city}
                           onChange={handleInputChange}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-2 font-medium">State</label>
+                        <input
+                          type="text"
+                          name="state"
+                          value={profileData.state}
+                          onChange={handleInputChange}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
                       </div>
                       <div>
@@ -227,7 +278,7 @@ function Settings() {
                         <input
                           type="text"
                           name="postal_code"
-                          value={profileData?.postal_code}
+                          value={profileData.postal_code}
                           onChange={(e) => {
                             const value = e.target.value
                               .replace(/\D/g, "")
@@ -237,17 +288,7 @@ function Settings() {
                               postal_code: value,
                             });
                           }}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-2 font-medium">State</label>
-                        <input
-                          type="text"
-                          name="state"
-                          value={profileData?.state}
-                          onChange={handleInputChange}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
                       </div>
                       <div>
@@ -257,21 +298,20 @@ function Settings() {
                         <input
                           type="text"
                           name="country"
-                          value={profileData?.country}
+                          value={profileData.country}
                           onChange={handleInputChange}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300 focus:outline-none"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
                       </div>
                     </div>
 
-                    {/* Save button */}
                     <div>
                       {!loading ? (
                         <button
                           type="submit"
                           className="px-6 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
                         >
-                          Save Changes
+                          Save Profile Changes
                         </button>
                       ) : (
                         <button
@@ -283,6 +323,121 @@ function Settings() {
                       )}
                     </div>
                   </form>
+
+                  {/* Change Password Section */}
+                  <div className="mt-12 border-t pt-8">
+                    <h3 className="text-xl font-semibold mb-6">
+                      Change Password
+                    </h3>
+                    <form
+                      onSubmit={handlePasswordChange}
+                      className="max-w-lg space-y-4"
+                    >
+                      <input
+                        type="password"
+                        placeholder="Current Password"
+                        value={passwordData.old_password}
+                        onChange={(e) =>
+                          setPasswordData({
+                            ...passwordData,
+                            old_password: e.target.value,
+                          })
+                        }
+                        required
+                        className="w-full border rounded px-3 py-2"
+                      />
+                      <input
+                        type="password"
+                        placeholder="New Password"
+                        value={passwordData.new_password}
+                        onChange={(e) =>
+                          setPasswordData({
+                            ...passwordData,
+                            new_password: e.target.value,
+                          })
+                        }
+                        required
+                        className="w-full border rounded px-3 py-2"
+                      />
+                      <input
+                        type="password"
+                        placeholder="Confirm New Password"
+                        value={passwordData.new_password2}
+                        onChange={(e) =>
+                          setPasswordData({
+                            ...passwordData,
+                            new_password2: e.target.value,
+                          })
+                        }
+                        required
+                        className="w-full border rounded px-3 py-2"
+                      />
+                      <button
+                        type="submit"
+                        className="px-6 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
+                      >
+                        Change Password
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Change Email Section */}
+                  <div className="mt-12 border-t pt-8">
+                    <h3 className="text-xl font-semibold mb-6">
+                      Change Email Address
+                    </h3>
+                    {!otpSent ? (
+                      <form
+                        onSubmit={handleEmailRequest}
+                        className="max-w-lg space-y-4"
+                      >
+                        <input
+                          type="email"
+                          placeholder="New Email Address"
+                          value={emailData.new_email}
+                          onChange={(e) =>
+                            setEmailData({
+                              ...emailData,
+                              new_email: e.target.value,
+                            })
+                          }
+                          required
+                          className="w-full border rounded px-3 py-2"
+                        />
+                        <button
+                          type="submit"
+                          className="px-6 py-2 rounded-lg bg-orange-600 text-white font-medium hover:bg-orange-700"
+                        >
+                          Send OTP
+                        </button>
+                      </form>
+                    ) : (
+                      <form
+                        onSubmit={handleEmailVerify}
+                        className="max-w-lg space-y-4"
+                      >
+                        <p className="text-green-600 mb-4">
+                          OTP has been sent to {emailData.new_email}
+                        </p>
+                        <input
+                          type="text"
+                          placeholder="Enter OTP"
+                          value={emailData.otp}
+                          onChange={(e) =>
+                            setEmailData({ ...emailData, otp: e.target.value })
+                          }
+                          required
+                          className="w-full border rounded px-3 py-2"
+                        />
+                        <button
+                          type="submit"
+                          className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
+                        >
+                          Verify & Change Email
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               </main>
             </div>
