@@ -109,19 +109,7 @@ function ProductBasicInfo({
                   placeholder="₹0.00"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Regular Price
-                </label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                  name="old_price"
-                  value={product.old_price || ""}
-                  onChange={handleProductInputChange}
-                  placeholder="₹0.00"
-                />
-              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Shipping Amount

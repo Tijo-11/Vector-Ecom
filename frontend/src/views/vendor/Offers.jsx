@@ -38,12 +38,23 @@ function Offers() {
     setError("");
     setSuccess("");
     try {
+      // Convert to UTC ISO strings if dates are provided
+      const startDateUtc = formData.start_date 
+        ? new Date(formData.start_date).toISOString() 
+        : null;
+      const endDateUtc = formData.end_date 
+        ? new Date(formData.end_date).toISOString() 
+        : null;
+
       const payload = {
         discount_percentage: Number(formData.discount_percentage),
-        start_date: formData.start_date || null,
-        end_date: formData.end_date || null,
+        start_date: startDateUtc,
+        end_date: endDateUtc,
         product_ids: formData.product_ids.map((id) => Number(id)),
       };
+      
+      console.log("Sending payload:", payload);
+
       await apiInstance.post(
         `vendor/offers/${UserData()?.vendor_id}/`,
         payload
@@ -138,7 +149,7 @@ function Offers() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date & Time <span className="text-red-500">*</span>
+                  Start Date & Time (Optional)
                 </label>
                 <input
                   type="datetime-local"
@@ -146,9 +157,9 @@ function Offers() {
                   onChange={(e) =>
                     setFormData({ ...formData, start_date: e.target.value })
                   }
-                  required
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">Leave empty to start immediately</p>
               </div>
 
               <div>

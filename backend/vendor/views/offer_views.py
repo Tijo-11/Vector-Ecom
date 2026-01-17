@@ -9,6 +9,7 @@ from vendor.models import Vendor
 from django.shortcuts import get_object_or_404
 import logging
 from rest_framework import serializers
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ class ProductOfferListCreateAPIView(generics.ListCreateAPIView):
         return ProductOffer.objects.filter(vendor=vendor).order_by('-id')
 
     def perform_create(self, serializer):
+        now = timezone.now()
+        logger.info(f"Server now (UTC): {now}")
         logger.info(f"Creating offer with validated data: {serializer.validated_data}")
         vendor_id = self.kwargs['vendor_id']
         vendor = get_object_or_404(Vendor, id=vendor_id)
@@ -32,6 +35,13 @@ class ProductOfferListCreateAPIView(generics.ListCreateAPIView):
 
         if not product_ids:
             raise serializers.ValidationError({"product_ids": "At least one product must be selected."})
+
+        # Ensure start_date is set to now if not provided or provided as None
+        if not serializer.validated_data.get('start_date'):
+            serializer.validated_data['start_date'] = now
+            logger.info(f"Using server time for start_date: {serializer.validated_data['start_date']}")
+        else:
+            logger.info(f"Using provided start_date (UTC): {serializer.validated_data['start_date']}")
 
         products = Product.objects.filter(id__in=product_ids, vendor=vendor)
         if not products.exists():

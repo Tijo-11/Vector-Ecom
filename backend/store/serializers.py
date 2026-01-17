@@ -134,8 +134,9 @@ class ProductSerializer(serializers.ModelSerializer):
 
         # Product-specific offers (include vendor-specific or global)
         product_discount = 0
+        grace_period = timezone.now() + timezone.timedelta(minutes=1)
         product_offers = obj.product_offers.filter(
-            start_date__lte=now
+            start_date__lte=grace_period
         ).filter(
             Q(end_date__gte=now) | Q(end_date__isnull=True)
         ).filter(
@@ -150,7 +151,7 @@ class ProductSerializer(serializers.ModelSerializer):
         category_discount = 0
         if obj.category:
             category_offers = obj.category.category_offers.filter(
-                start_date__lte=now
+                start_date__lte=grace_period
             ).filter(
                 Q(end_date__gte=now) | Q(end_date__isnull=True)
             )
@@ -387,6 +388,7 @@ class ProductOfferSerializer(serializers.ModelSerializer):
         write_only=True,
         required=True
     )
+    start_date = serializers.DateTimeField(required=False, allow_null=True)
 
     class Meta:
         model = ProductOffer
