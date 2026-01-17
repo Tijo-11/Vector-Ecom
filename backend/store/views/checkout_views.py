@@ -21,6 +21,7 @@ from store.models import CartOrderItem,Notification, CartOrder, Cart
 #other packages
 import time
 
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -379,7 +380,7 @@ class PayPalWebhookView(generics.CreateAPIView):
             verification = response.json()
             if verification.get('verification_status') != 'SUCCESS':
                 logger.warning("PayPal webhook verification failed")
-                return Response(status=status.HTTP_403_FORBIDDEN)
+                return Response(status = status.HTTP_403_FORBIDDEN)
             event = verify_data["webhook_event"]
         except Exception as e:
             logger.error(f"PayPal webhook verification error: {str(e)}")

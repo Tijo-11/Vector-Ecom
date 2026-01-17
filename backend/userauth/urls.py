@@ -39,5 +39,5 @@ urlpatterns = [
     path('user/change-email/verify/', VerifyEmailChangeView.as_view(), name='change-email-verify'),
 ]
 
-# Add router URLs (now prefixed with user/addresses/)
+
 urlpatterns += router.urls
