@@ -30,6 +30,8 @@ class CategoryOffer(models.Model):
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField(null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='category_offers')
+    is_active = models.BooleanField(default=True)
+
 
     def __str__(self):
         return f"{self.discount_percentage}% off on {self.category.title}"

@@ -398,7 +398,8 @@ class ProductOfferSerializer(serializers.ModelSerializer):
 class CategoryOfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = CategoryOffer
-        fields = ['id', 'discount_percentage', 'start_date', 'end_date', 'category']
+        fields = ['id', 'discount_percentage', 'start_date', 'end_date', 'category', 'is_active']
+
 
     def __init__(self, *args, **kwargs):
         super(CategoryOfferSerializer, self).__init__(*args, **kwargs)

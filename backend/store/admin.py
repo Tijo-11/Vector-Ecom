@@ -127,8 +127,9 @@ class ProductOfferAdmin(ImportExportModelAdmin):
     filter_horizontal = ['products']  # For ManyToManyField
 
 class CategoryOfferAdmin(ImportExportModelAdmin):
-    list_display = ['discount_percentage', 'start_date', 'end_date', 'category']
-    list_filter = ['category']
+    list_display = ['discount_percentage', 'start_date', 'end_date', 'category', 'is_active']
+    list_editable = ['is_active']
+    list_filter = ['category', 'is_active']
 
 class ReferralOfferAdmin(ImportExportModelAdmin):
     list_display = ['token', 'referring_user', 'is_used', 'created_at', 'expiry_date']
