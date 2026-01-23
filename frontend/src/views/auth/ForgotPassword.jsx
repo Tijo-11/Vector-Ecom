@@ -1,21 +1,29 @@
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
-
+import { useState, useEffect } from "react";
 import axios from "../../utils/axios";
 import Swal from "sweetalert2";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [searchParams] = useSearchParams();
-
-  const otp = searchParams.get("otp");
-  const uuid = searchParams.get("uuid");
+  const [isLoading, setIsLoading] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [linkSent, setLinkSent] = useState(false);
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
   };
 
-  const handleEmailSubmit = async () => {
+  // Timer countdown effect
+  useEffect(() => {
+    let interval;
+    if (seconds > 0) {
+      interval = setInterval(() => {
+        setSeconds((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [seconds]);
+
+  const handleSubmit = async () => {
     if (!email) {
       Swal.fire({
         icon: "warning",
@@ -24,6 +32,7 @@ export default function ForgotPassword() {
       return;
     }
 
+    setIsLoading(true);
     try {
       const res = await axios.get(`user/password-reset/${email}/`);
       Swal.fire({
@@ -31,15 +40,25 @@ export default function ForgotPassword() {
         title:
           res.data?.message || "If this email exists, a reset link was sent.",
       });
+      setLinkSent(true);
+      setSeconds(60); // Start 60-second cooldown for resend
     } catch (error) {
-      // Network or server error handling
       Swal.fire({
         icon: "error",
         title: "Something went wrong!",
         text: error.response?.data?.detail || "Please try again later.",
       });
     }
+    setIsLoading(false);
   };
+
+  const buttonText = isLoading
+    ? "Sending..."
+    : seconds > 0
+      ? `Resend in ${seconds}s`
+      : linkSent
+        ? "Resend Link"
+        : "Send Reset Link";
 
   return (
     <>
@@ -55,6 +74,21 @@ export default function ForgotPassword() {
                         Forgot Password
                       </h3>
                       <div className="mt-6">
+                        {/* Success/Timer message */}
+                        {linkSent && (
+                          <div className="mb-4 text-center">
+                            <p className="text-green-600 font-medium">
+                              Reset link sent! Please check your email
+                              (including spam folder).
+                            </p>
+                            {seconds === 0 && (
+                              <p className="text-sm text-gray-600 mt-2">
+                                Didn't receive it? You can resend the link now.
+                              </p>
+                            )}
+                          </div>
+                        )}
+
                         {/* Email input */}
                         <div className="mb-4">
                           <label
@@ -64,21 +98,25 @@ export default function ForgotPassword() {
                             Email Address
                           </label>
                           <input
-                            type="text"
+                            type="email"
                             id="email"
                             name="email"
                             value={email}
                             onChange={handleEmailChange}
+                            placeholder="Enter your email"
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            disabled={isLoading}
                           />
                         </div>
-                        {/* Submit button */}
+
+                        {/* Submit/Resend button */}
                         <div className="text-center">
                           <button
-                            onClick={handleEmailSubmit}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200"
+                            onClick={handleSubmit}
+                            disabled={isLoading || seconds > 0}
+                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Reset Password
+                            {buttonText}
                           </button>
                         </div>
                       </div>

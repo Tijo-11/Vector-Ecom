@@ -1,10 +1,11 @@
-// frontend/Register.jsx (Modified to handle ref token)
+// frontend/Register.jsx (Full updated version with OTP timer, resend, back-to-edit, and Google referral support)
 import { useEffect, useState } from "react";
 import { register, verifyOtp, login, googleLogin } from "../../utils/auth";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import Swal from "sweetalert2";
 import apiInstance from "../../utils/axios";
+
 export default function Register() {
   const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
@@ -17,11 +18,16 @@ export default function Register() {
   const [uidb64, setUidb64] = useState("");
   const [newUserId, setNewUserId] = useState(null);
   const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
+
+  // Timer states for OTP cooldown/resend
+  const [seconds, setSeconds] = useState(0);
+  const [timerActive, setTimerActive] = useState(false);
+
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refToken = searchParams.get("ref");
-  // Define Toast outside useEffect so it's accessible throughout component
+
   const Toast = Swal.mixin({
     toast: true,
     position: "top",
@@ -29,6 +35,24 @@ export default function Register() {
     timer: 1500,
     timerProgressBar: true,
   });
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (!timerActive || seconds <= 0) return;
+
+    const interval = setInterval(() => {
+      setSeconds((prev) => {
+        if (prev <= 1) {
+          setTimerActive(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerActive, seconds]);
+
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/");
@@ -43,6 +67,7 @@ export default function Register() {
     };
     loadGoogleScript();
   }, [isLoggedIn, navigate]);
+
   useEffect(() => {
     if (isGoogleScriptLoaded && window.google && window.google.accounts) {
       window.google.accounts.id.initialize({
@@ -51,44 +76,54 @@ export default function Register() {
       });
       window.google.accounts.id.renderButton(
         document.getElementById("googleSignUpDiv"),
-        { theme: "outline", size: "large" }
+        { theme: "outline", size: "large" },
       );
     }
   }, [isGoogleScriptLoaded]);
-  const handleGoogleResponse = async (response) => {
-    setIsLoading(true);
-    const { error } = await googleLogin(response.credential);
-    if (error) {
-      Toast.fire({ icon: "error", title: error });
-    } else {
-      navigate("/");
-    }
-    setIsLoading(false);
-  };
+
   const applyReferral = async (token, userId) => {
     try {
       const response = await apiInstance.post("referral/apply/", {
         token,
         new_user_id: userId,
       });
-      // Optional: show message
       if (response.data.message) {
         Toast.fire({ icon: "success", title: "Referral applied!" });
       }
     } catch (error) {
       console.error("Referral apply failed:", error);
-      // Optional: silent or show error
     }
   };
-  const resetForm = () => {
-    setFullname("");
-    setEmail("");
-    setPhone("");
-    setPassword("");
-    setPassword2("");
-    setShowOtp(false);
-    setOtp("");
+
+  const handleGoogleResponse = async (response) => {
+    setIsLoading(true);
+    const result = await googleLogin(response.credential);
+
+    if (result.error || !result.data) {
+      Toast.fire({
+        icon: "error",
+        title: result.error || "Google signup failed",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const { data } = result;
+
+    // Apply referral for new Google signups
+    if (data.new_user && refToken && data.user_id) {
+      await applyReferral(refToken, data.user_id);
+    }
+
+    navigate("/");
+    setIsLoading(false);
   };
+
+  const startTimer = () => {
+    setSeconds(60);
+    setTimerActive(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== password2) {
@@ -101,23 +136,43 @@ export default function Register() {
       email,
       phone,
       password,
-      password2
+      password2,
     );
     setIsLoading(false);
     if (error) {
       Toast.fire({ icon: "error", title: error });
     } else if (data && data.uidb64) {
-      // Successfully got response with uidb64
       Toast.fire({ icon: "info", title: data.message || "OTP sent to email" });
       setUidb64(data.uidb64);
-      setNewUserId(data.user_id); // Store new user_id
+      if (data.user_id) setNewUserId(data.user_id);
       setShowOtp(true);
+      startTimer();
     } else {
-      // Unexpected response format
       Toast.fire({ icon: "error", title: "Unexpected response from server" });
       console.error("Unexpected data format:", data);
     }
   };
+
+  const handleResend = async () => {
+    setIsLoading(true);
+    const { data, error } = await register(
+      fullname,
+      email,
+      phone,
+      password,
+      password2,
+    );
+    setIsLoading(false);
+    if (error) {
+      Toast.fire({ icon: "error", title: error });
+    } else {
+      Toast.fire({ icon: "success", title: "OTP resent successfully!" });
+      if (data.uidb64) setUidb64(data.uidb64);
+      if (data.user_id) setNewUserId(data.user_id);
+      startTimer();
+    }
+  };
+
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -126,7 +181,6 @@ export default function Register() {
       setIsLoading(false);
       Toast.fire({ icon: "error", title: error });
     } else {
-      // Auto-login after verification
       const loginResult = await login(email, password);
       setIsLoading(false);
       if (loginResult.error) {
@@ -136,15 +190,14 @@ export default function Register() {
             "Verification successful but login failed. Please login manually.",
         });
       } else {
-        // Apply referral if token present
         if (refToken && newUserId) {
           await applyReferral(refToken, newUserId);
         }
         navigate("/");
-        resetForm();
       }
     }
   };
+
   return (
     <>
       <main className="mb-24 mt-12">
@@ -286,9 +339,19 @@ export default function Register() {
                       ) : (
                         <form onSubmit={handleOtpSubmit}>
                           <div className="mb-4">
-                            <p className="text-sm text-gray-600 mb-4">
+                            <p className="text-sm text-gray-600 mb-2">
                               An OTP has been sent to <strong>{email}</strong>
                             </p>
+                            {seconds > 0 && (
+                              <p className="text-sm font-medium text-green-600 mb-2">
+                                Time remaining: {seconds}s
+                              </p>
+                            )}
+                            {seconds === 0 && (
+                              <p className="text-sm font-medium text-red-600 mb-2">
+                                OTP expired. You can request a new one.
+                              </p>
+                            )}
                             <label
                               htmlFor="otp"
                               className="block text-sm font-medium text-gray-700"
@@ -320,12 +383,29 @@ export default function Register() {
                               "Verify OTP"
                             )}
                           </button>
+                          <div className="mt-4 text-center">
+                            <button
+                              type="button"
+                              onClick={handleResend}
+                              disabled={isLoading || seconds > 0}
+                              className="text-blue-600 hover:underline disabled:text-gray-400 disabled:cursor-not-allowed"
+                            >
+                              {isLoading
+                                ? "Resending..."
+                                : seconds > 0
+                                  ? `Resend OTP in ${seconds}s`
+                                  : "Resend OTP"}
+                            </button>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => setShowOtp(false)}
+                            onClick={() => {
+                              setShowOtp(false);
+                              setOtp("");
+                            }}
                             className="w-full mt-3 text-blue-600 hover:underline"
                           >
-                            Back to registration
+                            Back to registration (edit details)
                           </button>
                         </form>
                       )}
