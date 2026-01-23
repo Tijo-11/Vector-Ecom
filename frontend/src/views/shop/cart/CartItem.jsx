@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useContext } from "react";
+// Fixed CartItem.jsx (Remove button fully working + all previous features)
+
+import React, { useState, useEffect, useRef, useContext } from "react";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
 import cartID from "../ProductDetail/cartId";
@@ -10,26 +12,26 @@ import log from "loglevel";
 
 function CartItem({ cartItems, setCart, setCartTotal }) {
   const [productQuantities, setProductQuantities] = useState({});
+  const [updatingItems, setUpdatingItems] = useState({});
+  const debounceTimeouts = useRef({});
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
   const currentAddress = UserCountry();
   const [cartCount, setCartCount] = useContext(CartContext);
 
   useEffect(() => {
-    const initialQuantities = {};
+    const initial = {};
     cartItems.forEach((c) => {
-      initialQuantities[c.product.id] = c.qty;
+      initial[c.product.id] = c.qty;
     });
-    setProductQuantities(initialQuantities);
+    setProductQuantities(initial);
   }, [cartItems]);
 
-  const handleQuantityChange = (e, product_id) => {
-    const quantity = e.target.value;
-    setProductQuantities((prev) => ({
-      ...prev,
-      [product_id]: quantity,
-    }));
-  };
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimeouts.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const updateCart = async (
     product_id,
@@ -37,140 +39,258 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     price,
     shipping_amount,
     color,
-    size
+    size,
   ) => {
-    const qty = Number(qty_value || 0);
-    if (qty <= 0) return;
-    // Find the cart item
+    const qty = Number(qty_value);
+    if (isNaN(qty) || qty <= 0) return;
+
     const cartItem = cartItems.find((c) => c.product.id === product_id);
     if (!cartItem) return;
-    // ✅ Check stock before updating
-    if (qty > cartItem.product.stock_qty) {
+
+    const currentStock = cartItem.product.stock_qty || 0;
+
+    if (qty > currentStock) {
       Swal.fire({
         icon: "warning",
-        title: "Stock Limit Reached",
-        text: `Only ${cartItem.product.stock_qty} unit(s) of "${cartItem.product.title}" available.`,
+        title: "Cannot Update",
+        text: `Only ${currentStock} unit(s) available.`,
         confirmButtonColor: "#2563eb",
       });
-      return; // Stop updating
+      setProductQuantities((prev) => ({ ...prev, [product_id]: currentStock }));
+      return;
     }
-    // Optimistic update for CartContext
-    const previousCartCount = cartCount;
-    setCartCount((prev) => prev + qty - (cartItem.qty || 0));
+
+    setUpdatingItems((prev) => ({ ...prev, [product_id]: true }));
+
+    const previousCount = cartCount;
+    setCartCount((prev) => prev + qty - cartItem.qty);
+
     const formData = {
       product: product_id,
       user: user?.user_id || null,
-      qty: qty,
-      price: price,
-      shipping_amount: shipping_amount,
+      qty,
+      price,
+      shipping_amount,
       color: color || null,
       size: size || null,
-      cart_id: cart_id,
+      cart_id,
       country: currentAddress?.country || null,
     };
+
     try {
       const response = await apiInstance.post("/cart/", formData);
-      toast.fire({ icon: "success", title: "Cart updated successfully" });
-      // Refresh cart
+
+      if (response.data.message && response.data.message.includes("adjusted")) {
+        toast.fire({
+          icon: "warning",
+          title: "Quantity Adjusted",
+          text: "Stock changed – updated to maximum available.",
+        });
+      } else {
+        toast.fire({ icon: "success", title: "Cart updated" });
+      }
+
       const url = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
-      const updatedCart = await apiInstance.get(url);
-      setCart(updatedCart.data || []);
-      const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
-      setCartTotal({
-        itemCount: updatedCart.data.length || 0,
-        sub_total: totalResponse.data?.sub_total || 0, // ✅ Fallback for safety
-        shipping: totalResponse.data?.shipping || 0,
-        tax: totalResponse.data?.tax || 0,
-        service_fee: totalResponse.data?.service_fee || 0,
-        total: totalResponse.data?.total || 0,
-      });
-      // Sync CartContext
-      const totalQty = updatedCart.data.reduce(
+      const updatedCartResponse = await apiInstance.get(url);
+      setCart(updatedCartResponse.data || []);
+
+      const totalQty = updatedCartResponse.data.reduce(
         (sum, item) => sum + item.qty,
-        0
+        0,
       );
       setCartCount(totalQty);
+
+      const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
+      setCartTotal({
+        itemCount: updatedCartResponse.data.length || 0,
+        mrp_total: totalResponse.data?.mrp_total || 0,
+        discounted_total: totalResponse.data?.discounted_total || 0,
+        shipping: totalResponse.data?.shipping || 0,
+        grand_total: totalResponse.data?.grand_total || 0,
+      });
     } catch (error) {
       log.error("Error updating cart:", error);
-      setCartCount(previousCartCount); // Rollback optimistic update
-      toast.fire({ icon: "error", title: "Failed to update cart" }); // ✅ Single toast
+      setCartCount(previousCount);
+      toast.fire({ icon: "error", title: "Update failed" });
+    } finally {
+      setUpdatingItems((prev) => ({ ...prev, [product_id]: false }));
     }
   };
 
+  const handleIncrease = (product_id) => {
+    const currentQty = Number(productQuantities[product_id] || 1);
+    const cartItem = cartItems.find((c) => c.product.id === product_id);
+    const maxStock = cartItem?.product.stock_qty || 0;
+
+    if (currentQty + 1 > maxStock) {
+      Swal.fire({
+        icon: "warning",
+        title: "Stock Limit Exceeded",
+        text: `Only ${maxStock} unit(s) available for "${cartItem.product.title}".`,
+        confirmButtonColor: "#2563eb",
+        timer: 5000,
+        timerProgressBar: true,
+      });
+      return;
+    }
+
+    const newQty = currentQty + 1;
+    setProductQuantities((prev) => ({ ...prev, [product_id]: newQty }));
+
+    if (debounceTimeouts.current[product_id])
+      clearTimeout(debounceTimeouts.current[product_id]);
+    debounceTimeouts.current[product_id] = setTimeout(() => {
+      updateCart(
+        product_id,
+        newQty,
+        cartItem.product.price,
+        cartItem.product.shipping_amount,
+        cartItem.color,
+        cartItem.size,
+      );
+    }, 600);
+  };
+
+  const handleDecrease = (product_id) => {
+    const currentQty = Number(productQuantities[product_id] || 1);
+    if (currentQty <= 1) return;
+
+    const newQty = currentQty - 1;
+    setProductQuantities((prev) => ({ ...prev, [product_id]: newQty }));
+
+    const cartItem = cartItems.find((c) => c.product.id === product_id);
+    if (debounceTimeouts.current[product_id])
+      clearTimeout(debounceTimeouts.current[product_id]);
+    debounceTimeouts.current[product_id] = setTimeout(() => {
+      updateCart(
+        product_id,
+        newQty,
+        cartItem.product.price,
+        cartItem.product.shipping_amount,
+        cartItem.color,
+        cartItem.size,
+      );
+    }, 600);
+  };
+
+  const handleInputChange = (e, product_id) => {
+    let value = e.target.value.replace(/[^0-9]/g, "");
+    if (value === "") {
+      setProductQuantities((prev) => ({ ...prev, [product_id]: "" }));
+      return;
+    }
+
+    const num = Number(value);
+    const cartItem = cartItems.find((c) => c.product.id === product_id);
+    const maxStock = cartItem?.product.stock_qty || 0;
+
+    if (num > maxStock) {
+      Swal.fire({
+        icon: "warning",
+        title: "Stock Limit Exceeded",
+        text: `Only ${maxStock} unit(s) available. Quantity capped.`,
+        confirmButtonColor: "#2563eb",
+        timer: 5000,
+        timerProgressBar: true,
+      });
+      value = maxStock.toString();
+    } else if (num < 1) {
+      value = "1";
+    }
+
+    setProductQuantities((prev) => ({ ...prev, [product_id]: value }));
+
+    if (debounceTimeouts.current[product_id])
+      clearTimeout(debounceTimeouts.current[product_id]);
+    debounceTimeouts.current[product_id] = setTimeout(() => {
+      updateCart(
+        product_id,
+        value || 1,
+        cartItem.product.price,
+        cartItem.product.shipping_amount,
+        cartItem.color,
+        cartItem.size,
+      );
+    }, 600);
+  };
+
+  // Fully working remove button
   const handleDeleteCartItem = async (item_id) => {
     const previousCart = [...cartItems];
-    const previousCartCount = cartCount;
-    const url = user?.user_id
+    const previousCount = cartCount;
+
+    const deleteUrl = user?.user_id
       ? `/cart-delete/${cart_id}/${item_id}/${user.user_id}/`
       : `/cart-delete/${cart_id}/${item_id}/`;
+
     try {
-      // DELETE first
-      const response = await apiInstance.delete(url);
-      log.debug(response.data);
-      // Then fetch updated cart (critical: do this regardless of totals)
+      // Delete the item
+      await apiInstance.delete(deleteUrl);
+
+      // Refetch cart list
       const cartUrl = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
       const cartResponse = await apiInstance.get(cartUrl);
-      // Update cart & count immediately (since these succeed)
+
       setCart(cartResponse.data || []);
+
+      // Update global cart count
       const totalQty = cartResponse.data.reduce(
         (sum, item) => sum + item.qty,
-        0
+        0,
       );
       setCartCount(totalQty);
-      // Now try to fetch/update totals (non-blocking)
+
+      // Update totals
       try {
         const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
         setCartTotal({
           itemCount: cartResponse.data.length || 0,
-          sub_total: totalResponse.data?.sub_total || 0, // ✅ Fallbacks
+          mrp_total: totalResponse.data?.mrp_total || 0,
+          discounted_total: totalResponse.data?.discounted_total || 0,
           shipping: totalResponse.data?.shipping || 0,
-          tax: totalResponse.data?.tax || 0,
-          service_fee: totalResponse.data?.service_fee || 0,
-          total: totalResponse.data?.total || 0,
+          grand_total: totalResponse.data?.grand_total || 0,
         });
       } catch (totalError) {
-        log.warn(
-          "Totals fetch failed after delete (non-critical):",
-          totalError
-        );
-        // Fallback to zeroed totals or current state—don't rollback cart!
+        log.warn("Failed to fetch totals after delete:", totalError);
+        // Fallback totals
         setCartTotal({
           itemCount: cartResponse.data.length || 0,
-          sub_total: 0,
+          mrp_total: 0,
+          discounted_total: 0,
           shipping: 0,
-          tax: 0,
-          service_fee: 0,
-          total: 0,
+          grand_total: 0,
         });
       }
-      // Success! (DELETE + cart update worked)
+
       toast.fire({ icon: "success", title: "Item removed from cart" });
     } catch (error) {
-      log.error("Critical error in delete (DELETE or cart fetch):", error);
-      // Only rollback if core ops fail
+      log.error("Error removing cart item:", error);
+      // Rollback on failure
       setCart(previousCart);
-      setCartCount(previousCartCount);
+      setCartCount(previousCount);
       toast.fire({ icon: "error", title: "Failed to remove item" });
     }
   };
 
   return (
     <>
-      {cartItems.map((c, index) => {
-        const originalPrice = parseFloat(
-          c.product?.original_price ?? c.product?.price ?? c.price ?? 0
-        );
+      {cartItems.map((c) => {
+        const currentQty = productQuantities[c.product.id] ?? c.qty;
+        const maxStock = c.product.stock_qty || 0;
+        const atMax = Number(currentQty) >= maxStock;
+
+        const originalPrice = parseFloat(c.product?.price ?? 0);
         const discount = parseFloat(c.product?.offer_discount ?? 0);
         const offerPrice =
           discount > 0 ? originalPrice * (1 - discount / 100) : originalPrice;
 
         return (
           <div
-            key={index}
+            key={c.id}
             className="md:flex items-stretch py-8 md:py-10 lg:py-8 border-t border-gray-50"
           >
             <div className="md:w-4/12 2xl:w-1/4 w-full">
@@ -187,40 +307,72 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
             </div>
             <div className="md:pl-3 md:w-8/12 2xl:w-3/4 flex flex-col justify-center">
               <p className="text-xs leading-3 text-gray-800 md:pt-0 pt-4">
-                {c.product.code || "N/A"}
+                {c.product.sku || "N/A"}
               </p>
               <div className="flex items-center justify-between w-full">
                 <p className="text-base font-black leading-none text-gray-800">
                   {c.product.title}
                 </p>
-                <div className="flex items-center">
-                  <input
-                    type="number"
-                    min="1"
-                    value={productQuantities[c.product.id] || c.qty}
-                    onChange={(e) => handleQuantityChange(e, c.product.id)}
-                    className="py-2 px-1 border border-gray-200 mr-2 w-16 focus:outline-none"
-                  />
-                  <button
-                    onClick={() =>
-                      updateCart(
-                        c.product.id,
-                        productQuantities[c.product.id] || c.qty,
-                        c.product.price,
-                        c.product.shipping_amount,
-                        c.color,
-                        c.size
-                      )
-                    }
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm"
-                  >
-                    Update
-                  </button>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center border border-gray-300 rounded-md">
+                      <button
+                        onClick={() => handleDecrease(c.product.id)}
+                        disabled={
+                          Number(currentQty) <= 1 || updatingItems[c.product.id]
+                        }
+                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="text"
+                        value={currentQty}
+                        onChange={(e) => handleInputChange(e, c.product.id)}
+                        disabled={updatingItems[c.product.id]}
+                        className="w-16 text-center py-2 focus:outline-none disabled:bg-gray-100"
+                      />
+                      <button
+                        onClick={() => handleIncrease(c.product.id)}
+                        disabled={atMax || updatingItems[c.product.id]}
+                        title={atMax ? "Stock limit reached" : ""}
+                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
+                      >
+                        +
+                      </button>
+                    </div>
+                    {updatingItems[c.product.id] && (
+                      <div className="flex items-center text-blue-600 text-sm">
+                        <svg
+                          className="animate-spin h-4 w-4 mr-1"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                        Updating...
+                      </div>
+                    )}
+                  </div>
+                  {atMax && (
+                    <p className="text-orange-600 text-xs font-medium mt-1">
+                      Maximum stock reached ({maxStock} available)
+                    </p>
+                  )}
                 </div>
               </div>
-              <p className="text-xs leading-3 text-gray-600 pt-2">
-                {/* Height: {c.product.height || "N/A"} */}
-              </p>
               {c.size && c.size !== "no size" && (
                 <p className="text-xs leading-3 text-gray-600 py-4">
                   Size: {c.size}
@@ -231,17 +383,11 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                   Color: {c.color}
                 </p>
               )}
-              <p className="w-96 text-xs leading-3 text-gray-600">
-                {/* Composition: {c.product.composition || "N/A"} */}
-              </p>
               <div className="flex items-center justify-between pt-5">
                 <div className="flex items-center">
-                  {/* <p className="text-xs leading-3 underline text-gray-800 cursor-pointer">
-                    Add to favorites
-                  </p> */}
                   <p
                     onClick={() => handleDeleteCartItem(c.id)}
-                    className="text-xs leading-3 underline text-red-500 hover:text-red-600 pl-5 cursor-pointer"
+                    className="text-xs leading-3 underline text-red-500 hover:text-red-600 cursor-pointer"
                   >
                     Remove
                   </p>

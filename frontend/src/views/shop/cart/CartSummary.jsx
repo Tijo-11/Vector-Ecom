@@ -1,9 +1,10 @@
-// CartSummary.jsx (Use renamed fields, consistent labels)
+// CartSummary.jsx (Improved message & disable logic)
+
 import React, { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
 import cartID from "../ProductDetail/cartId";
 import log from "loglevel";
-import { Link, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function CartSummary({ cartItems, setCartTotal }) {
   const [cart_total, setCartTotalLocal] = useState({
@@ -14,8 +15,9 @@ function CartSummary({ cartItems, setCartTotal }) {
     grand_total: 0,
   });
   const cart_id = cartID();
+  const navigate = useNavigate();
   const location = useLocation();
-  // Fetch calculated totals from API
+
   useEffect(() => {
     const fetchCartTotal = async () => {
       if (cart_id && cart_id !== "undefined") {
@@ -28,8 +30,8 @@ function CartSummary({ cartItems, setCartTotal }) {
             shipping: response.data.shipping || 0,
             grand_total: response.data.grand_total || 0,
           };
-          setCartTotalLocal((prev) => ({ ...prev, ...newTotals }));
-          setCartTotal({ ...cart_total, ...newTotals });
+          setCartTotalLocal(newTotals);
+          setCartTotal(newTotals);
         } catch (error) {
           log.error("Error fetching cart totals:", error);
         }
@@ -37,14 +39,21 @@ function CartSummary({ cartItems, setCartTotal }) {
     };
     fetchCartTotal();
   }, [cart_id, cartItems, setCartTotal]);
+
+  const hasInsufficientStock = cartItems.some(
+    (item) => (item.qty || 0) > (item.product?.stock_qty || 0),
+  );
+
   const isAddressPage = location.pathname === "/address";
+
   return (
     <div id="summary" className="w-full sm:w-1/4 md:w-1/2 px-8 py-10">
       <h1 className="font-semibold text-2xl border-b pb-8">Order Summary</h1>
       <div className="space-y-4">
         <div className="flex justify-between mt-10">
           <span className="font-semibold text-sm uppercase text-gray-700">
-            MRP ({cart_total.itemCount} items)
+            MRP ({cart_total.itemCount}{" "}
+            {cart_total.itemCount > 1 ? "items" : "item"})
           </span>
           <span className="font-semibold text-sm">
             ₹{cart_total.mrp_total.toFixed(2)}
@@ -74,16 +83,31 @@ function CartSummary({ cartItems, setCartTotal }) {
             <span>₹{cart_total.grand_total.toFixed(2)}</span>
           </div>
         </div>
+
+        {hasInsufficientStock && (
+          <p className="text-orange-600 text-center font-medium mt-4 animate-pulse">
+            Adjusting cart for available stock...
+          </p>
+        )}
       </div>
+
       {!isAddressPage && (
-        <Link
-          to="/address"
-          className="w-full mt-6 bg-blue-500 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition block text-center"
+        <button
+          onClick={() => navigate("/address")}
+          disabled={hasInsufficientStock}
+          className={`w-full mt-6 py-3 rounded-md text-sm uppercase font-semibold transition block text-center ${
+            hasInsufficientStock
+              ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
         >
-          Proceed to Address
-        </Link>
+          {hasInsufficientStock
+            ? "Please wait – updating stock"
+            : "Proceed to Address"}
+        </button>
       )}
     </div>
   );
 }
+
 export default CartSummary;

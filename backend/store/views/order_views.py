@@ -15,6 +15,7 @@ class CreateOrderView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     queryset = CartOrder.objects.all()
     permission_classes = (AllowAny,)
+    
     def create(self, request, *args, **kwargs):
         payload = request.data
         full_name = payload['full_name']
@@ -27,7 +28,7 @@ class CreateOrderView(generics.CreateAPIView):
         postal_code = payload['pincode']
         cart_id = payload['cart_id']
         user_id = payload.get('user_id')
-        # Handle user (optional)
+        
         user = None
         if user_id and user_id != "0":
             user = User.objects.filter(id=user_id).first()
@@ -36,7 +37,7 @@ class CreateOrderView(generics.CreateAPIView):
                     {"error": "User with provided ID does not exist"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        # Get active cart items
+        
         cart_items = Cart.objects.filter(cart_id=cart_id, is_active=True)
         if user:
             cart_items = cart_items.filter(user=user)
@@ -45,14 +46,17 @@ class CreateOrderView(generics.CreateAPIView):
                 {"error": "No active cart items found for the provided cart_id"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
         now = timezone.now()
+        adjusted = False
+        items_created = False
+        
         with transaction.atomic():
             total_shipping = Decimal(0)
-            total_tax = Decimal(0)
-            total_service_fee = Decimal(0)
             total_subtotal = Decimal(0)
             total_initial_total = Decimal(0)
             total_total = Decimal(0)
+            
             order = CartOrder.objects.create(
                 full_name=full_name,
                 email=email,
@@ -64,76 +68,91 @@ class CreateOrderView(generics.CreateAPIView):
                 postal_code=postal_code,
                 buyer=user
             )
+            
             for c in cart_items:
-                # === Calculate max discount from Product & Category Offers ===
+                product = c.product
+                available_stock = product.stock_qty or 0
+                
+                qty = c.qty
+                if qty > available_stock:
+                    adjusted = True
+                    if available_stock <= 0:
+                        c.is_active = False
+                        c.save()
+                        continue
+                    else:
+                        # Adjust qty and scale all monetary fields proportionally
+                        ratio = Decimal(available_stock) / Decimal(c.qty)
+                        qty = available_stock
+                        c.qty = qty
+                        c.sub_total *= ratio
+                        c.initial_total *= ratio
+                        c.offer_saved *= ratio
+                        c.shipping_amount *= ratio
+                        c.total = c.sub_total + c.shipping_amount
+                        c.saved *= ratio
+                        c.save()
+                
+                # Recalculate discounts fresh (in case offers changed)
                 product_discount = Decimal(0)
-                if hasattr(c.product, 'product_offers'):
-                    product_offers = c.product.product_offers.filter(
-                        start_date__lte=now
-                    ).filter(
+                if hasattr(product, 'product_offers'):
+                    product_offers = product.product_offers.filter(start_date__lte=now).filter(
                         Q(end_date__gte=now) | Q(end_date__isnull=True)
                     )
                     if product_offers.exists():
-                        max_product_discount = product_offers.aggregate(
-                            Max('discount_percentage')
-                        )['discount_percentage__max'] or 0
-                        product_discount = Decimal(max_product_discount)
+                        product_discount = Decimal(product_offers.aggregate(Max('discount_percentage'))['discount_percentage__max'] or 0)
+                
                 category_discount = Decimal(0)
-                if c.product.category:
-                    category_offers = c.product.category.category_offers.filter(
-                        start_date__lte=now
-                    ).filter(
+                if product.category:
+                    category_offers = product.category.category_offers.filter(start_date__lte=now).filter(
                         Q(end_date__gte=now) | Q(end_date__isnull=True)
                     )
                     if category_offers.exists():
-                        max_category_discount = category_offers.aggregate(
-                            Max('discount_percentage')
-                        )['discount_percentage__max'] or 0
-                        category_discount = Decimal(max_category_discount)
+                        category_discount = Decimal(category_offers.aggregate(Max('discount_percentage'))['discount_percentage__max'] or 0)
+                
                 max_discount = max(product_discount, category_discount)
                 discount_rate = max_discount / Decimal(100)
-                # === Pricing Calculations (without tax and service fee) ===
-                base_price = c.product.price
-                original_sub_total = base_price * c.qty
+                
+                base_price = product.price
+                original_sub_total = base_price * qty
                 offer_saved = original_sub_total * discount_rate
                 discounted_sub_total = original_sub_total - offer_saved
-                shipping = c.shipping_amount
+                shipping = c.shipping_amount  # already scaled above if adjusted
+                
                 total_shipping += shipping
-                # Service fee and tax set to 0
-                service_rate = Decimal('0.00')
-                service_fee = Decimal('0.00')
-                total_service_fee += service_fee
-                tax_rate = Decimal('0.00')
-                tax_fee = Decimal('0.00')
-                total_tax += tax_fee
-                # Totals
-                total = discounted_sub_total + shipping
-                initial_total = original_sub_total + shipping
-                saved = initial_total - total
                 total_subtotal += discounted_sub_total
-                total_initial_total += initial_total
-                total_total += total
-                # Create order item
-                CartOrderItem.objects.create(
-                    order=order,
-                    product=c.product,
-                    vendor=c.product.vendor,
-                    qty=c.qty,
-                    color=c.color,
-                    size=c.size,
-                    price=base_price,  # Store the MSRP base price
-                    sub_total=discounted_sub_total,
-                    shipping_amount=shipping,
-                    service_fee=service_fee,
-                    tax_fee=tax_fee,
-                    total=total,
-                    initial_total=initial_total,
-                    offer_saved=offer_saved,
-                    coupon_saved=Decimal(0.00),
-                    saved=saved
+                total_initial_total += original_sub_total + shipping
+                total_total += discounted_sub_total + shipping
+                
+                if qty > 0:
+                    CartOrderItem.objects.create(
+                        order=order,
+                        product=product,
+                        vendor=product.vendor,
+                        qty=qty,
+                        color=c.color,
+                        size=c.size,
+                        price=base_price,
+                        sub_total=discounted_sub_total,
+                        shipping_amount=shipping,
+                        service_fee=Decimal('0.00'),
+                        tax_fee=Decimal('0.00'),
+                        total=discounted_sub_total + shipping,
+                        initial_total=original_sub_total + shipping,
+                        offer_saved=offer_saved,
+                        coupon_saved=Decimal(0.00),
+                        saved=(original_sub_total + shipping) - (discounted_sub_total + shipping)
+                    )
+                    order.vendor.add(product.vendor)
+                    items_created = True
+            
+            if not items_created:
+                order.delete()
+                return Response(
+                    {"error": "All items are currently out of stock or unavailable. Please review your cart."},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-                order.vendor.add(c.product.vendor)
-            # Update order totals (without tax and service fee)
+            
             order.sub_total = total_subtotal
             order.shipping_amount = total_shipping
             order.tax_fee = Decimal('0.00')
@@ -144,10 +163,16 @@ class CreateOrderView(generics.CreateAPIView):
             order.coupon_saved = Decimal(0.00)
             order.saved = order.offer_saved
             order.save()
+        
+        message = "Order Created Successfully"
+        if adjusted:
+            message += " (some quantities were adjusted to current available stock)"
+        
         return Response(
-            {"message": "Order Created Successfully", "order_oid": order.oid},
+            {"message": message, "order_oid": order.oid},
             status=status.HTTP_201_CREATED
         )
+
 
 class CheckoutView(generics.RetrieveAPIView):
     serializer_class = CartOrderSerializer
