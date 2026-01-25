@@ -41,7 +41,7 @@ export default function SearchPage() {
   const [priceMax, setPriceMax] = useState("");
 
   const [cartCount, setCartCount] = useContext(CartContext);
-  const [wishlist, setWishlist] = useState([]);
+  const [wishlist, setWishlist] = useState([]); // Always an array
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
   const currentAddress = UserCountry();
@@ -49,21 +49,25 @@ export default function SearchPage() {
   const cart_id = cartID();
 
   const fetchWishlist = async () => {
-    if (!user?.user_id) return;
+    if (!user?.user_id) {
+      setWishlist([]);
+      return;
+    }
     try {
       const response = await apiInstance.get(
         `customer/wishlist/${user?.user_id}/`,
       );
-      setWishlist(response.data);
+      // Ensure wishlist is always an array (safe fallback)
+      const wishlistData = Array.isArray(response.data) ? response.data : [];
+      setWishlist(wishlistData);
     } catch (error) {
       log.error("Error fetching wishlist:", error);
+      setWishlist([]); // Reset to empty array on error
     }
   };
 
   useEffect(() => {
-    if (user?.user_id) {
-      fetchWishlist();
-    }
+    fetchWishlist();
   }, [user?.user_id]);
 
   // Fetch categories once
@@ -261,9 +265,11 @@ export default function SearchPage() {
   };
 
   const handleAddToWishlist = async (product_id) => {
+    if (!isLoggedIn || !user?.user_id) return;
+
     try {
       await addToWishlist(product_id, user?.user_id);
-      fetchWishlist();
+      await fetchWishlist(); // Refresh wishlist after change
     } catch (error) {
       log.error("Error updating wishlist:", error);
     }
@@ -275,6 +281,14 @@ export default function SearchPage() {
 
   const hasActiveFilters =
     query || selectedCategories.length > 0 || priceMin || priceMax;
+
+  // Helper to safely check if product is in wishlist
+  const isInWishlist = (productId) => {
+    return (
+      Array.isArray(wishlist) &&
+      wishlist.some((item) => item?.product?.id === productId)
+    );
+  };
 
   if (loading) return <ProductsPlaceholder />;
 
@@ -569,17 +583,13 @@ export default function SearchPage() {
                         <button
                           onClick={() => handleAddToWishlist(product.id)}
                           className={`flex items-center justify-center gap-2 w-full rounded-lg py-3 transition font-medium ${
-                            wishlist.some(
-                              (item) => item.product.id === product.id,
-                            )
+                            isInWishlist(product.id)
                               ? "bg-gray-600 text-white hover:bg-gray-700"
                               : "bg-red-600 text-white hover:bg-red-700"
                           }`}
                         >
                           <Heart size={20} />
-                          {wishlist.some(
-                            (item) => item.product.id === product.id,
-                          )
+                          {isInWishlist(product.id)
                             ? "Remove from Wishlist"
                             : "Add to Wishlist"}
                         </button>
