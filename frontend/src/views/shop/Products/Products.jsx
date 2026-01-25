@@ -39,7 +39,7 @@ export default function Products() {
     if (!userData?.user_id) return;
     try {
       const response = await apiInstance.get(
-        `customer/wishlist/${userData?.user_id}/`
+        `customer/wishlist/${userData?.user_id}/`,
       );
       setWishlist(response.data);
     } catch (error) {
@@ -136,7 +136,7 @@ export default function Products() {
       const cartRes = await apiInstance.get(url);
       const cartItems = cartRes.data;
       const existingItem = cartItems.find(
-        (item) => item.product.id === product_id
+        (item) => item.product.id === product_id,
       );
       const existingQty = existingItem ? existingItem.qty : 0;
       // 3️⃣ Check stock availability
@@ -358,7 +358,7 @@ export default function Products() {
                       product.id,
                       product.price, // Pass base price
                       product.shipping_amount,
-                      product.slug // 👈 pass slug here
+                      product.slug, // 👈 pass slug here
                     );
                   }}
                   disabled={
@@ -370,8 +370,8 @@ export default function Products() {
                     product.stock_qty === 0 || !product.in_stock
                       ? "bg-gray-400 cursor-not-allowed"
                       : !Number(quantityValue[product.id])
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                 >
                   <ShoppingCart size={18} />

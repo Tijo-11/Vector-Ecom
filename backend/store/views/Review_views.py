@@ -1,5 +1,6 @@
 # Django Packages
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
 # Restframework Packages
 from rest_framework.response import Response
@@ -54,17 +55,54 @@ class ReviewListAPIView(generics.ListCreateAPIView):#List view and Create view t
         return Response({"meassage": "Review Created Successfully"}, status=status.HTTP_201_CREATED,)
     
 #Searchview
-class SearchProductView(generics.ListCreateAPIView):
+class SearchProductView(generics.ListAPIView):  # Changed to ListAPIView (no need for Create)
     serializer_class = ProductSerializer
     permission_classes = (AllowAny,)
-    
+
     def get_queryset(self):
+        queryset = Product.objects.filter(status='published')
+
+        # Text search query (optional)
         query = self.request.GET.get('query')
-        if query is None:
-            return Response({"message": "Query parameter can't be none"}, status= status.HTTP_400_BAD_REQUEST)
-    
-        product = Product.objects.filter(status='published', title__icontains=query)
-        return product
-        
+        if query:
+            # Search in both title and description for better results
+            queryset = queryset.filter(
+                Q(title__icontains=query) | Q(description__icontains=query)
+            )
+
+        # Category filter (supports multiple categories: ?category=1&category=2)
+        category_ids = self.request.GET.getlist('category')
+        if category_ids:
+            queryset = queryset.filter(category__id__in=category_ids)
+
+        # Price range filters
+        price_min = self.request.GET.get('price_min')
+        if price_min:
+            try:
+                queryset = queryset.filter(price__gte=float(price_min))
+            except ValueError:
+                pass  # Ignore invalid price_min
+
+        price_max = self.request.GET.get('price_max')
+        if price_max:
+            try:
+                queryset = queryset.filter(price__lte=float(price_max))
+            except ValueError:
+                pass  # Ignore invalid price_max
+
+        # Optional: order results (e.g., newest first, or by relevance)
+        # You can change this as needed
+        queryset = queryset.order_by('-date')  # or '-price', 'title', etc.
+
+        return queryset
+
+    # Optional: handle empty results gracefully (but frontend already handles it)
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        if not queryset.exists() and not request.GET:
+            # If no filters at all, still return empty list (frontend shows welcome message)
+            pass
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)  
 
     
