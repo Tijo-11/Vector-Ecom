@@ -10,6 +10,7 @@ import log from "loglevel";
 
 function ProductsVendor() {
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true); // ← New loading state
 
   const axios = apiInstance;
   const userData = UserData();
@@ -18,39 +19,37 @@ function ProductsVendor() {
     window.location.href = "/vendor/register/";
   }
 
-  const fetchData = async () => {
+  // Shared function to load products (used for initial load, filter, and after delete)
+  const loadProducts = async (url) => {
+    setLoading(true);
     try {
-      const response = await axios.get(
-        `vendor/products/${userData?.vendor_id}/`
-      );
+      const response = await axios.get(url);
       setProducts(response.data);
     } catch (error) {
-      log.error("Error fetching data:", error);
+      log.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    loadProducts(`vendor/products/${userData?.vendor_id}/`);
   }, []);
 
   const handleDeleteProduct = async (productPid) => {
     try {
       await deleteProduct(userData?.vendor_id, productPid);
-      await fetchData();
+      // Refetch the main list after deletion
+      loadProducts(`vendor/products/${userData?.vendor_id}/`);
     } catch (error) {
       log.error(error);
     }
   };
 
   const handleFilterProduct = async (param) => {
-    try {
-      const response = await axios.get(
-        `vendor-product-filter/${userData?.vendor_id}?filter=${param}`
-      );
-      setProducts(response.data);
-    } catch (error) {
-      log.error(error);
-    }
+    loadProducts(
+      `vendor-product-filter/${userData?.vendor_id}?filter=${param}`,
+    );
   };
 
   return (
@@ -149,72 +148,83 @@ function ProductsVendor() {
 
               <hr className="my-6" />
 
+              {/* Table Container */}
               <div className="bg-white rounded-xl shadow overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead className="bg-gray-800 text-white">
-                      <tr>
-                        <th className="py-3 px-4 text-left">#ID</th>
-                        <th className="py-3 px-4 text-left">Name</th>
-                        <th className="py-3 px-4 text-left">Price</th>
-                        <th className="py-3 px-4 text-left">Quantity</th>
-                        <th className="py-3 px-4 text-left">Orders</th>
-                        <th className="py-3 px-4 text-left">Status</th>
-                        <th className="py-3 px-4 text-left">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {products?.map((p, index) => (
-                        <tr key={index} className="border-b hover:bg-gray-50">
-                          <th className="py-3 px-4 font-medium" scope="row">
-                            #{p.sku}
-                          </th>
-                          <td className="py-3 px-4">{p.title}</td>
-                          <td className="py-3 px-4">₹{p.price}</td>
-                          <td className="py-3 px-4">{p.stock_qty}</td>
-                          <td className="py-3 px-4">{p.order_count}</td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-1 text-xs rounded-full bg-gray-200">
-                              {p?.status?.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-2">
-                              <Link
-                                to={`/detail/${p.slug}`}
-                                className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center justify-center"
-                              >
-                                <Eye size={16} />
-                              </Link>
-                              <Link
-                                to={`/vendor/product/update/${p.pid}/`}
-                                className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 flex items-center justify-center"
-                              >
-                                <Pencil size={16} />
-                              </Link>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteProduct(p.pid)}
-                                className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 flex items-center justify-center"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {products?.length < 1 && (
+                  {loading ? (
+                    // ← Centered spinner while loading
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+                      <p className="text-lg text-gray-600">
+                        Loading products...
+                      </p>
+                    </div>
+                  ) : (
+                    <table className="w-full border-collapse">
+                      <thead className="bg-gray-800 text-white">
                         <tr>
-                          <td
-                            colSpan="7"
-                            className="text-center py-8 text-lg text-gray-500"
-                          >
-                            No Products Yet
-                          </td>
+                          <th className="py-3 px-4 text-left">#ID</th>
+                          <th className="py-3 px-4 text-left">Name</th>
+                          <th className="py-3 px-4 text-left">Price</th>
+                          <th className="py-3 px-4 text-left">Quantity</th>
+                          <th className="py-3 px-4 text-left">Orders</th>
+                          <th className="py-3 px-4 text-left">Status</th>
+                          <th className="py-3 px-4 text-left">Action</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {products?.map((p, index) => (
+                          <tr key={index} className="border-b hover:bg-gray-50">
+                            <th className="py-3 px-4 font-medium" scope="row">
+                              #{p.sku}
+                            </th>
+                            <td className="py-3 px-4">{p.title}</td>
+                            <td className="py-3 px-4">₹{p.price}</td>
+                            <td className="py-3 px-4">{p.stock_qty}</td>
+                            <td className="py-3 px-4">{p.order_count}</td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-1 text-xs rounded-full bg-gray-200">
+                                {p?.status?.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex gap-2">
+                                <Link
+                                  to={`/detail/${p.slug}`}
+                                  className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center justify-center"
+                                >
+                                  <Eye size={16} />
+                                </Link>
+                                <Link
+                                  to={`/vendor/product/update/${p.pid}/`}
+                                  className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 flex items-center justify-center"
+                                >
+                                  <Pencil size={16} />
+                                </Link>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteProduct(p.pid)}
+                                  className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 flex items-center justify-center"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {products?.length < 1 && (
+                          <tr>
+                            <td
+                              colSpan="7"
+                              className="text-center py-8 text-lg text-gray-500"
+                            >
+                              No Products Yet
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </div>

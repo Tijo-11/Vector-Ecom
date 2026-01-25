@@ -7,6 +7,22 @@ function ProductBasicInfo({
   handleProductInputChange,
   handleProductFileChange,
 }) {
+  // Robustly extract the current category ID (handles object, id string/number, or missing)
+  const rawCategoryId =
+    product.category && typeof product.category === "object"
+      ? product.category.id
+      : product.category;
+
+  // Coerce to string for reliable matching (common issue: API returns number, select uses string)
+  const currentCategoryId = rawCategoryId ? String(rawCategoryId) : "";
+
+  // Optional: Find the current category title for fallback display if needed
+  // (Not used in dropdown, but helpful if you want to show it separately)
+  const currentCategoryTitle =
+    category.find((c) => String(c.id) === currentCategoryId)?.title ||
+    (typeof product.category === "object" ? product.category.title : null) ||
+    "- Select -";
+
   return (
     <div className="bg-white shadow-lg rounded-lg p-6">
       <h4 className="text-xl font-semibold mb-4">Product Details</h4>
@@ -25,6 +41,12 @@ function ProductBasicInfo({
             <h4 className="mt-3 text-lg font-medium text-gray-800">
               {product.title || "Product Title"}
             </h4>
+            {/* Optional: Show current category prominently if you want it "at top" */}
+            {currentCategoryTitle !== "- Select -" && (
+              <p className="mt-2 text-sm text-gray-600">
+                Current Category: <strong>{currentCategoryTitle}</strong>
+              </p>
+            )}
           </div>
         </div>
         <div className="col-span-2">
@@ -73,16 +95,22 @@ function ProductBasicInfo({
                 <select
                   className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
                   name="category"
-                  value={product.category || ""}
+                  value={currentCategoryId}
                   onChange={handleProductInputChange}
                 >
                   <option value="">- Select -</option>
-                  {category.map((c, index) => (
-                    <option key={index} value={c.id}>
+                  {category.map((c) => (
+                    <option key={c.id} value={String(c.id)}>
                       {c.title}
                     </option>
                   ))}
                 </select>
+                {/* Shows current category name below dropdown for clarity */}
+                {currentCategoryTitle !== "- Select -" && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    Currently selected: <strong>{currentCategoryTitle}</strong>
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -109,7 +137,7 @@ function ProductBasicInfo({
                   placeholder="₹0.00"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Shipping Amount
