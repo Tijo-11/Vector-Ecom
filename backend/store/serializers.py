@@ -236,20 +236,19 @@ class CartOrderSerializer(serializers.ModelSerializer):
             self.Meta.depth = 3
 
 class ReviewSerializer(serializers.ModelSerializer):
-    product = ProductSerializer()
-    profile = ProfileSerializer()
+    profile = serializers.SerializerMethodField()
+    user_id = serializers.IntegerField(source='user.id', read_only=True)  # ← Add this line
 
     class Meta:
         model = Review
-        fields = '__all__'
+        fields = ['id', 'user_id', 'user', 'product', 'review', 'reply', 'rating', 'active', 
+                  'helpful', 'not_helpful', 'date', 'profile']
+        read_only_fields = ['user', 'product', 'date', 'helpful', 'not_helpful', 'profile', 'user_id']
 
-    def __init__(self, *args, **kwargs):
-        super(ReviewSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
-            self.Meta.depth = 0
-        else:
-            self.Meta.depth = 3
+    def get_profile(self, obj):
+        if obj.user:
+            return ProfileSerializer(obj.user.profile).data
+        return None
 
 class WishlistSerializer(serializers.ModelSerializer):
     product = ProductSerializer()

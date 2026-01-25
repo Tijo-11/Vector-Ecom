@@ -1,59 +1,95 @@
 # Django Packages
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from django.db import IntegrityError
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from django.core.exceptions import PermissionDenied
+
 
 # Restframework Packages
 from rest_framework.response import Response
 from rest_framework import generics,status
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+
 # Serializers
 from store.serializers import   ProductSerializer, ReviewSerializer
 # Models
-from userauth.models import User
+
 from store.models import  Product, Review
 # Others Packages
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+
+from store.models import CartOrder
+
+from rest_framework.permissions import  AllowAny
 
 
-class ReviewListAPIView(generics.ListCreateAPIView):#List view and Create view together
-    # queryset = Review.objects.all() # it is overriden
+ # Assuming CartOrder is your main order model
+# If your order items model is different (e.g., CartOrderItems), import it too
+
+class ReviewListAPIView(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
-    permission_classes = (AllowAny,)
-    
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAuthenticated()]
+        return [AllowAny()]
+
     def get_queryset(self):
-        #  """
-        # Safely get reviews for a product.
-        # If product doesn't exist, return 404 automatically.
-        # """
-        product_id = self.kwargs['product_id']# grab product id from url
-        
+        product_id = self.kwargs['product_id']
         product = get_object_or_404(Product, id=product_id)
-        #product= Products.objects.get(id =product_id) is not as per DRF best practices as it will raise errors
-        #user get_object_or_404() function instead
-        reviews = Review.objects.filter(product=product)
-        return reviews
-    
-    # create Review
+        # Only show active reviews
+        return Review.objects.filter(product=product, active=True).order_by('-date')
+
     def create(self, request, *args, **kwargs):
-        permission_classes = (IsAuthenticatedOrReadOnly,) #noqa
-        payload = request.data
-        user_id = payload['user_id']
-        product_id = payload['product_id']
-        rating = payload['rating']
-        review = payload['review'] #This is not as per best practices of DRF
-        if not user_id or user_id == 'undefined':
-            return Response({"error": "Invalid user_id"}, status=status.HTTP_400_BAD_REQUEST)
-        if not product_id or product_id == 'undefined':
-            return Response({"error": "Invalid product_id"}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        product_id = self.kwargs['product_id']
+
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response(
+                {"error": "Product not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Purchase check
+        has_purchased = CartOrder.objects.filter(
+            buyer=user,
+            payment_status="paid"
+        ).filter(
+            orderitem__product=product
+        ).exists()
+
+        if not has_purchased:
+            return Response(
+                {"error": "You can only review products you have purchased."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Create or update via serializer (unique_together will prevent duplicates)
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            # Force active=True and set user/product
+            review_instance = serializer.save(user=user, product=product, active=True)
+            
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         
-        
-        
-        user = get_object_or_404(User, id=user_id)
-        product = Product.objects.get(id=product_id)
-        
-        Review.objects.create(user=user, product=product, rating=rating, review=review)
-        
-        return Response({"meassage": "Review Created Successfully"}, status=status.HTTP_201_CREATED,)
-    
+        except IntegrityError:
+            # Handle duplicate attempt gracefully
+            return Response(
+                {"error": "You have already reviewed this product."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+
+
+
+
+
 #Searchview
 class SearchProductView(generics.ListAPIView):  # Changed to ListAPIView (no need for Create)
     serializer_class = ProductSerializer
@@ -106,3 +142,51 @@ class SearchProductView(generics.ListAPIView):  # Changed to ListAPIView (no nee
         return Response(serializer.data)  
 
     
+
+
+class HasPurchasedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, product_id):
+        user = request.user
+
+        # FIXED: Use 'orderitem' related_name
+        has_purchased = CartOrder.objects.filter(
+            buyer=user,
+            payment_status="paid"
+        ).filter(
+            orderitem__product__id=product_id
+        ).exists()
+
+        return Response({"has_purchased": has_purchased})
+    
+
+class ReviewDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve, Update (PATCH), or Delete a single review.
+    Only the author can update or delete their own review.
+    """
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        # Only return active reviews
+        return Review.objects.filter(active=True)
+
+    def get_object(self):
+        pk = self.kwargs['pk']
+        review = get_object_or_404(Review, id=pk)
+        return review
+
+    def perform_update(self, serializer):
+        # Only allow author to update
+        if serializer.instance.user != self.request.user:
+            raise PermissionDenied("You can only edit your own reviews.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        # Only allow author to delete
+        if instance.user != self.request.user:
+            raise PermissionDenied("You can only delete your own reviews.")
+        instance.delete()  # Or set active=False if you prefer soft delete

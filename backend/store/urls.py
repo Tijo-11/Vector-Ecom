@@ -1,11 +1,11 @@
-# store/urls.py 
+# store/urls.py (reordered and typed URLs to avoid conflict)
 
 from django.urls import path
 from .views.product_category import CategoryListView, ProductListView, FeaturedProductListView, ProductDetailView
 from .views.cart_views import CartAPIView, CartListView, CartDetailView, CartItemDeleteAPIView, CartMergeAPIView
 from .views.order_views import CreateOrderView, CheckoutView, CouponAPIView, OrdersDetailAPIView, RemoveCouponAPIView
 from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
-from .views.Review_views import ReviewListAPIView, SearchProductView
+from .views.Review_views import ReviewListAPIView, SearchProductView, HasPurchasedView, ReviewDetailAPIView
 from .views.cancel_views import CancelOrderView, ReturnOrderItemView
 from .views.order_management_views import GuestOrderTrackingView
 from .views.referral_views import GenerateReferralView, ApplyReferralView, MyReferralCouponsView
@@ -30,8 +30,12 @@ urlpatterns = [
     path('razorpay-checkout/<str:order_id>/', RazorpayCheckoutView.as_view(), name='razorpay-checkout'),
     path('payment-success/<str:order_id>/', PaymentSuccessView.as_view(), name='payment-success'),
     
-    # Reviews
-    path('reviews/<product_id>/', ReviewListAPIView.as_view(), name='list-review'),
+    # Reviews - IMPORTANT: Detail view BEFORE list view to avoid URL conflict
+    path('reviews/product/<int:product_id>/', ReviewListAPIView.as_view(), name='list-review'),
+
+    # Detail for edit/delete
+    path('reviews/<int:pk>/', ReviewDetailAPIView.as_view(), name='review-detail'),
+    path('product/<int:product_id>/has-purchased/', HasPurchasedView.as_view(), name='has-purchased'),
     path('search/', SearchProductView.as_view(), name='search'),
     
     # View order
@@ -48,9 +52,10 @@ urlpatterns = [
     # REFERRAL SYSTEM 
     # ============================================
     path('referral/generate/', GenerateReferralView.as_view(), name='generate-referral'),
-    path('referral/apply/', ApplyReferralView.as_view(), name='apply-referral'),  # THIS IS CRITICAL!
+    path('referral/apply/', ApplyReferralView.as_view(), name='apply-referral'),
     path('referral/my-coupons/', MyReferralCouponsView.as_view(), name='my-referral-coupons'),
     
     # Remove coupon
     path('coupon/remove/', RemoveCouponAPIView.as_view(), name='remove-coupon'),
+    
 ]
