@@ -30,10 +30,10 @@ export default function Dashboard() {
   }, []);
   const fetchChartData = async () => {
     const order_response = await apiInstance.get(
-      `vendor-orders-report-chart/${UserData()?.vendor_id}/`
+      `vendor-orders-report-chart/${UserData()?.vendor_id}/`,
     );
     const product_response = await apiInstance.get(
-      `vendor-products-report-chart/${UserData()?.vendor_id}/`
+      `vendor-products-report-chart/${UserData()?.vendor_id}/`,
     );
     setOrderChartData(order_response?.data);
     setProductsChartData(product_response?.data);
@@ -136,13 +136,13 @@ export default function Dashboard() {
                   <h1 className="text-4xl font-bold">{stats?.orders}</h1>
                 </div>
 
-                <div className="bg-sky-500 text-white rounded-xl shadow p-4 flex flex-col items-start">
+                {/* <div className="bg-sky-500 text-white rounded-xl shadow p-4 flex flex-col items-start">
                   <div className="self-end opacity-20">
                     <Users size={64} />
                   </div>
                   <h6 className="uppercase tracking-wide text-sm">Customers</h6>
                   <h1 className="text-4xl font-bold">125</h1>
-                </div>
+                </div> */}
 
                 <div className="bg-yellow-500 text-white rounded-xl shadow p-4 flex flex-col items-start">
                   <div className="self-end opacity-20">
