@@ -13,30 +13,42 @@ import log from "loglevel";
 export default function ProductDetail() {
   const [product, setProduct] = useState({});
   const [mainImage, setMainImage] = useState("");
+  const [loading, setLoading] = useState(true); // ← New loading state
   const param = useParams();
   const currentAddress = UserCountry();
   const userData = UserData();
   const cartId = CartId();
 
   useEffect(() => {
-    apiInstance.get(`products/${param.slug}/`).then((response) => {
-      setProduct(response.data);
-      setMainImage(response.data.image);
-      log.debug("Response data:", response.data);
-    });
+    setLoading(true); // Start loading
+
+    apiInstance
+      .get(`products/${param.slug}/`)
+      .then((response) => {
+        setProduct(response.data);
+        setMainImage(response.data.image || "");
+        log.debug("Response data:", response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching product:", error);
+        // Optionally set an error state here if you want to show an error message
+      })
+      .finally(() => {
+        setLoading(false); // Always stop loading
+      });
   }, [param.slug]);
 
   const allImages = [
     { id: "main", image: product.image },
     ...(product?.gallery || []),
-  ];
+  ].filter((item) => item.image); // Safety: only images with a URL
 
-  // Check if product is out of stock
+  // Only calculate out-of-stock when data is loaded
   const isOutOfStock = product.stock_qty === 0 || !product.in_stock;
 
-  // Show an alert if the product is out of stock
+  // Show out-of-stock alert only after data is loaded
   useEffect(() => {
-    if (isOutOfStock && product.id) {
+    if (!loading && isOutOfStock && product.id) {
       Swal.fire({
         icon: "info",
         title: "Out of Stock",
@@ -48,152 +60,163 @@ export default function ProductDetail() {
         position: "top-end",
       });
     }
-  }, [isOutOfStock, product.id]);
+  }, [loading, isOutOfStock, product.id]);
 
   return (
     <div className="bg-gray-100">
       <div className="container mx-auto px-4 py-8 ml-24">
-        <div className="flex flex-wrap -mx-4">
-          {/* Product Images */}
-          <div className="w-full md:w-1/2 px-4 mb-8">
-            {mainImage && (
-              <div className="relative overflow-hidden rounded-lg shadow-md mb-4 group cursor-zoom-in">
-                <img
-                  src={mainImage}
-                  alt={product.title || "Product"}
-                  className="w-full h-auto transition-transform duration-300 ease-in-out group-hover:scale-150"
-                />
-              </div>
-            )}
-            <div className="flex gap-4 py-4 justify-center overflow-x-auto">
-              {allImages.map((item) => (
-                <img
-                  key={item.id}
-                  src={item.image}
-                  alt={`Thumbnail ${item.id}`}
-                  onClick={() => setMainImage(item.image)}
-                  className={`size-16 sm:size-20 object-cover rounded-md cursor-pointer transition duration-300 ${
-                    mainImage === item.image ? "opacity-100" : "opacity-60"
-                  }`}
-                />
-              ))}
-            </div>
+        {loading ? (
+          // ← Loading spinner (centered, full-height while loading)
+          <div className="flex flex-col items-center justify-center min-h-screen">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
+            <p className="mt-4 text-lg text-gray-600">
+              Loading product details...
+            </p>
           </div>
-
-          {/* Product Details */}
-          <div className="w-full md:w-1/2 px-4">
-            <h2 className="text-3xl font-bold mb-2">{product.title}</h2>
-            <p className="text-gray-600 mb-4">SKU: {product.sku}</p>
-
-            <div className="mb-4 flex items-center gap-2">
-              {product.offer_discount > 0 ? (
-                <>
-                  <span className="text-sm line-through text-gray-400">
-                    ₹{product.price}
-                  </span>
-                  <span className="text-2xl font-bold mr-2">
-                    ₹
-                    {(
-                      product.price *
-                      (1 - product.offer_discount / 100)
-                    ).toFixed(2)}
-                  </span>
-                </>
-              ) : (
-                <span className="text-2xl font-bold mr-2">
-                  ₹{product.price}
-                </span>
-              )}
-              {product.old_price && (
-                <span className="text-gray-500 line-through">
-                  ₹{product.old_price}
-                </span>
-              )}
-              {product.offer_discount > 0 && (
-                <span className="text-red-500 font-bold animate-pulse">
-                  {product.offer_discount}% OFF
-                </span>
-              )}
-            </div>
-
-            {/* Out of Stock Badge */}
-            {isOutOfStock && (
-              <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm font-medium">
-                Out of Stock — This product is presently unavailable. Please
-                check back later.
+        ) : (
+          <>
+            <div className="flex flex-wrap -mx-4">
+              {/* Product Images */}
+              <div className="w-full md:w-1/2 px-4 mb-8">
+                {mainImage ? (
+                  <div className="relative overflow-hidden rounded-lg shadow-md mb-4 group cursor-zoom-in">
+                    <img
+                      src={mainImage}
+                      alt={product.title || "Product"}
+                      className="w-full h-auto transition-transform duration-300 ease-in-out group-hover:scale-150"
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-gray-200 border-2 border-dashed rounded-lg w-full h-96 flex items-center justify-center">
+                    <span className="text-gray-500">No image available</span>
+                  </div>
+                )}
+                <div className="flex gap-4 py-4 justify-center overflow-x-auto">
+                  {allImages.map((item) => (
+                    <img
+                      key={item.id}
+                      src={item.image}
+                      alt={`Thumbnail ${item.id}`}
+                      onClick={() => setMainImage(item.image)}
+                      className={`size-16 sm:size-20 object-cover rounded-md cursor-pointer transition duration-300 ${
+                        mainImage === item.image ? "opacity-100" : "opacity-60"
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
-            )}
 
-            {/* Rating */}
-            <div className="flex items-center mb-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <svg
-                  key={i}
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill={
-                    i < Math.floor(product.rating || 0)
-                      ? "currentColor"
-                      : "none"
-                  }
-                  stroke="currentColor"
-                  className="size-6 text-yellow-500"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10.788 3.21c.448-1.077 1.976-1.077 
-                    2.424 0l2.082 5.006 5.404.434c1.164.093 
-                    1.636 1.545.749 2.305l-4.117 3.527 
-                    1.257 5.273c.271 1.136-.964 2.033-1.96 
-                    1.425L12 18.354 7.373 21.18c-.996.608-2.231
-                    -.29-1.96-1.425l1.257-5.273-4.117-3.527c
-                    -.887-.76-.415-2.212.749-2.305l5.404-.434 
-                    2.082-5.005Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              ))}
-              <span className="ml-2 text-gray-600">
-                {product.rating} ({product.reviews} reviews)
-              </span>
+              {/* Product Details */}
+              <div className="w-full md:w-1/2 px-4">
+                <h2 className="text-3xl font-bold mb-2">
+                  {product.title || "Loading..."}
+                </h2>
+                <p className="text-gray-600 mb-4">SKU: {product.sku || "-"}</p>
+
+                <div className="mb-4 flex items-center gap-2">
+                  {product.offer_discount > 0 ? (
+                    <>
+                      <span className="text-sm line-through text-gray-400">
+                        ₹{product.price}
+                      </span>
+                      <span className="text-2xl font-bold mr-2">
+                        ₹
+                        {(
+                          product.price *
+                          (1 - product.offer_discount / 100)
+                        ).toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-2xl font-bold mr-2">
+                      ₹{product.price || "0.00"}
+                    </span>
+                  )}
+                  {product.old_price && (
+                    <span className="text-gray-500 line-through">
+                      ₹{product.old_price}
+                    </span>
+                  )}
+                  {product.offer_discount > 0 && (
+                    <span className="text-red-500 font-bold animate-pulse">
+                      {product.offer_discount}% OFF
+                    </span>
+                  )}
+                </div>
+
+                {/* Out of Stock Badge */}
+                {isOutOfStock && (
+                  <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm font-medium">
+                    Out of Stock — This product is presently unavailable. Please
+                    check back later.
+                  </div>
+                )}
+
+                {/* Rating */}
+                <div className="flex items-center mb-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <svg
+                      key={i}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill={
+                        i < Math.floor(product.rating || 0)
+                          ? "currentColor"
+                          : "none"
+                      }
+                      stroke="currentColor"
+                      className="size-6 text-yellow-500"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10.788 3.21c.448-1.077 1.976-1.077 
+                        2.424 0l2.082 5.006 5.404.434c1.164.093 
+                        1.636 1.545.749 2.305l-4.117 3.527 
+                        1.257 5.273c.271 1.136-.964 2.033-1.96 
+                        1.425L12 18.354 7.373 21.18c-.996.608-2.231
+                        -.29-1.96-1.425l1.257-5.273-4.117-3.527c
+                        -.887-.76-.415-2.212.749-2.305l5.404-.434 
+                        2.082-5.005Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  ))}
+                  <span className="ml-2 text-gray-600">
+                    {product.rating || "0"} ({product.reviews || 0} reviews)
+                  </span>
+                </div>
+
+                <p className="text-gray-700 mb-6">{product.brand || "-"}</p>
+
+                {/* Product Options & Add to Cart */}
+                <ProductOptions
+                  product={product}
+                  setMainImage={setMainImage}
+                  country={currentAddress.country}
+                  user={userData?.user_id}
+                  cartId={cartId}
+                  isOutOfStock={isOutOfStock} // ← Pass it so ProductOptions can disable properly
+                />
+
+                {/* Removed the duplicate full-width "Out of Stock" button – ProductOptions already handles the Add to Cart button state */}
+              </div>
             </div>
 
-            <p className="text-gray-700 mb-6">{product.brand}</p>
+            {/* Related Products */}
+            <RelatedProducts related={product.related || []} />
 
-            {/* Product Options & Add to Cart */}
-            <ProductOptions
-              product={product}
-              setMainImage={setMainImage}
-              country={currentAddress.country}
-              user={userData?.user_id}
-              cartId={cartId}
-            />
-
-            {/* Disabled Out of Stock Button */}
-            {isOutOfStock && (
-              <button
-                disabled
-                className="w-full py-3 mt-4 rounded-lg bg-gray-400 text-white font-semibold cursor-not-allowed"
-              >
-                Out of Stock
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Related Products */}
-        <RelatedProducts related={product.related} />
-
-        {/* Review Section */}
-        <div
-          className="tab-pane fade"
-          id="pills-contact"
-          role="tabpanel"
-          aria-labelledby="pills-contact-tab"
-          tabIndex={0}
-        >
-          <Review product={product} userData={userData} />
-        </div>
+            {/* Review Section */}
+            <div
+              className="tab-pane fade"
+              id="pills-contact"
+              role="tabpanel"
+              aria-labelledby="pills-contact-tab"
+              tabIndex={0}
+            >
+              <Review product={product} userData={userData} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

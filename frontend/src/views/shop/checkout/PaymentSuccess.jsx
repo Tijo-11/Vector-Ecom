@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import { v4 as uuidv4 } from "uuid";
@@ -50,7 +50,6 @@ function PaymentSuccess() {
       log.debug("Cart cleared successfully");
     } catch (error) {
       log.error("Error clearing cart:", error);
-      // Optional: Add toast notification for error if desired
     }
   };
 
@@ -59,70 +58,73 @@ function PaymentSuccess() {
       if (hasRun) return;
       setHasRun(true);
 
+      // If no payment IDs in URL, treat as failed verification (safe fallback)
+      if (!razorpayPaymentId && !paypalCaptureId) {
+        setStatus("unpaid");
+        return;
+      }
+
       const requestId = uuidv4();
       log.debug(
-        `PaymentSuccess check (order_id=${order_id}, requestId=${requestId})`
+        `PaymentSuccess check (order_id=${order_id}, requestId=${requestId})`,
       );
 
       const attemptVerification = async (attempt = 0) => {
         try {
-          if (razorpayPaymentId || paypalCaptureId) {
-            if (attempt === 0) {
-              await new Promise((resolve) => setTimeout(resolve, 1500));
-            }
-
-            const formData = new FormData();
-            formData.append("order_id", order_id);
-            if (razorpayPaymentId)
-              formData.append("session_id", razorpayPaymentId);
-            if (paypalCaptureId)
-              formData.append("paypal_capture_id", paypalCaptureId);
-
-            const verifyResponse = await apiInstance.post(
-              `/payment-success/${order_id}/`,
-              formData,
-              { headers: { "X-Request-ID": requestId } }
-            );
-
-            const responseStatus = verifyResponse.data.message || "unpaid";
-
-            if (
-              responseStatus === "payment_successful" ||
-              responseStatus === "already_paid"
-            ) {
-              window.dispatchEvent(new Event("paymentSuccess"));
-              setStatus(responseStatus);
-              await clearCart(); // Clear cart on success
-            } else if (
-              responseStatus === "unpaid" &&
-              attempt < MAX_RETRIES - 1
-            ) {
-              setRetryCount(attempt + 1);
-              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-              return attemptVerification(attempt + 1);
-            } else {
-              setStatus(responseStatus);
-            }
+          if (attempt === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
           }
 
-          // Fetch full order details
-          const orderResponse = await apiInstance.get(`/checkout/${order_id}/`);
-          setOrder(orderResponse.data || {});
+          const formData = new FormData();
+          formData.append("order_id", order_id);
+          if (razorpayPaymentId)
+            formData.append("session_id", razorpayPaymentId);
+          if (paypalCaptureId)
+            formData.append("paypal_capture_id", paypalCaptureId);
+
+          const verifyResponse = await apiInstance.post(
+            `/payment-success/${order_id}/`,
+            formData,
+            { headers: { "X-Request-ID": requestId } },
+          );
+
+          const responseStatus = verifyResponse.data.message || "unpaid";
+
+          if (
+            responseStatus === "payment_successful" ||
+            responseStatus === "already_paid"
+          ) {
+            window.dispatchEvent(new Event("paymentSuccess"));
+
+            const orderPromise = apiInstance.get(`/checkout/${order_id}/`);
+            const clearPromise = clearCart();
+
+            const orderResponse = await orderPromise;
+            await clearPromise;
+
+            setOrder(orderResponse.data || {});
+            setStatus(responseStatus);
+          } else if (responseStatus === "unpaid" && attempt < MAX_RETRIES - 1) {
+            setRetryCount(attempt + 1);
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+            return attemptVerification(attempt + 1);
+          } else {
+            setStatus(responseStatus);
+          }
         } catch (error) {
           log.error("PaymentSuccess error:", error);
 
           if (error.response?.data?.message === "already_paid") {
             window.dispatchEvent(new Event("paymentSuccess"));
+
+            const orderPromise = apiInstance.get(`/checkout/${order_id}/`);
+            const clearPromise = clearCart();
+
+            const orderResponse = await orderPromise;
+            await clearPromise;
+
+            setOrder(orderResponse.data || {});
             setStatus("already_paid");
-            await clearCart(); // Clear cart on already_paid
-            try {
-              const orderResponse = await apiInstance.get(
-                `/checkout/${order_id}/`
-              );
-              setOrder(orderResponse.data || {});
-            } catch (orderError) {
-              log.error("Failed to fetch order:", orderError);
-            }
           } else if (attempt < MAX_RETRIES - 1) {
             setRetryCount(attempt + 1);
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
@@ -139,23 +141,25 @@ function PaymentSuccess() {
     verifyPayment();
   }, [order_id, razorpayPaymentId, paypalCaptureId, hasRun, cart_id, user]);
 
+  // New centered spinner loading screen (replaces the previous card-style verifying screen)
   if (status === "verifying") {
     return (
-      <div className="container mx-auto mt-10 px-4">
-        <div className="bg-white shadow-md rounded-md p-8 text-center">
-          <h1 className="font-semibold text-2xl mb-4 text-yellow-600">
-            <i className="fas fa-spinner fa-spin mr-2"></i>Payment Verifying
-          </h1>
-          <p className="text-gray-700 font-bold">
-            Please hold on while we verify your payment.
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-600 mb-8"></div>
+        <h1 className="text-2xl font-semibold text-gray-800 mb-4">
+          Processing Your Order
+        </h1>
+        <p className="text-lg text-gray-600 text-center max-w-md">
+          Please wait while we verify your payment and prepare your invoice.
+        </p>
+        {retryCount > 0 && (
+          <p className="text-blue-600 mt-4">
+            Verification attempt {retryCount + 1} of {MAX_RETRIES}...
           </p>
-          {retryCount > 0 && (
-            <p className="text-blue-600 mt-2">
-              Verification attempt {retryCount + 1} of {MAX_RETRIES}...
-            </p>
-          )}
-          <p className="text-red-600 mt-2">Do not reload or leave this page.</p>
-        </div>
+        )}
+        <p className="text-red-600 mt-6 font-medium">
+          Do not reload or leave this page.
+        </p>
       </div>
     );
   }
@@ -255,7 +259,6 @@ function PaymentSuccess() {
             <div>
               <h2 className="font-semibold text-xl mb-4">Payment Summary</h2>
 
-              {/* Order Items - Show original price per item */}
               {order.orderitem && order.orderitem.length > 0 ? (
                 order.orderitem.map((item, index) => (
                   <div
@@ -271,18 +274,15 @@ function PaymentSuccess() {
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 italic">Loading items...</p>
+                <p className="text-gray-500 italic">No items found.</p>
               )}
 
-              {/* Totals */}
               <div className="mt-6 border-t pt-4 space-y-2">
-                {/* Original Subtotal (before discount) */}
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Subtotal</span>
                   <span>₹{originalSubTotal.toFixed(2)}</span>
                 </div>
 
-                {/* Offer Discount */}
                 {order.offer_saved && parseFloat(order.offer_saved) > 0 && (
                   <div className="flex justify-between text-green-600 font-semibold">
                     <span>Offers Saved</span>
@@ -290,7 +290,6 @@ function PaymentSuccess() {
                   </div>
                 )}
 
-                {/* Coupon Discount */}
                 {order.coupon_saved && parseFloat(order.coupon_saved) > 0 && (
                   <div className="flex justify-between text-blue-600 font-semibold">
                     <span>Coupon Saved</span>
@@ -315,7 +314,6 @@ function PaymentSuccess() {
                   <span>₹{parseFloat(order.service_fee || 0).toFixed(2)}</span>
                 </div>
 
-                {/* Final Total */}
                 <div className="flex justify-between text-xl font-bold border-t pt-3 mt-4 text-gray-900">
                   <span>Total Paid</span>
                   <span>₹{parseFloat(order.total || 0).toFixed(2)}</span>
