@@ -128,20 +128,66 @@ class UserSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+
+
 class ProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    user_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), 
-        source='user', 
-        write_only=True, 
-        required=False
-    )
+    # Flatten commonly used User fields for easier frontend access
+    full_name = serializers.CharField(source="user.full_name", required=False)
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    # Profile fields (adjust based on your actual Profile model fields)
+    # Assuming: about, address, city, state, country, postal_code, image are on Profile
+    about = serializers.CharField(allow_blank=True, required=False)
+    address = serializers.CharField(allow_blank=True, required=False)
+    city = serializers.CharField(allow_blank=True, required=False)
+    state = serializers.CharField(allow_blank=True, required=False)
+    country = serializers.CharField(allow_blank=True, required=False)
+    postal_code = serializers.CharField(allow_blank=True, required=False)
+    image = serializers.ImageField(allow_null=True, required=False, use_url=True)
+
+    # Critical flags for frontend detection
+    can_change_password = serializers.SerializerMethodField()
+    can_change_email = serializers.SerializerMethodField()
+
+    # Nested user serializer (optional - kept for completeness if you need full user data)
+    user_details = UserSerializer(source="user", read_only=True)
 
     class Meta:
         model = Profile
-        fields = "__all__"
+        fields = [
+            "id",
+            "full_name",
+            "email",
+            "about",
+            "address",
+            "city",
+            "state",
+            "country",
+            "postal_code",
+            "image",
+            "can_change_password",
+            "can_change_email",
+            "user_details",  # Optional nested full user data
+            # Add any other Profile fields here
+        ]
+        extra_kwargs = {
+            "image": {"required": False, "allow_null": True},
+        }
 
-    def to_representation(self, instance):
-        response = super().to_representation(instance)
-        response['user'] = UserSerializer(instance.user).data
-        return response
+    def get_can_change_password(self, obj):
+        """Returns True only for email/password users"""
+        return obj.user.has_usable_password()
+
+    def get_can_change_email(self, obj):
+        """Same logic as password - Google users cannot change email"""
+        return obj.user.has_usable_password()
+
+    def update(self, instance, validated_data):
+        # Handle nested user data if full_name is updated
+        user_data = validated_data.pop("user", {})
+        if "full_name" in user_data:
+            instance.user.full_name = user_data["full_name"]
+            instance.user.save()
+
+        # Update Profile fields
+        return super().update(instance, validated_data)

@@ -1,19 +1,17 @@
-// src/components/customer/Sidebar.jsx
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import UserProfileData from "../../plugin/UserProfileData";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import log from "loglevel";
 
-export default function Sidebar() {
+const Sidebar = () => {
   const {
     profile: userProfile,
     loading: profileLoading,
     error: profileError,
   } = UserProfileData();
   const userData = UserData();
-  const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -36,34 +34,33 @@ export default function Sidebar() {
   }
 
   useEffect(() => {
-    if (!userData?.user_id) {
-      setLoading(false);
-      return;
-    }
-    const fetchData = async () => {
+    if (!userData?.user_id) return;
+
+    const fetchCounts = async () => {
       try {
-        const ordersRes = await apiInstance.get(
-          `customer/orders/${userData.user_id}/`
-        );
-        setOrderCount(ordersRes.data.length || 0);
-        const wishlistRes = await apiInstance.get(
-          `customer/wishlist/${userData.user_id}/`
-        );
-        setWishlistCount(wishlistRes.data.length || 0);
-        const notificationsRes = await apiInstance.get(
-          `customer/notifications/${userData.user_id}/`
-        );
-        setNotificationCount(notificationsRes.data.length || 0);
+        const [ordersRes, wishlistRes, notificationsRes] = await Promise.all([
+          apiInstance.get(`customer/orders/${userData.user_id}/`),
+          apiInstance.get(`customer/wishlist/${userData.user_id}/`),
+          apiInstance.get(`customer/notifications/${userData.user_id}/`),
+        ]);
+
+        // Safe handling for paginated responses
+        const getCount = (data) =>
+          data.count ?? (Array.isArray(data) ? data.length : 0);
+
+        setOrderCount(getCount(ordersRes.data));
+        setWishlistCount(getCount(wishlistRes.data));
+        setNotificationCount(getCount(notificationsRes.data));
       } catch (error) {
-        log.error("Error fetching sidebar data:", error);
-      } finally {
-        setLoading(false);
+        log.error("Error fetching sidebar counts:", error);
+        // Keep previous counts on error (no reset)
       }
     };
-    fetchData();
+
+    fetchCounts();
   }, [userData?.user_id]);
 
-  if (profileLoading || loading) {
+  if (profileLoading) {
     return <div className="lg:w-1/4">Loading profile...</div>;
   }
 
@@ -142,4 +139,6 @@ export default function Sidebar() {
       </ol>
     </div>
   );
-}
+};
+
+export default React.memo(Sidebar);

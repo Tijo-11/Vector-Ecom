@@ -1,4 +1,5 @@
-// src/components/customer/Settings.jsx
+// Settings.jsx (Complete Working Version)
+
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
@@ -19,6 +20,7 @@ function Settings() {
   });
   const [imagePreview, setImagePreview] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSocialUser, setIsSocialUser] = useState(false);
 
   // Password change state
   const [passwordData, setPasswordData] = useState({
@@ -53,6 +55,13 @@ function Settings() {
           p_image: null,
         });
         setImagePreview(res.data?.image || "");
+
+        // Reliable detection: Hide sections if user cannot change password (i.e., Google user)
+        if (res.data.can_change_password === false) {
+          setIsSocialUser(true);
+        } else {
+          setIsSocialUser(false);
+        }
       } catch (error) {
         log.error("Error fetching profile data:", error);
       }
@@ -99,7 +108,7 @@ function Settings() {
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
-        }
+        },
       );
 
       Swal.fire({
@@ -136,7 +145,7 @@ function Settings() {
       Swal.fire(
         "Error",
         err.response?.data?.error || "Failed to change password",
-        "error"
+        "error",
       );
     }
   };
@@ -153,7 +162,7 @@ function Settings() {
       Swal.fire(
         "Error",
         err.response?.data?.error || "Failed to send OTP",
-        "error"
+        "error",
       );
     }
   };
@@ -165,7 +174,6 @@ function Settings() {
       Swal.fire("Success", "Email changed successfully", "success");
       setEmailData({ new_email: "", otp: "" });
       setOtpSent(false);
-      // Optionally refresh profile data
       window.location.reload();
     } catch (err) {
       Swal.fire("Error", err.response?.data?.error || "Invalid OTP", "error");
@@ -324,81 +332,77 @@ function Settings() {
                     </div>
                   </form>
 
-                  {/* Change Password Section */}
-                  <div className="mt-12 border-t pt-8">
-                    <h3 className="text-xl font-semibold mb-6">
-                      Change Password
-                    </h3>
-                    <form
-                      onSubmit={handlePasswordChange}
-                      className="max-w-lg space-y-4"
-                    >
-                      <input
-                        type="password"
-                        placeholder="Current Password"
-                        value={passwordData.old_password}
-                        onChange={(e) =>
-                          setPasswordData({
-                            ...passwordData,
-                            old_password: e.target.value,
-                          })
-                        }
-                        required
-                        className="w-full border rounded px-3 py-2"
-                      />
-                      <input
-                        type="password"
-                        placeholder="New Password"
-                        value={passwordData.new_password}
-                        onChange={(e) =>
-                          setPasswordData({
-                            ...passwordData,
-                            new_password: e.target.value,
-                          })
-                        }
-                        required
-                        className="w-full border rounded px-3 py-2"
-                      />
-                      <input
-                        type="password"
-                        placeholder="Confirm New Password"
-                        value={passwordData.new_password2}
-                        onChange={(e) =>
-                          setPasswordData({
-                            ...passwordData,
-                            new_password2: e.target.value,
-                          })
-                        }
-                        required
-                        className="w-full border rounded px-3 py-2"
-                      />
-                      <button
-                        type="submit"
-                        className="px-6 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
-                      >
-                        Change Password
-                      </button>
-                    </form>
-                  </div>
+                  {/* Message for Social/Google Users */}
+                  {isSocialUser && (
+                    <div className="mt-12 border-t pt-8">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                        <p className="text-blue-800 font-semibold text-lg mb-3">
+                          Account managed by Google
+                        </p>
+                        <p className="text-blue-800">
+                          You signed in with Google. Password and email changes
+                          must be done through your Google Account.
+                        </p>
+                        <p className="text-blue-700 text-sm mt-4">
+                          Visit{" "}
+                          <a
+                            href="https://myaccount.google.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline font-medium"
+                          >
+                            Google Account settings
+                          </a>{" "}
+                          to manage them.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
-                  {/* Change Email Section */}
-                  <div className="mt-12 border-t pt-8">
-                    <h3 className="text-xl font-semibold mb-6">
-                      Change Email Address
-                    </h3>
-                    {!otpSent ? (
+                  {/* Change Password - Only for Email/Password Users */}
+                  {!isSocialUser && (
+                    <div className="mt-12 border-t pt-8">
+                      <h3 className="text-xl font-semibold mb-6">
+                        Change Password
+                      </h3>
                       <form
-                        onSubmit={handleEmailRequest}
+                        onSubmit={handlePasswordChange}
                         className="max-w-lg space-y-4"
                       >
                         <input
-                          type="email"
-                          placeholder="New Email Address"
-                          value={emailData.new_email}
+                          type="password"
+                          placeholder="Current Password"
+                          value={passwordData.old_password}
                           onChange={(e) =>
-                            setEmailData({
-                              ...emailData,
-                              new_email: e.target.value,
+                            setPasswordData({
+                              ...passwordData,
+                              old_password: e.target.value,
+                            })
+                          }
+                          required
+                          className="w-full border rounded px-3 py-2"
+                        />
+                        <input
+                          type="password"
+                          placeholder="New Password"
+                          value={passwordData.new_password}
+                          onChange={(e) =>
+                            setPasswordData({
+                              ...passwordData,
+                              new_password: e.target.value,
+                            })
+                          }
+                          required
+                          className="w-full border rounded px-3 py-2"
+                        />
+                        <input
+                          type="password"
+                          placeholder="Confirm New Password"
+                          value={passwordData.new_password2}
+                          onChange={(e) =>
+                            setPasswordData({
+                              ...passwordData,
+                              new_password2: e.target.value,
                             })
                           }
                           required
@@ -406,38 +410,76 @@ function Settings() {
                         />
                         <button
                           type="submit"
-                          className="px-6 py-2 rounded-lg bg-orange-600 text-white font-medium hover:bg-orange-700"
+                          className="px-6 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
                         >
-                          Send OTP
+                          Change Password
                         </button>
                       </form>
-                    ) : (
-                      <form
-                        onSubmit={handleEmailVerify}
-                        className="max-w-lg space-y-4"
-                      >
-                        <p className="text-green-600 mb-4">
-                          OTP has been sent to {emailData.new_email}
-                        </p>
-                        <input
-                          type="text"
-                          placeholder="Enter OTP"
-                          value={emailData.otp}
-                          onChange={(e) =>
-                            setEmailData({ ...emailData, otp: e.target.value })
-                          }
-                          required
-                          className="w-full border rounded px-3 py-2"
-                        />
-                        <button
-                          type="submit"
-                          className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
+                    </div>
+                  )}
+
+                  {/* Change Email - Only for Email/Password Users */}
+                  {!isSocialUser && (
+                    <div className="mt-12 border-t pt-8">
+                      <h3 className="text-xl font-semibold mb-6">
+                        Change Email Address
+                      </h3>
+                      {!otpSent ? (
+                        <form
+                          onSubmit={handleEmailRequest}
+                          className="max-w-lg space-y-4"
                         >
-                          Verify & Change Email
-                        </button>
-                      </form>
-                    )}
-                  </div>
+                          <input
+                            type="email"
+                            placeholder="New Email Address"
+                            value={emailData.new_email}
+                            onChange={(e) =>
+                              setEmailData({
+                                ...emailData,
+                                new_email: e.target.value,
+                              })
+                            }
+                            required
+                            className="w-full border rounded px-3 py-2"
+                          />
+                          <button
+                            type="submit"
+                            className="px-6 py-2 rounded-lg bg-orange-600 text-white font-medium hover:bg-orange-700"
+                          >
+                            Send OTP
+                          </button>
+                        </form>
+                      ) : (
+                        <form
+                          onSubmit={handleEmailVerify}
+                          className="max-w-lg space-y-4"
+                        >
+                          <p className="text-green-600 mb-4">
+                            OTP has been sent to {emailData.new_email}
+                          </p>
+                          <input
+                            type="text"
+                            placeholder="Enter OTP"
+                            value={emailData.otp}
+                            onChange={(e) =>
+                              setEmailData({
+                                ...emailData,
+                                otp: e.target.value,
+                              })
+                            }
+                            required
+                            className="w-full border rounded px-3 py-2"
+                          />
+                          <button
+                            type="submit"
+                            className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
+                          >
+                            Verify & Change Email
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  )}
                 </div>
               </main>
             </div>

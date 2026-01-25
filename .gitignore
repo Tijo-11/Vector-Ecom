@@ -47,3 +47,4 @@ staticfiles/
 # Cove
 node_modules
 backend/.elasticbeanstalk/
+dump.rdb

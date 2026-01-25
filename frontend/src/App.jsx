@@ -40,6 +40,8 @@ const OrderDetail = lazy(() => import("./views/customer/OrderDetail.jsx"));
 const Wishlist = lazy(() => import("./views/customer/Wishlist.jsx"));
 const Notifications = lazy(() => import("./views/customer/Notifications.jsx"));
 const Settings = lazy(() => import("./views/customer/Settings.jsx"));
+const Profile = lazy(() => import("./views/customer/Profile.jsx"));
+const Addresses = lazy(() => import("./views/customer/Addresses.jsx"));
 const ViewOrder = lazy(() => import("./views/customer/ViewOrder.jsx"));
 const Invoice = lazy(() => import("./views/customer/Invoice.jsx"));
 
@@ -273,6 +275,26 @@ export default function App() {
                 <Suspense fallback={<LoadingSpinner />}>
                   <PrivateRoute>
                     <Notifications />
+                  </PrivateRoute>
+                </Suspense>
+              }
+            />
+            <Route
+              path="/customer/profile/"
+              element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PrivateRoute>
+                    <Profile />
+                  </PrivateRoute>
+                </Suspense>
+              }
+            />
+            <Route
+              path="/customer/addresses/"
+              element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PrivateRoute>
+                    <Addresses />
                   </PrivateRoute>
                 </Suspense>
               }

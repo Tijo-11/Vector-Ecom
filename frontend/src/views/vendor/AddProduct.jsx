@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
@@ -155,7 +155,7 @@ function AddProduct() {
 
       // Only include specifications with non-empty title or content
       const validSpecifications = specifications.filter(
-        (spec) => spec.title?.trim() || spec.content?.trim()
+        (spec) => spec.title?.trim() || spec.content?.trim(),
       );
       validSpecifications.forEach((specification, index) => {
         Object.entries(specification).forEach(([key, value]) => {
@@ -165,7 +165,8 @@ function AddProduct() {
 
       // Only include colors with at least one non-empty field
       const validColors = colors.filter(
-        (color) => color.name?.trim() || color.color_code?.trim() || color.image
+        (color) =>
+          color.name?.trim() || color.color_code?.trim() || color.image,
       );
       validColors.forEach((color, index) => {
         Object.entries(color).forEach(([key, value]) => {
@@ -178,7 +179,7 @@ function AddProduct() {
             formData.append(
               `colors[${index}][${key}]`,
               value.file,
-              value.file.name
+              value.file.name,
             );
           } else if (value) {
             formData.append(`colors[${index}][${key}]`, String(value));
@@ -188,7 +189,7 @@ function AddProduct() {
 
       // Only include sizes with non-empty name or price
       const validSizes = sizes.filter(
-        (size) => size.name?.trim() || size.price
+        (size) => size.name?.trim() || size.price,
       );
       validSizes.forEach((size, index) => {
         Object.entries(size).forEach(([key, value]) => {
@@ -210,7 +211,7 @@ function AddProduct() {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       Swal.fire({
