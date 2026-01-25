@@ -233,6 +233,7 @@ export default function Products() {
                 <img
                   src={product.image}
                   alt={product.title}
+                  loading="lazy"
                   className="w-full h-64 rounded-lg bg-gray-200 object-contain group-hover:opacity-75"
                 />
                 <h3 className="mt-4 text-sm text-gray-700">{product.title}</h3>
