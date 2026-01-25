@@ -1,3 +1,4 @@
+//  CartInitializer.jsx
 import { useEffect, useContext, useState } from "react";
 import { CartContext } from "../plugin/Context";
 import { useAuthStore } from "../store/auth";
@@ -30,7 +31,16 @@ const CartInitializer = () => {
 
     try {
       const res = await apiInstance.get(url);
-      const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
+
+      // Safe guard: Ensure res.data is an array (handles paginated {results: []} or direct array or empty cases)
+      const cartItems = Array.isArray(res.data)
+        ? res.data
+        : res.data.results || res.data.items || [];
+
+      const totalQty = cartItems.reduce(
+        (sum, item) => sum + (item.qty || 0),
+        0,
+      );
       setCartCount(totalQty);
       log.debug("Cart fetched", { url, totalQty });
     } catch (err) {

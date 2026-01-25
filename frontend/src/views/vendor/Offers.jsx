@@ -7,6 +7,14 @@ import Sidebar from "./Sidebar";
 function Offers() {
   const [offers, setOffers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [offerTotalCount, setOfferTotalCount] = useState(0);
+  const [productTotalCount, setProductTotalCount] = useState(0);
+  const [offerCurrentPage, setOfferCurrentPage] = useState(1);
+  const [productCurrentPage, setProductCurrentPage] = useState(1);
+  const [offerHasNext, setOfferHasNext] = useState(false);
+  const [offerHasPrev, setOfferHasPrev] = useState(false);
+  const [productHasNext, setProductHasNext] = useState(false);
+  const [productHasPrev, setProductHasPrev] = useState(false);
   const [formData, setFormData] = useState({
     discount_percentage: "",
     start_date: "",
@@ -17,25 +25,75 @@ function Offers() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  const axios = apiInstance;
+  const userData = UserData();
+  const vendorId = userData?.vendor_id;
+
+  if (userData?.vendor_id === 0) {
+    window.location.href = "/vendor/register/";
+  }
+
+  // URL constructors
+  const getOffersUrl = (page) => {
+    const base = `vendor/offers/${vendorId}/`;
+    return page <= 1 ? base : `${base}?page=${page}`;
+  };
+
+  const getProductsUrl = (page) => {
+    const base = `vendor/products/${vendorId}/`;
+    return page <= 1 ? base : `${base}?page=${page}`;
+  };
+
+  const fetchData = async (
+    offerPage = offerCurrentPage,
+    productPage = productCurrentPage,
+  ) => {
+    if (!vendorId) return;
+    setLoading(true);
     try {
-      setLoading(true);
       const [offersRes, productsRes] = await Promise.all([
-        apiInstance.get(`vendor/offers/${UserData()?.vendor_id}/`),
-        apiInstance.get(`vendor/products/${UserData()?.vendor_id}/`),
+        axios.get(getOffersUrl(offerPage)),
+        axios.get(getProductsUrl(productPage)),
       ]);
-      setOffers(offersRes.data);
-      setProducts(productsRes.data);
+
+      // Handle offers (paginated)
+      const offersData = offersRes.data;
+      const offerList = Array.isArray(offersData)
+        ? offersData
+        : offersData.results || [];
+      setOffers(offerList);
+      setOfferTotalCount(offersData.count ?? offerList.length);
+      setOfferHasNext(!!offersData.next);
+      setOfferHasPrev(!!offersData.previous);
+      setOfferCurrentPage(offerPage);
+
+      // Handle products (paginated) - for select
+      const productsData = productsRes.data;
+      const productList = Array.isArray(productsData)
+        ? productsData
+        : productsData.results || [];
+      setProducts(productList);
+      setProductTotalCount(productsData.count ?? productList.length);
+      setProductHasNext(!!productsData.next);
+      setProductHasPrev(!!productsData.previous);
+      setProductCurrentPage(productPage);
     } catch (err) {
       console.error("Fetch error:", err);
+      setOffers([]);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(1, 1);
+  }, [vendorId]);
+
+  // Separate effects for page changes
+  useEffect(() => {
+    fetchData(offerCurrentPage, productCurrentPage);
+  }, [offerCurrentPage, productCurrentPage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,7 +102,6 @@ function Offers() {
 
     const discount = Number(formData.discount_percentage);
 
-    // Validation: 0 < discount < 100
     if (isNaN(discount) || discount <= 0 || discount >= 100) {
       setError(
         "Discount percentage must be greater than 0% and less than 100%.",
@@ -52,13 +109,11 @@ function Offers() {
       return;
     }
 
-    // Validation: at least one product selected
     if (formData.product_ids.length === 0) {
       setError("Please select at least one product.");
       return;
     }
 
-    // Optional: validate end_date > start_date if both provided
     if (formData.start_date && formData.end_date) {
       const start = new Date(formData.start_date);
       const end = new Date(formData.end_date);
@@ -83,21 +138,15 @@ function Offers() {
         product_ids: formData.product_ids.map((id) => Number(id)),
       };
 
-      console.log("Sending payload:", payload);
-
-      await apiInstance.post(
-        `vendor/offers/${UserData()?.vendor_id}/`,
-        payload,
-      );
+      await axios.post(`vendor/offers/${vendorId}/`, payload);
       setSuccess("Offer created successfully!");
-      fetchData();
+      fetchData(1, productCurrentPage); // Reset offers to page 1
       setFormData({
         discount_percentage: "",
         start_date: "",
         end_date: "",
         product_ids: [],
       });
-
       setTimeout(() => setSuccess(""), 5000);
     } catch (err) {
       console.error("Create offer error:", err.response?.data || err);
@@ -111,9 +160,9 @@ function Offers() {
 
   const handleDelete = async (id) => {
     try {
-      await apiInstance.delete(`vendor/offers/${UserData()?.vendor_id}/${id}/`);
+      await axios.delete(`vendor/offers/${vendorId}/${id}/`);
       setSuccess("Offer deleted successfully!");
-      fetchData();
+      fetchData(offerCurrentPage, productCurrentPage);
       setTimeout(() => setSuccess(""), 5000);
     } catch (err) {
       console.error("Delete error:", err);
@@ -137,7 +186,6 @@ function Offers() {
         </h4>
 
         {loading ? (
-          // Custom CSS spinner matching ProductsVendor style
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
             <p className="text-lg text-gray-600">
@@ -146,7 +194,6 @@ function Offers() {
           </div>
         ) : (
           <>
-            {/* Success Message */}
             {success && (
               <div className="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg mb-6 flex items-center">
                 <CheckCircle className="mr-3" size={24} />
@@ -154,7 +201,6 @@ function Offers() {
               </div>
             )}
 
-            {/* Error Message */}
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-6">
                 {error}
@@ -236,31 +282,58 @@ function Offers() {
                       offers.
                     </p>
                   ) : (
-                    <select
-                      multiple
-                      size="8"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          product_ids: Array.from(
-                            e.target.selectedOptions,
-                            (option) => option.value,
-                          ),
-                        })
-                      }
-                    >
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title} (ID: {p.id})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {products.length > 0 && (
-                    <p className="text-sm text-gray-500 mt-2">
-                      Hold Ctrl/Cmd to select multiple products
-                    </p>
+                    <>
+                      <select
+                        multiple
+                        size="8"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            product_ids: Array.from(
+                              e.target.selectedOptions,
+                              (option) => option.value,
+                            ),
+                          })
+                        }
+                      >
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title} (ID: {p.id})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Hold Ctrl/Cmd to select multiple products
+                      </p>
+                      {/* Simple pagination for products in select */}
+                      {productTotalCount > products.length && (
+                        <div className="flex justify-center gap-4 mt-4">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProductCurrentPage((prev) =>
+                                Math.max(prev - 1, 1),
+                              )
+                            }
+                            disabled={!productHasPrev}
+                            className="px-4 py-2 bg-gray-600 text-white rounded disabled:bg-gray-400"
+                          >
+                            Prev Products
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProductCurrentPage((prev) => prev + 1)
+                            }
+                            disabled={!productHasNext}
+                            className="px-4 py-2 bg-gray-600 text-white rounded disabled:bg-gray-400"
+                          >
+                            Next Products
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -282,69 +355,100 @@ function Offers() {
                   No offers created yet.
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full table-auto">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
-                          Discount
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
-                          Products
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
-                          Start Date
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
-                          End Date
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
-                          Status
-                        </th>
-                        <th className="px-6 py-4 text-center text-sm font-medium text-gray-700">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {offers.map((offer) => (
-                        <tr key={offer.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            {offer.discount_percentage}%
-                          </td>
-                          <td className="px-6 py-4">
-                            {offer.products?.length || 0} products
-                          </td>
-                          <td className="px-6 py-4">
-                            {formatDate(offer.start_date, "start")}
-                          </td>
-                          <td className="px-6 py-4">
-                            {formatDate(offer.end_date)}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                                offer.is_active
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {offer.is_active ? "Active" : "Expired/Inactive"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <button
-                              onClick={() => handleDelete(offer.id)}
-                              className="text-red-600 hover:text-red-800 transition"
-                            >
-                              <Trash size={20} />
-                            </button>
-                          </td>
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-auto">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                            Discount
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                            Products
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                            Start Date
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                            End Date
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                            Status
+                          </th>
+                          <th className="px-6 py-4 text-center text-sm font-medium text-gray-700">
+                            Actions
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {offers.map((offer) => (
+                          <tr key={offer.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              {offer.discount_percentage}%
+                            </td>
+                            <td className="px-6 py-4">
+                              {offer.products?.length || 0} products
+                            </td>
+                            <td className="px-6 py-4">
+                              {formatDate(offer.start_date, "start")}
+                            </td>
+                            <td className="px-6 py-4">
+                              {formatDate(offer.end_date)}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                                  offer.is_active
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {offer.is_active
+                                  ? "Active"
+                                  : "Expired/Inactive"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <button
+                                onClick={() => handleDelete(offer.id)}
+                                className="text-red-600 hover:text-red-800 transition"
+                              >
+                                <Trash size={20} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination for Offers */}
+                  {offerTotalCount > offers.length && (
+                    <div className="flex justify-center items-center mt-8 gap-6">
+                      <button
+                        onClick={() =>
+                          setOfferCurrentPage((prev) => Math.max(prev - 1, 1))
+                        }
+                        disabled={!offerHasPrev || loading}
+                        className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                      >
+                        Previous
+                      </button>
+
+                      <span className="text-lg font-medium">
+                        Page {offerCurrentPage} ({offerTotalCount} total offers)
+                      </span>
+
+                      <button
+                        onClick={() => setOfferCurrentPage((prev) => prev + 1)}
+                        disabled={!offerHasNext || loading}
+                        className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </>

@@ -7,6 +7,7 @@ class CategoryListView(generics.ListAPIView):
     serializer_class = CategorySerializer
     queryset = Category.objects.filter(active=True)
     permission_classes = (AllowAny,)
+    pagination_class = None
 
 class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer

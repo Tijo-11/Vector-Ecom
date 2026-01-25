@@ -11,6 +11,10 @@ import log from "loglevel";
 function Coupon() {
   const [stats, setStats] = useState({});
   const [coupons, setCoupons] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
   const [createCoupons, setCreateCoupons] = useState({
     code: "",
     discount: "",
@@ -25,26 +29,59 @@ function Coupon() {
 
   const axios = apiInstance;
   const userData = UserData();
+  const vendorId = userData?.vendor_id;
 
-  const fetchData = async () => {
+  // Construct URL with page param
+  const getCouponUrl = (page) => {
+    const base = `vendor-coupon-list/${vendorId}/`;
+    return page <= 1 ? base : `${base}?page=${page}`;
+  };
+
+  const fetchData = async (page = currentPage) => {
+    if (!vendorId) return;
+    setLoading(true);
     try {
-      setLoading(true);
+      const couponUrl = getCouponUrl(page);
       const [couponRes, statsRes] = await Promise.all([
-        axios.get(`vendor-coupon-list/${userData?.vendor_id}/`),
-        axios.get(`vendor-coupon-stats/${userData?.vendor_id}/`),
+        axios.get(couponUrl),
+        axios.get(`vendor-coupon-stats/${vendorId}/`),
       ]);
-      setCoupons(couponRes.data);
+
+      // Handle paginated coupons
+      const couponData = couponRes.data;
+      const couponList = Array.isArray(couponData)
+        ? couponData
+        : couponData.results || [];
+      const count = couponData.count ?? couponList.length;
+      const next = couponData.next ?? null;
+      const prev = couponData.previous ?? null;
+
+      setCoupons(couponList);
+      setTotalCount(count);
+      setHasNext(!!next);
+      setHasPrev(!!prev);
+      setCurrentPage(page);
+
+      // Stats (array with one object)
       setStats(statsRes.data[0] || {});
     } catch (error) {
       log.error("Error fetching data:", error);
+      setCoupons([]);
+      setTotalCount(0);
+      setHasNext(false);
+      setHasPrev(false);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(1);
+  }, [vendorId]);
+
+  useEffect(() => {
+    fetchData(currentPage);
+  }, [currentPage]);
 
   const handleDeleteCoupon = async (couponId) => {
     Swal.fire({
@@ -57,10 +94,8 @@ function Coupon() {
       confirmButtonText: "Yes, delete it!",
     }).then(async (result) => {
       if (result.isConfirmed) {
-        await axios.delete(
-          `vendor-coupon-detail/${userData?.vendor_id}/${couponId}/`,
-        );
-        await fetchData();
+        await axios.delete(`vendor-coupon-detail/${vendorId}/${couponId}/`);
+        await fetchData(currentPage); // Refetch current page
         Swal.fire("Deleted!", "Coupon has been deleted.", "success");
       }
     });
@@ -79,7 +114,6 @@ function Coupon() {
   const handleCreateCoupon = async (e) => {
     e.preventDefault();
 
-    // Validation
     if (!createCoupons.code.trim()) {
       Swal.fire({
         icon: "error",
@@ -105,16 +139,13 @@ function Coupon() {
     }
 
     const formdata = new FormData();
-    formdata.append("vendor_id", userData?.vendor_id);
+    formdata.append("vendor_id", vendorId);
     formdata.append("code", createCoupons.code.trim().toUpperCase());
     formdata.append("discount", discount);
     formdata.append("active", createCoupons.active);
 
     try {
-      await axios.post(
-        `vendor-coupon-create/${userData?.vendor_id}/`,
-        formdata,
-      );
+      await axios.post(`vendor-coupon-create/${vendorId}/`, formdata);
       Swal.fire({
         icon: "success",
         title: "Coupon Created",
@@ -123,7 +154,7 @@ function Coupon() {
       });
       setShowModal(false);
       setCreateCoupons({ code: "", discount: "", active: true });
-      await fetchData();
+      await fetchData(1); // Refresh to page 1 after create
     } catch (error) {
       log.error("Error creating coupon:", error);
       Swal.fire({
@@ -152,7 +183,6 @@ function Coupon() {
         </div>
 
         {loading ? (
-          // Custom CSS spinner matching ProductsVendor style
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
             <p className="text-lg text-gray-600">Loading coupons...</p>
@@ -183,62 +213,93 @@ function Coupon() {
 
             {/* Coupons Table */}
             <div className="bg-white shadow rounded-xl overflow-hidden">
-              <table className="w-full border-collapse">
-                <thead className="bg-gray-800 text-white">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Code</th>
-                    <th className="px-4 py-3 text-left">Type</th>
-                    <th className="px-4 py-3 text-left">Discount</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-left">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {coupons.length > 0 ? (
-                    coupons.map((coupon) => (
-                      <tr key={coupon.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium">{coupon.code}</td>
-                        <td className="px-4 py-3">Percentage</td>
-                        <td className="px-4 py-3">{coupon.discount}%</td>
-                        <td className="px-4 py-3">
-                          {coupon.active ? (
-                            <span className="text-green-600 font-medium">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="text-red-600 font-medium">
-                              Inactive
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 flex space-x-2">
-                          <Link
-                            to={`/vendor/coupon/${coupon.id}/`}
-                            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Link>
-                          <button
-                            onClick={() => handleDeleteCoupon(coupon.id)}
-                            className="bg-red-500 hover:bg-red-600 text-white p-2 rounded transition"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead className="bg-gray-800 text-white">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Code</th>
+                      <th className="px-4 py-3 text-left">Type</th>
+                      <th className="px-4 py-3 text-left">Discount</th>
+                      <th className="px-4 py-3 text-left">Status</th>
+                      <th className="px-4 py-3 text-left">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {coupons.length > 0 ? (
+                      coupons.map((coupon) => (
+                        <tr key={coupon.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium">
+                            {coupon.code}
+                          </td>
+                          <td className="px-4 py-3">Percentage</td>
+                          <td className="px-4 py-3">{coupon.discount}%</td>
+                          <td className="px-4 py-3">
+                            {coupon.active ? (
+                              <span className="text-green-600 font-medium">
+                                Active
+                              </span>
+                            ) : (
+                              <span className="text-red-600 font-medium">
+                                Inactive
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 flex space-x-2">
+                            <Link
+                              to={`/vendor/coupon/${coupon.id}/`}
+                              className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteCoupon(coupon.id)}
+                              className="bg-red-500 hover:bg-red-600 text-white p-2 rounded transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="text-center py-8 text-gray-500"
+                        >
+                          No coupons yet
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="5"
-                        className="text-center py-8 text-gray-500"
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Pagination Controls */}
+                {totalCount > coupons.length && (
+                  <div className="flex flex-col sm:flex-row justify-between items-center py-4 px-6 border-t bg-gray-50">
+                    <p className="text-sm text-gray-700 mb-2 sm:mb-0">
+                      Showing page {currentPage} ({totalCount} total coupons)
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(prev - 1, 1))
+                        }
+                        disabled={!hasPrev || loading}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
                       >
-                        No coupons yet
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage((prev) => prev + 1)}
+                        disabled={!hasNext || loading}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}

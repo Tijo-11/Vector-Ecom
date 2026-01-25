@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ShoppingCart, Heart } from "lucide-react";
 import ProductsPlaceholder from "../Products/ProductsPlaceHolder";
-import Categories from "../category/Categories";
 import apiInstance from "../../../utils/axios";
 import UserCountry from "../ProductDetail/UserCountry";
 import UserData from "../../../plugin/UserData";
@@ -11,6 +10,9 @@ import Swal from "sweetalert2";
 import log from "loglevel";
 import { addToWishlist } from "../../../plugin/addToWishlist";
 import { useAuthStore } from "../../../store/auth";
+import StarRating from "../Products/StarRating"; // Adjust path if needed
+
+const PAGE_SIZE = 12;
 
 export default function CategoryProducts() {
   const Toast = Swal.mixin({
@@ -22,16 +24,76 @@ export default function CategoryProducts() {
   });
 
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [currentCategory, setCurrentCategory] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
   const [selectedColors, setSelectedColors] = useState({});
   const [selectedSizes, setSelectedSizes] = useState({});
   const [quantityValue, setQuantityValue] = useState({});
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [wishlist, setWishlist] = useState([]);
-  const { slug } = useParams(); // category slug from URL
+
+  const { slug } = useParams();
   const userData = UserData();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // Reset page to 1 when category slug changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [slug]);
+
+  // Fetch categories (non-paginated – add pagination_class = None in backend view)
+  useEffect(() => {
+    apiInstance
+      .get(`category/`)
+      .then((res) => {
+        const catList = Array.isArray(res.data)
+          ? res.data
+          : res.data.results || [];
+        setCategories(catList);
+        const cat = catList.find((c) => c.slug === slug);
+        setCurrentCategory(cat || null);
+      })
+      .catch((err) => log.error("Error fetching categories:", err));
+  }, [slug]);
+
+  // Fetch paginated + filtered products
+  useEffect(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    params.append("page", currentPage);
+    if (slug) params.append("category", slug);
+
+    apiInstance
+      .get(`products/?${params.toString()}`)
+      .then((res) => {
+        const productList = res.data.results || [];
+        setProducts(productList);
+        setTotalCount(res.data.count || 0);
+
+        // Preserve selections
+        const newQuantities = { ...quantityValue };
+        const newColors = { ...selectedColors };
+        const newSizes = { ...selectedSizes };
+
+        productList.forEach((product) => {
+          newQuantities[product.id] = newQuantities[product.id] ?? "0";
+          newColors[product.id] = newColors[product.id] ?? "";
+          newSizes[product.id] = newSizes[product.id] ?? "";
+        });
+
+        setQuantityValue(newQuantities);
+        setSelectedColors(newColors);
+        setSelectedSizes(newSizes);
+      })
+      .catch((err) => {
+        log.error("Error fetching products:", err);
+        setProducts([]);
+      })
+      .finally(() => setLoading(false));
+  }, [currentPage, slug]);
 
   // Fetch wishlist
   const fetchWishlist = async () => {
@@ -46,57 +108,18 @@ export default function CategoryProducts() {
     }
   };
 
-  // Find category title
-  const category = categories.find((cat) => cat.slug === slug);
-  const pageTitle =
-    slug && category
-      ? `${category.title}`
-      : "Your Destination for Timeless Treasures";
+  useEffect(() => {
+    if (userData?.user_id) fetchWishlist();
+  }, [userData?.user_id]);
 
-  // Set document title
+  // Page title
+  const pageTitle = currentCategory
+    ? currentCategory.title
+    : "Your Destination for Timeless Treasures";
+
   useEffect(() => {
     document.title = pageTitle;
   }, [pageTitle]);
-
-  // Fetch products
-  useEffect(() => {
-    setLoading(true);
-    apiInstance
-      .get(`products/`)
-      .then((response) => {
-        const initialQuantities = response.data.reduce(
-          (acc, product) => ({
-            ...acc,
-            [product.id]: "0",
-          }),
-          {},
-        );
-        const filteredProducts = slug
-          ? response.data.filter((product) => product.category?.slug === slug)
-          : response.data;
-        setProducts(filteredProducts);
-        setQuantityValue(initialQuantities);
-        setLoading(false);
-      })
-      .catch((error) => {
-        log.error("Error fetching products:", error);
-        setLoading(false);
-      });
-  }, [slug]);
-
-  // Fetch categories
-  useEffect(() => {
-    apiInstance
-      .get(`category/`)
-      .then((response) => setCategories(response.data))
-      .catch((error) => log.error("Error fetching categories:", error));
-  }, []);
-
-  useEffect(() => {
-    if (userData?.user_id) {
-      fetchWishlist();
-    }
-  }, [userData?.user_id]);
 
   const currentAddress = UserCountry();
   const user = UserData();
@@ -104,46 +127,26 @@ export default function CategoryProducts() {
 
   const handleColorButtonClick = (e, productId, colorName) => {
     setSelectedColors((prev) => ({ ...prev, [productId]: colorName }));
-    setSelectedProduct(productId);
   };
 
   const handleSizeButtonClick = (e, productId, sizeName) => {
     setSelectedSizes((prev) => ({ ...prev, [productId]: sizeName }));
-    setSelectedProduct(productId);
   };
 
   const handleQuantityChange = (e, productId) => {
     setQuantityValue((prev) => ({ ...prev, [productId]: e.target.value }));
-    setSelectedProduct(productId);
   };
 
-  const handleAddToWishlist = async (product_id) => {
-    try {
-      await addToWishlist(product_id, userData?.user_id);
-      fetchWishlist(); // Refresh wishlist after adding/removing
-    } catch (error) {
-      log.error("Error updating wishlist:", error);
-    }
-  };
-
-  // ✅ Updated Add to Cart with stock validation
   const handleAddToCart = async (product_id, price, shipping_amount, slug) => {
     const qty = Number(quantityValue[product_id] || 0);
     if (qty <= 0) return;
 
     try {
-      // 1️⃣ Get live stock for product
       const productRes = await apiInstance.get(`/products/${slug}/`);
       const stock_qty = productRes.data.stock_qty;
       const product_name = productRes.data.title;
-      // const offer_discount = productRes.data.offer_discount;
-
-      // Calculate effective price - REMOVED: Backend handles discount now
-      // const effectivePrice =
-      //   offer_discount > 0 ? price * (1 - offer_discount / 100) : price;
       const effectivePrice = price;
 
-      // 2️⃣ Fetch cart to check existing quantity
       const url = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
@@ -154,7 +157,6 @@ export default function CategoryProducts() {
       );
       const existingQty = existingItem ? existingItem.qty : 0;
 
-      // 3️⃣ Stock validation
       if (existingQty + qty > stock_qty) {
         Swal.fire({
           icon: "warning",
@@ -165,7 +167,6 @@ export default function CategoryProducts() {
         return;
       }
 
-      // 4️⃣ Proceed to add to cart
       const formData = new FormData();
       formData.append("product", product_id);
       formData.append("user", user?.user_id || "");
@@ -178,7 +179,6 @@ export default function CategoryProducts() {
       formData.append("cart_id", cart_id);
 
       const response = await apiInstance.post(`cart/`, formData);
-
       Toast.fire({
         icon: "success",
         title: response.data.message || "Added to cart",
@@ -192,43 +192,54 @@ export default function CategoryProducts() {
     }
   };
 
-  if (loading) return <ProductsPlaceholder />;
+  const handleAddToWishlist = async (product_id) => {
+    try {
+      await addToWishlist(product_id, userData?.user_id);
+      fetchWishlist();
+    } catch (error) {
+      log.error("Error updating wishlist:", error);
+    }
+  };
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const hasNext = currentPage < totalPages;
+  const hasPrev = currentPage > 1;
+
+  if (loading && products.length === 0) return <ProductsPlaceholder />;
 
   return (
     <div className="container mx-auto my-4">
-      {/* Header */}
+      {/* Header with Category Offer */}
       <div className="bg-yellow-100 py-8 px-8 text-center">
         <h1 className="text-4xl font-bold mb-4">{pageTitle}</h1>
         <p className="text-lg text-gray-600">
-          {category
-            ? `Explore handpicked products in ${category.title}`
+          {currentCategory
+            ? `Explore handpicked products in ${currentCategory.title}`
             : "Because Memories Never Go out of Style"}
         </p>
-        {category?.offer_discount > 0 && (
+        {currentCategory?.offer_discount > 0 && (
           <div className="mt-4">
             <h2 className="text-2xl font-semibold mb-2">Special Offer!</h2>
             <div className="bg-white p-4 rounded shadow mx-auto w-fit">
-              <p className="font-bold">{category.title}</p>
+              <p className="font-bold">{currentCategory.title}</p>
               <p className="text-red-500 animate-pulse">
-                {category.offer_discount}% OFF
+                {currentCategory.offer_discount}% OFF
               </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Product grid */}
+      {/* Product Grid */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h2 className="sr-only">Products</h2>
-
-        {products.length === 0 && slug && (
-          <p className="text-center text-gray-500 mt-4">
+        {products.length === 0 && !loading && slug && (
+          <p className="text-center text-gray-500 mt-8 text-xl">
             No products found for this category.
           </p>
         )}
 
         <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8 mt-4">
-          {products?.map((product) => (
+          {products.map((product) => (
             <div key={product.id} className="group flex flex-col h-full">
               <Link to={`/product/${product.slug}`}>
                 <img
@@ -277,13 +288,14 @@ export default function CategoryProducts() {
                 )}
               </div>
 
+              <StarRating rating={product.rating} />
+
               {product.category && (
                 <p className="text-sm text-gray-500">
                   Category: {product.category.title}
                 </p>
               )}
 
-              {/* Size and Color selectors */}
               <div className="mt-2">
                 {product.size?.length > 0 && (
                   <div>
@@ -326,7 +338,6 @@ export default function CategoryProducts() {
                   </div>
                 )}
 
-                {/* Quantity */}
                 <div>
                   <label>Quantity:</label>
                   <input
@@ -339,7 +350,6 @@ export default function CategoryProducts() {
                 </div>
               </div>
 
-              {/* Action buttons */}
               <div className="mt-auto flex flex-col gap-2">
                 <button
                   onClick={() => {
@@ -352,7 +362,6 @@ export default function CategoryProducts() {
                       });
                       return;
                     }
-
                     if (!Number(quantityValue[product.id])) {
                       Swal.fire({
                         icon: "info",
@@ -362,11 +371,9 @@ export default function CategoryProducts() {
                       });
                       return;
                     }
-
-                    // ✅ Pass slug for stock check AND base price for backend calculation
                     handleAddToCart(
                       product.id,
-                      product.price, // Pass base price, let backend handle discount
+                      product.price,
                       product.shipping_amount,
                       product.slug,
                     );
@@ -390,7 +397,7 @@ export default function CategoryProducts() {
                     : "Add to Cart"}
                 </button>
 
-                {isLoggedIn ? (
+                {isLoggedIn && (
                   <button
                     onClick={() => handleAddToWishlist(product.id)}
                     className={`flex items-center justify-center gap-2 w-full rounded-lg py-2 transition ${
@@ -404,18 +411,37 @@ export default function CategoryProducts() {
                       ? "Remove from Wishlist"
                       : "Add to Wishlist"}
                   </button>
-                ) : (
-                  <></>
                 )}
               </div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* {categories && categories.length > 0 ? (
-        <Categories categories={categories} />
-      ) : null} */}
+        {/* Pagination */}
+        {totalCount > PAGE_SIZE && (
+          <div className="flex justify-center items-center mt-12 gap-8">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={!hasPrev}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-blue-700 transition"
+            >
+              Previous
+            </button>
+
+            <span className="text-lg font-medium">
+              Page {currentPage} of {totalPages} ({totalCount} products)
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              disabled={!hasNext}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-blue-700 transition"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
