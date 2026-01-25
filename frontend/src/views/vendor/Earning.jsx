@@ -1,6 +1,6 @@
-// Earning.jsx (fixed formatting errors)
+// Earning.jsx (with custom CSS spinner matching ProductsVendor)
 import React, { useState, useEffect } from "react";
-import { IndianRupee, Loader2 } from "lucide-react";
+import { IndianRupee } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import { Chart } from "chart.js/auto";
 import zoomPlugin from "chartjs-plugin-zoom";
@@ -213,11 +213,10 @@ function Earning() {
         </h4>
 
         {loading ? (
-          <div className="flex flex-col justify-center items-center h-full min-h-[400px]">
-            <Loader2 className="animate-spin text-purple-600" size={48} />
-            <p className="mt-4 text-lg text-gray-600">
-              Loading earnings data...
-            </p>
+          // Custom CSS spinner matching ProductsVendor style
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+            <p className="text-lg text-gray-600">Loading earnings data...</p>
           </div>
         ) : (
           <>
@@ -350,9 +349,10 @@ function Earning() {
           </div>
 
           {reportLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="animate-spin text-blue-600" size={36} />
-              <p className="ml-4 text-gray-600">Generating report...</p>
+            // Smaller custom spinner for report loading
+            <div className="flex flex-col items-center justify-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+              <p className="text-gray-600">Generating report...</p>
             </div>
           ) : reportData ? (
             <>

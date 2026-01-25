@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Star, Eye, Loader2 } from "lucide-react";
+import { Star, Eye } from "lucide-react";
 
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
@@ -45,9 +45,10 @@ function Reviews() {
         </h4>
 
         {loading ? (
-          <div className="flex flex-col justify-center items-center h-full min-h-[400px]">
-            <Loader2 className="animate-spin text-yellow-500" size={48} />
-            <p className="mt-4 text-lg text-gray-600">Loading reviews...</p>
+          // Custom CSS spinner matching ProductsVendor style
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+            <p className="text-lg text-gray-600">Loading reviews...</p>
           </div>
         ) : (
           <section className="p-6 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 shadow-md">

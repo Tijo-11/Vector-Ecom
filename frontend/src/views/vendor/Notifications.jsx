@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Eye, EyeOff, Bell, CheckCircle, X, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Bell, CheckCircle, X } from "lucide-react";
 import moment from "moment";
 import { Link } from "react-router-dom";
 
@@ -64,11 +64,10 @@ function Notifications() {
         </h4>
 
         {loading ? (
-          <div className="flex flex-col justify-center items-center h-[60vh]">
-            <Loader2 className="animate-spin text-blue-600" size={48} />
-            <p className="mt-4 text-lg text-gray-600">
-              Loading notifications...
-            </p>
+          // ← Custom CSS spinner matching ProductsVendor style
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+            <p className="text-lg text-gray-600">Loading notifications...</p>
           </div>
         ) : (
           <>

@@ -38,7 +38,7 @@ export default function CategoryProducts() {
     if (!userData?.user_id) return;
     try {
       const response = await apiInstance.get(
-        `customer/wishlist/${userData?.user_id}/`
+        `customer/wishlist/${userData?.user_id}/`,
       );
       setWishlist(response.data);
     } catch (error) {
@@ -69,7 +69,7 @@ export default function CategoryProducts() {
             ...acc,
             [product.id]: "0",
           }),
-          {}
+          {},
         );
         const filteredProducts = slug
           ? response.data.filter((product) => product.category?.slug === slug)
@@ -150,7 +150,7 @@ export default function CategoryProducts() {
 
       const cartRes = await apiInstance.get(url);
       const existingItem = cartRes.data.find(
-        (item) => item.product.id === product_id
+        (item) => item.product.id === product_id,
       );
       const existingQty = existingItem ? existingItem.qty : 0;
 
@@ -248,7 +248,7 @@ export default function CategoryProducts() {
                     <p className="mt-1 text-lg font-medium text-gray-900">
                       ₹
                       {(
-                      product.price *
+                        product.price *
                         (1 - product.offer_discount / 100)
                       ).toFixed(2)}
                     </p>
@@ -368,7 +368,7 @@ export default function CategoryProducts() {
                       product.id,
                       product.price, // Pass base price, let backend handle discount
                       product.shipping_amount,
-                      product.slug
+                      product.slug,
                     );
                   }}
                   disabled={
@@ -380,8 +380,8 @@ export default function CategoryProducts() {
                     product.stock_qty === 0 || !product.in_stock
                       ? "bg-gray-400 cursor-not-allowed"
                       : !Number(quantityValue[product.id])
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                 >
                   <ShoppingCart size={18} />
