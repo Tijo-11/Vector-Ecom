@@ -1,5 +1,5 @@
-// OrderDetail.jsx (Consistent display: Original Total, Saved, Subtotal, Shipping, Grand Total)
-import React, { useState, useEffect } from "react";
+// OrderDetail.jsx
+import { useState, useEffect } from "react";
 import { X, AlertCircle, CheckCircle } from "lucide-react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
@@ -199,7 +199,7 @@ function OrderDetail() {
                               <div>
                                 <p className="mb-1 text-sm">Saved</p>
                                 <h2 className="text-xl font-semibold">
-                                  -₹{order.saved}
+                                  ₹{order.saved}
                                 </h2>
                               </div>
                             </div>
@@ -280,7 +280,7 @@ function OrderDetail() {
                                       ₹{orderItem.sub_total}
                                     </td>
                                     <td className="p-3 text-red-600">
-                                      -₹{orderItem.saved}
+                                      ₹{orderItem.saved}
                                     </td>
                                     <td className="p-3">
                                       {orderItem.tracking_id == null ||
@@ -320,7 +320,7 @@ function OrderDetail() {
                                                   onClick={() =>
                                                     handleCancelOrder(
                                                       "item",
-                                                      orderItem.id
+                                                      orderItem.id,
                                                     )
                                                   }
                                                   className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs"

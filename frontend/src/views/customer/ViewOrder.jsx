@@ -1,4 +1,4 @@
-// ViewOrder.jsx (Consistent display: Original Total, Saved, Subtotal, Shipping, Grand Total)
+// ViewOrder.jsx
 import React, { useState, useEffect } from "react";
 import apiInstance from "../../utils/axios";
 import { Link, useParams } from "react-router-dom";
@@ -68,7 +68,7 @@ function ViewOrder() {
                           <div>
                             <p className="mb-1 text-sm">Saved</p>
                             <h2 className="text-xl font-semibold">
-                              -₹{order.saved}
+                              ₹{order.saved}
                             </h2>
                           </div>
                         </div>
@@ -144,7 +144,7 @@ function ViewOrder() {
                                 <td className="p-3">{item.qty}</td>
                                 <td className="p-3">₹{item.sub_total}</td>
                                 <td className="p-3 text-red-600">
-                                  -₹{item.saved}
+                                  ₹{item.saved}
                                 </td>
                                 <td className="p-3">
                                   {item.tracking_id ? (

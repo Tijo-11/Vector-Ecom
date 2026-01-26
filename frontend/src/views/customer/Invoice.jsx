@@ -1,38 +1,104 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import apiInstance from "../../utils/axios";
+import { useAuthStore } from "../../store/auth";
 
 export default function Invoice() {
-  const [order, setOrder] = useState({
-    full_name: "John Doe",
-    email: "john@example.com",
-    mobile: "+91 9876543210",
-    oid: "ORD-2024-001",
-    initial_total: 5000,
-    shipping_amount: 100,
-    saved: 500,
-    sub_total: 4500,
-    total: 4600,
-  });
+  const { order_oid } = useParams();
+  const user = useAuthStore((state) => state.user);
 
-  const [orderItems, setOrderItems] = useState([
-    {
-      product: { title: "Vintage Camera" },
-      price: 2500,
-      qty: 1,
-      sub_total: 2500,
-      saved: 250,
-    },
-    {
-      product: { title: "Retro Radio" },
-      price: 2500,
-      qty: 1,
-      sub_total: 2500,
-      saved: 250,
-    },
-  ]);
+  const [order, setOrder] = useState(null);
+  const [orderItems, setOrderItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      if (!user?.user_id || !order_oid) {
+        setError("Invalid access or missing order ID");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await apiInstance.get(
+          `/customer/order/detail/${user.user_id}/${order_oid}/`,
+        );
+        const data = response.data;
+
+        // Compute original subtotal (sum of price * qty before any discounts)
+        const initialTotal =
+          data.orderitem?.reduce(
+            (acc, item) =>
+              acc + parseFloat(item.price || 0) * parseInt(item.qty || 0),
+            0,
+          ) || 0;
+
+        // Total saved = offer_saved + coupon_saved (order level)
+        const totalSaved =
+          parseFloat(data.offer_saved || 0) +
+          parseFloat(data.coupon_saved || 0);
+
+        // Sub total after discounts
+        const subTotal = initialTotal - totalSaved;
+
+        setOrder({
+          full_name: data.full_name || "N/A",
+          email: data.email || "N/A",
+          mobile: data.mobile || "N/A",
+          oid: data.oid || order_oid,
+          initial_total: initialTotal,
+          shipping_amount: parseFloat(data.shipping_amount || 0),
+          saved: totalSaved,
+          sub_total: subTotal,
+          total: parseFloat(data.total || 0),
+        });
+
+        setOrderItems(
+          data.orderitem?.map((item) => ({
+            product: { title: item.product?.title || "Unknown Product" },
+            price: parseFloat(item.price || 0),
+            qty: parseInt(item.qty || 0),
+            sub_total:
+              parseFloat(item.price || 0) * parseInt(item.qty || 0) -
+              (parseFloat(item.offer_saved || 0) +
+                parseFloat(item.coupon_saved || 0)),
+            saved:
+              parseFloat(item.offer_saved || 0) +
+              parseFloat(item.coupon_saved || 0),
+          })) || [],
+        );
+      } catch (err) {
+        console.error("Error fetching order:", err);
+        setError("Failed to load order details. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrder();
+  }, [user?.user_id, order_oid]);
 
   const handlePrint = () => {
     window.print();
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+        <p className="text-lg">Loading invoice...</p>
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <div className="container mx-auto mt-10 px-4 text-center">
+        <p className="text-red-600 text-xl">{error || "Order not found"}</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -92,12 +158,16 @@ export default function Invoice() {
                   <td className="p-3 border border-gray-300">
                     {item.product?.title}
                   </td>
-                  <td className="p-3 border border-gray-300">₹{item.price}</td>
+                  <td className="p-3 border border-gray-300">
+                    ₹{item.price.toFixed(2)}
+                  </td>
                   <td className="p-3 border border-gray-300">{item.qty}</td>
                   <td className="p-3 border border-gray-300">
-                    ₹{item.sub_total}
+                    ₹{item.sub_total.toFixed(2)}
                   </td>
-                  <td className="p-3 border border-gray-300">-₹{item.saved}</td>
+                  <td className="p-3 border border-gray-300">
+                    ₹{item.saved.toFixed(2)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -109,20 +179,19 @@ export default function Invoice() {
           <div className="text-right">
             <h5 className="text-lg font-semibold">Summary</h5>
             <p className="text-sm">
-              <b>Original Subtotal: </b> ₹
-              {order.initial_total - order.shipping_amount}
+              <b>Original Subtotal: </b> ₹{order.initial_total.toFixed(2)}
             </p>
             <p className="text-sm">
-              <b>Saved: </b> -₹{order.saved}
+              <b>Saved: </b> ₹{order.saved.toFixed(2)}
             </p>
             <p className="text-sm">
-              <b>Subtotal (after discounts): </b> ₹{order.sub_total}
+              <b>Subtotal (after discounts): </b> ₹{order.sub_total.toFixed(2)}
             </p>
             <p className="text-sm">
-              <b>Shipping: </b> ₹{order.shipping_amount}
+              <b>Shipping: </b> ₹{order.shipping_amount.toFixed(2)}
             </p>
             <p className="text-base font-bold mt-2">
-              <b>Grand Total: </b> ₹{order.total}
+              <b>Grand Total: </b> ₹{order.total.toFixed(2)}
             </p>
           </div>
         </div>
