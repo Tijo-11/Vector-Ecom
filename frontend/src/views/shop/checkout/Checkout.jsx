@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
-import { useAuthStore } from "../../../store/auth";
 import Swal from "sweetalert2";
 import RazorpayButton from "./Razorpay";
 import PaypalButton from "./Paypal";
@@ -11,23 +10,39 @@ import log from "loglevel";
 function Checkout() {
   const [order, setOrder] = useState({});
   const [couponCode, setCouponCode] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const { order_id } = useParams();
+
   const fetchOrderData = async () => {
     try {
-      setLoading(true);
       const response = await apiInstance.get(`/checkout/${order_id}/`);
       console.log("=== FULL ORDER RESPONSE ===", response.data);
       setOrder(response.data || {});
     } catch (error) {
       log.error("Error fetching order:", error);
     } finally {
-      setLoading(false);
+      setIsInitialLoading(false);
     }
   };
+
+  const refreshOrderData = async () => {
+    try {
+      const response = await apiInstance.get(`/checkout/${order_id}/`);
+      console.log("=== REFRESH ORDER RESPONSE ===", response.data);
+      setOrder(response.data || {});
+    } catch (error) {
+      log.error("Error refreshing order:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Failed to refresh order details",
+      });
+    }
+  };
+
   useEffect(() => {
     if (order_id) fetchOrderData();
   }, [order_id]);
+
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
       Swal.fire({
@@ -47,7 +62,7 @@ function Checkout() {
       });
       if (response.data.icon === "success") {
         setCouponCode("");
-        await fetchOrderData();
+        await refreshOrderData();
       }
     } catch (err) {
       if (err.response) {
@@ -64,12 +79,13 @@ function Checkout() {
       }
     }
   };
+
   const removeCoupon = async () => {
     const formdata = new FormData();
     formdata.append("order_oid", order_id);
     try {
       const response = await apiInstance.post("coupon/remove/", formdata);
-      await fetchOrderData();
+      await refreshOrderData();
       Swal.fire({
         icon: response.data.icon,
         title: response.data.message,
@@ -89,6 +105,7 @@ function Checkout() {
       }
     }
   };
+
   // Coupon detection logic
   const isCouponApplied = (() => {
     if (parseFloat(order.coupon_saved || 0) > 0) return true;
@@ -97,16 +114,18 @@ function Checkout() {
     if (
       order.orderitem?.some(
         (item) =>
-          item.coupon && Array.isArray(item.coupon) && item.coupon.length > 0
+          item.coupon && Array.isArray(item.coupon) && item.coupon.length > 0,
       )
     )
       return true;
     return false;
   })();
+
   // Calculate original subtotal
   const originalSubTotal =
     order.orderitem?.reduce((acc, item) => acc + item.price * item.qty, 0) || 0;
-  if (loading) {
+
+  if (isInitialLoading) {
     return (
       <div className="container mx-auto mt-10 px-4">
         <div className="flex justify-center items-center h-64">
@@ -115,6 +134,7 @@ function Checkout() {
       </div>
     );
   }
+
   return (
     <div className="container mx-auto mt-10 px-4">
       <div className="flex flex-col lg:flex-row gap-6 my-10">
@@ -312,4 +332,5 @@ function Checkout() {
     </div>
   );
 }
+
 export default Checkout;

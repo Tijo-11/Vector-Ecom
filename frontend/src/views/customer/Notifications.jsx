@@ -126,7 +126,7 @@ function Notifications() {
                               notifications.map((noti) => (
                                 <div
                                   key={noti.id}
-                                  className="p-4 hover:bg-gray-50 transition flex justify-between items-start opacity-100 transition-opacity duration-300"
+                                  className="p-4 hover:bg-gray-50  flex justify-between items-start opacity-100 transition-opacity duration-300"
                                 >
                                   <div className="flex-1">
                                     <div className="flex justify-between items-center mb-2">

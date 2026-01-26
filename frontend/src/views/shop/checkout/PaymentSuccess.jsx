@@ -27,20 +27,54 @@ function PaymentSuccess() {
   const paypalCaptureId = urlParams.get("paypal_capture_id");
 
   const clearCart = async () => {
+    if (!cart_id || cart_id === "undefined") {
+      setCartCount(0);
+      if (!user?.user_id) {
+        localStorage.removeItem("random_string");
+      }
+      return;
+    }
+
     try {
-      const cartUrl = user?.user_id
+      // Fetch ALL cart items with full pagination support (same as Cart.jsx)
+      let items = [];
+      let nextUrl = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
-      const cartResponse = await apiInstance.get(cartUrl);
-      const items = cartResponse.data || [];
 
+      while (nextUrl) {
+        const response = await apiInstance.get(nextUrl);
+        const data = response.data;
+
+        let pageItems = [];
+        if (Array.isArray(data)) {
+          // Non-paginated (backward compatible)
+          pageItems = data;
+          nextUrl = null;
+        } else if (data && data.results) {
+          // Paginated DRF response
+          pageItems = data.results || [];
+          nextUrl = data.next || null;
+        }
+
+        items = [...items, ...pageItems];
+      }
+
+      // Delete each item individually (with error handling per item)
       for (const item of items) {
         const deleteUrl = user?.user_id
           ? `/cart-delete/${cart_id}/${item.id}/${user.user_id}/`
           : `/cart-delete/${cart_id}/${item.id}/`;
-        await apiInstance.delete(deleteUrl);
+
+        try {
+          await apiInstance.delete(deleteUrl);
+        } catch (err) {
+          log.error(`Failed to delete cart item ${item.id}:`, err);
+          // Continue deleting others even if one fails
+        }
       }
 
+      // Always reset global count and clear guest cart ID
       setCartCount(0);
 
       if (!user?.user_id) {
@@ -50,6 +84,8 @@ function PaymentSuccess() {
       log.debug("Cart cleared successfully");
     } catch (error) {
       log.error("Error clearing cart:", error);
+      // Even on full failure, reset count to avoid stale UI
+      setCartCount(0);
     }
   };
 
@@ -96,11 +132,14 @@ function PaymentSuccess() {
           ) {
             window.dispatchEvent(new Event("paymentSuccess"));
 
-            const orderPromise = apiInstance.get(`/checkout/${order_id}/`);
+            // Run clearCart and order fetch in parallel
             const clearPromise = clearCart();
+            const orderPromise = apiInstance.get(`/checkout/${order_id}/`);
 
-            const orderResponse = await orderPromise;
-            await clearPromise;
+            const [orderResponse] = await Promise.all([
+              orderPromise,
+              clearPromise,
+            ]);
 
             setOrder(orderResponse.data || {});
             setStatus(responseStatus);
@@ -117,11 +156,13 @@ function PaymentSuccess() {
           if (error.response?.data?.message === "already_paid") {
             window.dispatchEvent(new Event("paymentSuccess"));
 
-            const orderPromise = apiInstance.get(`/checkout/${order_id}/`);
             const clearPromise = clearCart();
+            const orderPromise = apiInstance.get(`/checkout/${order_id}/`);
 
-            const orderResponse = await orderPromise;
-            await clearPromise;
+            const [orderResponse] = await Promise.all([
+              orderPromise,
+              clearPromise,
+            ]);
 
             setOrder(orderResponse.data || {});
             setStatus("already_paid");

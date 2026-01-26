@@ -1,5 +1,4 @@
-// Updated Cart.jsx (Added global cart count sync + initial loading state for better UX)
-
+//Cart.jsx
 import React, { useState, useEffect, useContext } from "react";
 import CartItem from "./CartItem";
 import CartSummary from "./CartSummary";
@@ -8,26 +7,47 @@ import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
 import cartID from "../ProductDetail/cartId";
 import log from "loglevel";
-import { CartContext } from "../../../plugin/Context"; // ← Added
+import { CartContext } from "../../../plugin/Context";
 
 function Cart() {
   const [cart, setCart] = useState([]);
   const [cartMessage, setCartMessage] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
-  const [loading, setLoading] = useState(true); // ← New: page loading state
+  const [loading, setLoading] = useState(true);
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
   const [cartTotal, setCartTotal] = useState({});
-  const [, setCartCount] = useContext(CartContext); // ← Added to sync global count
+  const [, setCartCount] = useContext(CartContext);
 
-  const fetchCartData = async () => {
+  const fetchCartItems = async () => {
     if (!cart_id || cart_id === "undefined") return [];
+
     try {
-      const url = user?.user_id
+      let items = [];
+      let nextUrl = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
-      const response = await apiInstance.get(url);
-      return response.data || [];
+
+      while (nextUrl) {
+        const response = await apiInstance.get(nextUrl);
+        const data = response.data;
+
+        let pageItems = [];
+
+        if (Array.isArray(data)) {
+          // Non-paginated response (backward compatible)
+          pageItems = data;
+          nextUrl = null;
+        } else if (data && data.results) {
+          // Paginated response (standard DRF style)
+          pageItems = data.results || [];
+          nextUrl = data.next || null;
+        }
+
+        items = [...items, ...pageItems];
+      }
+
+      return items;
     } catch (error) {
       log.error("Error fetching cart items:", error);
       return [];
@@ -39,7 +59,7 @@ function Cart() {
     setIsAdjusting(true);
 
     try {
-      const currentCart = await fetchCartData();
+      const currentCart = await fetchCartItems();
       let adjustedItems = [];
       let hasAdjustments = false;
 
@@ -50,17 +70,19 @@ function Cart() {
         if (currentQty > availableStock) {
           hasAdjustments = true;
           adjustedItems.push(
-            item.product.title || `Item ID ${item.product.id}`,
+            item.product?.title || `Item #${item.product?.id}`,
           );
 
           const perUnitShipping =
             currentQty > 0 ? item.shipping_amount / currentQty : 0;
 
+          const newQty = availableStock;
+
           const payload = {
             product: item.product.id,
-            qty: availableStock,
+            qty: newQty,
             price: item.price,
-            shipping_amount: perUnitShipping,
+            shipping_amount: perUnitShipping * newQty, // Fixed: prorated total shipping
             country: item.country,
             cart_id: cart_id,
             size: item.size || "",
@@ -77,8 +99,8 @@ function Cart() {
         }
       }
 
-      // Refetch fresh data
-      const updatedCart = await fetchCartData();
+      // Refetch full fresh data after all adjustments
+      const updatedCart = await fetchCartItems();
       setCart(updatedCart);
 
       // Sync global cart count
@@ -98,7 +120,7 @@ function Cart() {
       log.error("Error in validateAndAdjustCart:", error);
     } finally {
       setIsAdjusting(false);
-      setLoading(false); // ← Page is now loaded
+      setLoading(false);
     }
   };
 
@@ -114,7 +136,7 @@ function Cart() {
       clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [cart_id, user]);
+  }, [cart_id, user?.user_id]);
 
   if (loading) {
     return (

@@ -1,4 +1,4 @@
-# userauth/views.py (Updated with detailed logging in PasswordChangeView)
+# userauth/views.py 
 
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -238,7 +238,7 @@ class PasswordChangeView(generics.CreateAPIView):
 
         logger.info(f"Token present: {bool(token)}")
         logger.info(f"uidb64 present: {bool(uidb64)}")
-        logger.info(f"password present: {bool(password)}")
+        logger.info("password present. ")
 
         missing_fields = []
         if not token:

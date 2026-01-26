@@ -1,6 +1,6 @@
-// CartSummary.jsx (Improved message & disable logic)
+// CartSummary.jsx
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import apiInstance from "../../../utils/axios";
 import cartID from "../ProductDetail/cartId";
 import log from "loglevel";
@@ -8,7 +8,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 function CartSummary({ cartItems, setCartTotal }) {
   const [cart_total, setCartTotalLocal] = useState({
-    itemCount: cartItems.length || 0,
     mrp_total: 0,
     discounted_total: 0,
     shipping: 0,
@@ -18,33 +17,59 @@ function CartSummary({ cartItems, setCartTotal }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const fetchCartTotal = async () => {
-      if (cart_id && cart_id !== "undefined") {
-        try {
-          const response = await apiInstance.get(`/cart-detail/${cart_id}/`);
-          const newTotals = {
-            itemCount: cartItems.length || 0,
-            mrp_total: response.data.mrp_total || 0,
-            discounted_total: response.data.discounted_total || 0,
-            shipping: response.data.shipping || 0,
-            grand_total: response.data.grand_total || 0,
-          };
-          setCartTotalLocal(newTotals);
-          setCartTotal(newTotals);
-        } catch (error) {
-          log.error("Error fetching cart totals:", error);
-        }
-      }
-    };
-    fetchCartTotal();
-  }, [cart_id, cartItems, setCartTotal]);
+  // Always safe-guard against non-array cartItems (prevents TypeError if data is malformed)
+  const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
+  const itemCount = safeCartItems.length;
 
-  const hasInsufficientStock = cartItems.some(
+  const hasInsufficientStock = safeCartItems.some(
     (item) => (item.qty || 0) > (item.product?.stock_qty || 0),
   );
 
+  useEffect(() => {
+    const fetchCartTotal = async () => {
+      if (!cart_id || cart_id === "undefined") {
+        const emptyTotals = {
+          mrp_total: 0,
+          discounted_total: 0,
+          shipping: 0,
+          grand_total: 0,
+        };
+        setCartTotalLocal(emptyTotals);
+        setCartTotal({ itemCount, ...emptyTotals });
+        return;
+      }
+
+      try {
+        const response = await apiInstance.get(`/cart-detail/${cart_id}/`);
+        const serverTotals = {
+          mrp_total: response.data.mrp_total || 0,
+          discounted_total: response.data.discounted_total || 0,
+          shipping: response.data.shipping || 0,
+          grand_total: response.data.grand_total || 0,
+        };
+        setCartTotalLocal(serverTotals);
+        setCartTotal({ itemCount, ...serverTotals });
+      } catch (error) {
+        log.error("Error fetching cart totals:", error);
+        // Fallback to zeros on error
+        const fallbackTotals = {
+          mrp_total: 0,
+          discounted_total: 0,
+          shipping: 0,
+          grand_total: 0,
+        };
+        setCartTotalLocal(fallbackTotals);
+        setCartTotal({ itemCount, ...fallbackTotals });
+      }
+    };
+
+    fetchCartTotal();
+  }, [cart_id, cartItems, setCartTotal]); // Refetch when cartItems or cart_id changes
+
   const isAddressPage = location.pathname === "/address";
+
+  const shippingDisplay =
+    cart_total.shipping > 0 ? `₹${cart_total.shipping.toFixed(2)}` : "Free";
 
   return (
     <div id="summary" className="w-full sm:w-1/4 md:w-1/2 px-8 py-10">
@@ -52,8 +77,7 @@ function CartSummary({ cartItems, setCartTotal }) {
       <div className="space-y-4">
         <div className="flex justify-between mt-10">
           <span className="font-semibold text-sm uppercase text-gray-700">
-            MRP ({cart_total.itemCount}{" "}
-            {cart_total.itemCount > 1 ? "items" : "item"})
+            MRP ({itemCount} {itemCount > 1 ? "items" : "item"})
           </span>
           <span className="font-semibold text-sm">
             ₹{cart_total.mrp_total.toFixed(2)}
@@ -72,9 +96,7 @@ function CartSummary({ cartItems, setCartTotal }) {
             Shipping
           </label>
           <select className="block p-2 text-gray-600 w-full text-sm border rounded-md">
-            <option>
-              Standard shipping - ₹{cart_total.shipping.toFixed(2)}
-            </option>
+            <option>Standard shipping - {shippingDisplay}</option>
           </select>
         </div>
         <div className="border-t mt-8 pt-4">
