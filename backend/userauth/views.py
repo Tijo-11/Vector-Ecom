@@ -33,13 +33,26 @@ logger = logging.getLogger(__name__)
 
 token_generator = PasswordResetTokenGenerator()
 
+def mask_email(email: str) -> str:
+    try:
+        local, domain = email.split("@")
+        # Keep first 2 characters of local part, mask the rest
+        masked_local = local[:2] + "***" if len(local) > 2 else local[0] + "***"
+        return f"{masked_local}@{domain}"
+    except Exception:
+        return "***@***"  # fallback if email is malformed
+
+
+
+
+
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
         logger.info("Token request received")
-        logger.info(f"Request data keys: {list(request.data.keys())}")
+        logger.info("Request contains data payload")
         logger.info(f"Has email: {'email' in request.data}")
         logger.info(f"Has password: {'password' in request.data}")
         logger.info(f"Content-Type: {request.content_type}")
@@ -119,7 +132,7 @@ class RegisterView(generics.CreateAPIView):
         user.otp = generate_otp()
         user.save()
 
-        logger.info(f"User created successfully: {user.id} - {user.email}")
+        logger.info(f"User created successfully: {user.id} - {mask_email(user.email)}")
 
         uidb64 = urlsafe_base64_encode(force_bytes(str(user.pk)))
 
@@ -185,13 +198,13 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         email = self.kwargs.get("email")
-        logger.info(f"Password reset request for email: {email}")
+        logger.info(f"Password reset request for email: {mask_email(email)}")
 
         try:
             user = User.objects.get(email=email)
-            logger.info(f"User found for password reset: {user.id} - {user.email}")
+            logger.info(f"User found for password reset: {user.id} - {mask_email(user.email)}")
         except User.DoesNotExist:
-            logger.info(f"No user found for email: {email} (silent response)")
+            logger.info(f"No user found for email: {mask_email(email)} (silent response)")
             return Response({"message": "If this email exists, a reset link was sent."})
 
         # Generate secure password reset link (uidb64 + token, no OTP)
@@ -215,8 +228,8 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
             recipient_list=[user.email],
             fail_silently=False,
         )
-        logger.info(f"Password reset email queued for user: {user.email}")
-        return Response({"message": "If this email exists, a reset link was sent."})
+        logger.info(f"Password reset email queued for user: {mask_email(user.email)}")
+        return Response({"message": "If this email is registered, a reset link was sent."})
 
 
 # PasswordChangeView (Forgot Password Reset - Token-based flow)
@@ -228,8 +241,9 @@ class PasswordChangeView(generics.CreateAPIView):
         logger.info("Password change request received")
         logger.info(f"Request method: {request.method}")
         logger.info(f"Request content-type: {request.content_type}")
-        logger.info(f"Raw request data keys: {list(request.data.keys()) if request.data else 'None'}")
-        logger.info(f"Full request data: {request.data}")
+        logger.info("Request contains data payload" if request.data else "No request data provided")
+        logger.info("Request data logged in generic form (sensitive fields masked)")
+
 
         payload = request.data
         token = payload.get("token")
@@ -250,7 +264,7 @@ class PasswordChangeView(generics.CreateAPIView):
 
         if missing_fields:
             logger.warning(f"Missing required fields: {missing_fields}")
-            logger.warning(f"Received payload: {payload}")
+            logger.warning("Received payload with sensitive fields masked")
             return Response(
                 {"error": "Missing required fields", "missing": missing_fields},
                 status=status.HTTP_400_BAD_REQUEST
@@ -260,7 +274,7 @@ class PasswordChangeView(generics.CreateAPIView):
             user_id = force_str(urlsafe_base64_decode(uidb64))
             logger.info(f"Decoded user_id from uidb64: {user_id}")
             user = User.objects.get(pk=user_id)
-            logger.info(f"User found for password change: {user.id} - {user.email}")
+            logger.info(f"User found for password change: {user.id} - {mask_email(user.email)}")
         except (ValueError, TypeError) as e:
             logger.error(f"Invalid uidb64 decoding: {str(e)}", exc_info=True)
             return Response({"error": "Invalid link"}, status=status.HTTP_400_BAD_REQUEST)
@@ -285,7 +299,7 @@ class PasswordChangeView(generics.CreateAPIView):
         logger.info(f"Token valid for user: {user.id}. Proceeding to set new password.")
         user.set_password(password)
         user.save()
-        logger.info(f"Password successfully changed for user: {user.id} - {user.email}")
+        logger.info(f"Password successfully changed for user: {user.id} - {mask_email(user.email)}")
         return Response({"message": "Password Changed Successfully"}, status=status.HTTP_200_OK)
 
 class VerifyEmailOTP(generics.CreateAPIView):
