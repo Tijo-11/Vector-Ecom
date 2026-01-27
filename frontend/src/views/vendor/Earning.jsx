@@ -1,10 +1,11 @@
-// Earning.jsx (with custom CSS spinner matching ProductsVendor)
+// Earning.jsx - Final version with fixed timeline (always last 12 months), correct "Dec 25, Jan 26" format, and robust graph rendering
 import React, { useState, useEffect } from "react";
 import { IndianRupee } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import { Chart } from "chart.js/auto";
 import zoomPlugin from "chartjs-plugin-zoom";
 import "chartjs-adapter-date-fns";
+import { format } from "date-fns";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
@@ -15,7 +16,6 @@ Chart.register(zoomPlugin);
 function Earning() {
   const [earningStats, setEarningStats] = useState(null);
   const [earningStatsTracker, setEarningTracker] = useState([]);
-  const [earningChartData, setEarningChartData] = useState(null);
   const [period, setPeriod] = useState("monthly");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -40,8 +40,8 @@ function Earning() {
           axios.get(`vendor-monthly-earning/${userData?.vendor_id}/`),
         ]);
         setEarningStats(statsRes.data[0]);
-        setEarningTracker(trackerRes.data);
-        setEarningChartData(trackerRes.data);
+        const trackerData = trackerRes.data || [];
+        setEarningTracker(trackerData);
       } catch (err) {
         console.error("Error fetching earning data:", err);
       } finally {
@@ -51,29 +51,32 @@ function Earning() {
     fetchData();
   }, []);
 
-  const months = earningChartData?.map((item) => item.month);
-  const revenue = earningChartData?.map(
-    (item) => parseFloat(item.total_earning) || 0,
-  );
+  // Create a map: month number (1-12) → {sales_count, total_earning}
+  const dataMap = new Map();
+  earningStatsTracker.forEach((item) => {
+    dataMap.set(item.month, {
+      sales: item.sales_count || 0,
+      earning: parseFloat(item.total_earning) || 0,
+    });
+  });
+
+  // Always generate last 12 months (oldest → newest for chart)
+  const today = new Date();
+  today.setDate(1); // Start of current month
+
+  const chartLabels = [];
+  const revenue = [];
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(today);
+    date.setMonth(today.getMonth() - i);
+    chartLabels.push(date);
+
+    const monthNum = date.getMonth() + 1;
+    revenue.push(dataMap.get(monthNum)?.earning || 0);
+  }
 
   const revenue_data = {
-    labels: months?.map(
-      (m) =>
-        [
-          "2023-01-01",
-          "2023-02-01",
-          "2023-03-01",
-          "2023-04-01",
-          "2023-05-01",
-          "2023-06-01",
-          "2023-07-01",
-          "2023-08-01",
-          "2023-09-01",
-          "2023-10-01",
-          "2023-11-01",
-          "2023-12-01",
-        ][m - 1],
-    ),
+    labels: chartLabels,
     datasets: [
       {
         label: "Revenue",
@@ -95,6 +98,9 @@ function Earning() {
         type: "time",
         time: {
           unit: "month",
+          displayFormats: {
+            month: "MMM yy",
+          },
         },
         title: {
           display: true,
@@ -118,12 +124,8 @@ function Earning() {
     plugins: {
       zoom: {
         zoom: {
-          wheel: {
-            enabled: true,
-          },
-          pinch: {
-            enabled: true,
-          },
+          wheel: { enabled: true },
+          pinch: { enabled: true },
           mode: "x",
         },
         pan: {
@@ -131,8 +133,31 @@ function Earning() {
           mode: "x",
         },
       },
+      tooltip: {
+        callbacks: {
+          title: (tooltipItems) => {
+            return format(tooltipItems[0].parsed.x, "MMM yy");
+          },
+        },
+      },
     },
   };
+
+  // Generate table items (newest → oldest, only months with sales > 0, last 12 months)
+  const tableItems = [];
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(today);
+    date.setMonth(today.getMonth() - i);
+    const monthNum = date.getMonth() + 1;
+    const info = dataMap.get(monthNum);
+    if (info && info.sales > 0) {
+      tableItems.push({
+        display: format(date, "MMM yy"),
+        sales: info.sales,
+        earning: info.earning.toFixed(2),
+      });
+    }
+  }
 
   const fetchReport = async () => {
     const params = { period };
@@ -213,7 +238,6 @@ function Earning() {
         </h4>
 
         {loading ? (
-          // Custom CSS spinner matching ProductsVendor style
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
             <p className="text-lg text-gray-600">Loading earnings data...</p>
@@ -244,10 +268,10 @@ function Earning() {
               </div>
             </div>
 
-            {/* Revenue Tracker Table */}
+            {/* Revenue Tracker Table - only months with sales, newest first, with MMM yy */}
             <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
               <h4 className="text-lg font-semibold mb-4">Revenue Tracker</h4>
-              {earningStatsTracker.length === 0 ? (
+              {tableItems.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">
                   No revenue data available yet.
                 </p>
@@ -261,30 +285,11 @@ function Earning() {
                     </tr>
                   </thead>
                   <tbody>
-                    {earningStatsTracker.map((earning, index) => (
+                    {tableItems.map((item, index) => (
                       <tr key={index} className="border-b">
-                        <td className="py-2 px-3">
-                          {
-                            [
-                              "January",
-                              "February",
-                              "March",
-                              "April",
-                              "May",
-                              "June",
-                              "July",
-                              "August",
-                              "September",
-                              "October",
-                              "November",
-                              "December",
-                            ][earning.month - 1]
-                          }
-                        </td>
-                        <td className="py-2 px-3">{earning.sales_count}</td>
-                        <td className="py-2 px-3">
-                          ₹{(parseFloat(earning.total_earning) || 0).toFixed(2)}
-                        </td>
+                        <td className="py-2 px-3">{item.display}</td>
+                        <td className="py-2 px-3">{item.sales}</td>
+                        <td className="py-2 px-3">₹{item.earning}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -292,18 +297,12 @@ function Earning() {
               )}
             </div>
 
-            {/* Revenue Analytics Chart with Zoom */}
+            {/* Revenue Analytics Chart - always shows last 12 months timeline */}
             <div className="bg-white rounded-2xl shadow-md p-6 h-[400px] mb-8">
               <h4 className="text-lg font-semibold mb-4">
                 Revenue Analytics (Zoomable)
               </h4>
-              {earningChartData && earningChartData.length > 0 ? (
-                <Line data={revenue_data} options={revenue_options} />
-              ) : (
-                <p className="text-center text-gray-500 py-20">
-                  No chart data available.
-                </p>
-              )}
+              <Line data={revenue_data} options={revenue_options} />
             </div>
           </>
         )}
@@ -349,7 +348,6 @@ function Earning() {
           </div>
 
           {reportLoading ? (
-            // Smaller custom spinner for report loading
             <div className="flex flex-col items-center justify-center py-10">
               <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
               <p className="text-gray-600">Generating report...</p>

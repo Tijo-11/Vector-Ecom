@@ -14,6 +14,7 @@ from store.serializers import (CartOrderItemSerializer, SummarySerializer, Produ
 # Models
 from store.models import  CartOrderItem,  Product,  CartOrder,  Review
 from vendor.models import Vendor
+from django.db.models.functions import ExtractYear, ExtractMonth
 
 ## Others Packages
 from datetime import datetime, timedelta
@@ -147,6 +148,8 @@ class Earning(generics.ListAPIView):
         return Response(serializer.data) # Returns serialized data as JSON response
 
 
+
+
 @api_view(('GET',))
 def MonthlyEarningTracker(request, vendor_id):
     vendor = Vendor.objects.get(id=vendor_id)
@@ -154,18 +157,17 @@ def MonthlyEarningTracker(request, vendor_id):
         CartOrderItem.objects
         .filter(vendor=vendor, order__payment_status="paid")
         .annotate(
+            year=ExtractYear("date"),
             month=ExtractMonth("date")
         )
-        .values("month")
+        .values("year", "month")
         .annotate(
             sales_count=models.Sum("qty"),
-            total_earning=models.Sum(
-                models.F('sub_total') + models.F('shipping_amount'))
+            total_earning=models.Sum(models.F('sub_total') + models.F('shipping_amount'))
         )
-        .order_by("-month")
+        .order_by("-year", "-month")  # Newest first
     )
     return Response(monthly_earning_tracker)
-
 
 ##-------- Reviews
 
