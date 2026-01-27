@@ -81,14 +81,14 @@ export default function AdminSidebar() {
         </li>
         <li>
           <Link
-            to="/admin/service-fees"
+            to="/admin/category-offer"
             className={
-              isActiveLink(location.pathname, "/admin/service-fees")
+              isActiveLink(location.pathname, "/admin/category-offer")
                 ? activeLink
                 : nonActiveLink
             }
           >
-            <IndianRupee size={18} /> <span>Service Fees</span>
+            <IndianRupee size={18} /> <span>Category Offer</span>
           </Link>
         </li>
         <li>

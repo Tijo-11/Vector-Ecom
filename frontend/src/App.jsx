@@ -75,7 +75,7 @@ const ProductManagement = lazy(
   () => import("./views/admin/ProductManagement.jsx"),
 );
 const OrderManagement = lazy(() => import("./views/admin/OrderManagement.jsx"));
-const ServiceFees = lazy(() => import("./views/admin/ServiceFees.jsx"));
+const CategoryOffer = lazy(() => import("./views/admin/CategoryOffer.jsx"));
 const Reports = lazy(() => import("./views/admin/Reports.jsx"));
 const AdminNotifications = lazy(
   () => import("./views/admin/AdminNotifications.jsx"),
@@ -526,11 +526,11 @@ export default function App() {
               }
             />
             <Route
-              path="/admin/service-fees"
+              path="/admin/category-offer"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
                   <AdminRoute>
-                    <ServiceFees />
+                    <CategoryOffer />
                   </AdminRoute>
                 </Suspense>
               }

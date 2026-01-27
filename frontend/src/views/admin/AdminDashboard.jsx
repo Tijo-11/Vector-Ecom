@@ -84,7 +84,7 @@ export default function AdminDashboard() {
     labels: revenueMonths,
     datasets: [
       {
-        label: "Total Service Fees (₹)",
+        label: "Total Revenue (₹)",
         data: revenueValues,
         fill: true,
         backgroundColor: "rgba(99, 102, 241, 0.3)",
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
                     Total Vendors
                   </h6>
                   <h1 className="text-4xl font-bold">
-                    {stats?.total_vendors || 42}
+                    {stats?.total_vendors || 0}
                   </h1>
                 </div>
 
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
                     Total Orders
                   </h6>
                   <h1 className="text-4xl font-bold">
-                    {stats?.total_orders || 2480}
+                    {stats?.total_orders || 0}
                   </h1>
                 </div>
 
@@ -143,11 +143,9 @@ export default function AdminDashboard() {
                   <div className="self-end opacity-20">
                     <IndianRupee size={48} />
                   </div>
-                  <h6 className="uppercase tracking-wide text-sm">
-                    Service Fees
-                  </h6>
+                  <h6 className="uppercase tracking-wide text-sm">Revenue</h6>
                   <h1 className="text-4xl font-bold">
-                    ₹{stats?.service_fees || "85,240"}
+                    ₹{stats?.total_revenue?.toLocaleString() || "0"}
                   </h1>
                 </div>
 
@@ -159,7 +157,7 @@ export default function AdminDashboard() {
                     Top Vendor
                   </h6>
                   <h1 className="text-2xl font-semibold">
-                    {stats?.top_vendor || "VendorX"}
+                    {stats?.top_vendor || "N/A"}
                   </h1>
                 </div>
               </div>
@@ -182,143 +180,6 @@ export default function AdminDashboard() {
               </div>
 
               <hr className="my-6" />
-
-              {/* === TABS: Vendors & Products === */}
-              <div className="mb-24">
-                <ul className="flex border-b mb-4">
-                  <li className="mr-1">
-                    <button
-                      className={`inline-block px-4 py-2 font-medium ${
-                        activeTab === "vendors"
-                          ? "text-blue-600 border-b-2 border-blue-600"
-                          : "text-gray-600 hover:text-blue-600"
-                      }`}
-                      onClick={() => setActiveTab("vendors")}
-                    >
-                      Vendors
-                    </button>
-                  </li>
-                  <li className="mr-1">
-                    <button
-                      className={`inline-block px-4 py-2 font-medium ${
-                        activeTab === "products"
-                          ? "text-blue-600 border-b-2 border-blue-600"
-                          : "text-gray-600 hover:text-blue-600"
-                      }`}
-                      onClick={() => setActiveTab("products")}
-                    >
-                      Products
-                    </button>
-                  </li>
-                </ul>
-
-                {/* === VENDOR TAB === */}
-                {activeTab === "vendors" && (
-                  <div>
-                    <h4 className="text-lg font-semibold mb-4">
-                      Vendor Management
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full table-auto border-collapse">
-                        <thead className="bg-gray-800 text-white">
-                          <tr>
-                            <th className="px-4 py-2 text-left">#ID</th>
-                            <th className="px-4 py-2 text-left">Name</th>
-                            <th className="px-4 py-2 text-left">Email</th>
-                            <th className="px-4 py-2 text-left">Products</th>
-                            <th className="px-4 py-2 text-left">Status</th>
-                            <th className="px-4 py-2 text-left">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          <tr>
-                            <td className="px-4 py-2">#VN001</td>
-                            <td className="px-4 py-2">VendorX</td>
-                            <td className="px-4 py-2">vendorx@mail.com</td>
-                            <td className="px-4 py-2">120</td>
-                            <td className="px-4 py-2 text-green-600 font-semibold">
-                              Active
-                            </td>
-                            <td className="px-4 py-2 space-x-2">
-                              <button className="bg-red-500 text-white px-2 py-1 rounded inline-flex items-center">
-                                <Ban size={16} className="mr-1" /> Block
-                              </button>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2">#VN002</td>
-                            <td className="px-4 py-2">VendorY</td>
-                            <td className="px-4 py-2">vendory@mail.com</td>
-                            <td className="px-4 py-2">60</td>
-                            <td className="px-4 py-2 text-red-600 font-semibold">
-                              Blocked
-                            </td>
-                            <td className="px-4 py-2 space-x-2">
-                              <button className="bg-green-500 text-white px-2 py-1 rounded inline-flex items-center">
-                                <ShieldAlert size={16} className="mr-1" />{" "}
-                                Unblock
-                              </button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* === PRODUCT TAB === */}
-                {activeTab === "products" && (
-                  <div>
-                    <h4 className="text-lg font-semibold mb-4">
-                      Product Management
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full table-auto border-collapse">
-                        <thead className="bg-gray-800 text-white">
-                          <tr>
-                            <th className="px-4 py-2 text-left">#ID</th>
-                            <th className="px-4 py-2 text-left">Name</th>
-                            <th className="px-4 py-2 text-left">Vendor</th>
-                            <th className="px-4 py-2 text-left">Price</th>
-                            <th className="px-4 py-2 text-left">Status</th>
-                            <th className="px-4 py-2 text-left">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          <tr>
-                            <td className="px-4 py-2">#PR001</td>
-                            <td className="px-4 py-2">Wireless Earbuds</td>
-                            <td className="px-4 py-2">VendorX</td>
-                            <td className="px-4 py-2">₹1999</td>
-                            <td className="px-4 py-2 text-green-600 font-semibold">
-                              Active
-                            </td>
-                            <td className="px-4 py-2 space-x-2">
-                              <button className="bg-gray-500 text-white px-2 py-1 rounded inline-flex items-center">
-                                <Trash size={16} className="mr-1" /> Deactivate
-                              </button>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2">#PR002</td>
-                            <td className="px-4 py-2">Bluetooth Speaker</td>
-                            <td className="px-4 py-2">VendorY</td>
-                            <td className="px-4 py-2">₹1499</td>
-                            <td className="px-4 py-2 text-gray-600 font-semibold">
-                              Inactive
-                            </td>
-                            <td className="px-4 py-2 space-x-2">
-                              <button className="bg-green-500 text-white px-2 py-1 rounded inline-flex items-center">
-                                <Edit size={16} className="mr-1" /> Activate
-                              </button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
