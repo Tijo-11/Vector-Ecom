@@ -1,15 +1,17 @@
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
-import NotFound from "./NotFound";
 
 export default function AdminRoute({ children }) {
-  const user = useAuthStore((state) => state.user);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
 
-  // If user is not logged in or not an admin → redirect to NotFound
-  if (!user || user?.is_admin !== true) {
-    return <NotFound />;
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
   }
 
-  // If admin → render the protected route
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
 }

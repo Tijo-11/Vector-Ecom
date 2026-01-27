@@ -1,23 +1,12 @@
 import { create } from "zustand";
-
 import { mountStoreDevtool } from "simple-zustand-devtools";
-// from the browser’s developer tools. It helps track state changes and actions for easier debugging.
 
-const useAuthStore = create((set, get) => ({
-  // allUserData: Stores the full decoded user information (e.g., user_id, username) from the JWT.
+const useAuthStore = create((set) => ({
   allUserData: null,
-
-  // loading: Tracks loading state (e.g., during login requests). Initialized as false.
   loading: false,
-
-  // user: Stores a simplified user object (commonly used fields like user_id and username).
-  // This is derived when we set `allUserData`, so components can access it directly.
   user: null,
-
-  // isLoggedIn: Boolean flag that directly tracks if a user session is active (true when allUserData is not null).
   isLoggedIn: false,
 
-  // setUser: Updates `allUserData`, `user`, and `isLoggedIn` in one go whenever login/logout happens.
   setUser: (user) =>
     set({
       allUserData: user,
@@ -26,21 +15,19 @@ const useAuthStore = create((set, get) => ({
             user_id: user.user_id || null,
             username: user.username || null,
             vendor_id: user.vendor_id || null,
+            is_admin: user.is_admin || false,
           }
         : null,
       isLoggedIn: !!user,
-      isVendor: user?.vendor_id > 0, // To check vendor
+      isVendor: user?.vendor_id > 0,
+      isAdmin: user?.is_admin === true,
     }),
 
-  // setLoading: Updates the loading state during API calls (true while waiting, false after response).
   setLoading: (loading) => set({ loading }),
 }));
 
-// Conditionally attach Zustand devtools in the development environment:
 if (import.meta.env.DEV) {
-  // import.meta.env.DEV is a Vite-specific way to check if the app is running in development mode.
   mountStoreDevtool("Store", useAuthStore);
-  // Mounts Zustand devtools with the name "Store". This helps visualize state in browser devtools.
 }
 
 export { useAuthStore };

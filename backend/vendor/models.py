@@ -95,29 +95,8 @@ class Vendor(models.Model):
         
 
     def save(self, *args, **kwargs):
-        if self.slug == "" or self.slug == None:
+        if self.slug == "" or self.slug is None:
             self.slug = slugify(self.name)
         super(Vendor, self).save(*args, **kwargs) 
 
 
-'''
-Callable default on unique field vendor.vid will not generate unique values upon migrating. 
-Please choose how to proceed: 1) Continue making this migration as the first step in writing a manual 
-migration to generate unique values described here:
-https://docs.djangoproject.com/en/5.2/howto/writing-migrations/#migrations-that-add-unique-fields. 
-2)
-Quit and edit field options in models.py. Select an option: 
-
-🔍 **Explanation:**  
-This error occurs because you're adding a **unique field** (`vendor.vid`) with a **callable default** (like `uuid.uuid4`) during a migration. Django needs to populate existing rows in the database with default values — but it calls the default **only once**, meaning **all rows get the same value**, which violates the uniqueness constraint.
-
-🛠️ **Your options:**
-
-- **Option 1:** Proceed with the migration, then write a **manual data migration** to assign unique values to each row individually. This is the recommended approach for existing data.  
-- **Option 2:** Edit `models.py` to remove `unique=True` temporarily or avoid using a callable default. You can later reintroduce uniqueness after populating the field.
-
-💡 **Best practice:**  
-Use `null=True` initially, run the migration, then write a data migration to fill in unique values (e.g., using `uuid.uuid4()` per row), and finally make the field `unique=True` and `null=False`.
-
-Want help writing that manual migration? I can whip it up for you.
-'''

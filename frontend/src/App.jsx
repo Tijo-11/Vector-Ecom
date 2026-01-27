@@ -1,10 +1,10 @@
+// src/App.jsx (Full Corrected File - Fixed LoadingSpinner typo and syntax)
 import { useState } from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
 import Login from "./views/auth/login";
 import Register from "./views/auth/Register";
-import PrivateRoute from "./layouts/PrivateRoute";
 import CartInitializer from "./utils/CartInitializer";
 import Logout from "./views/auth/Logout";
 import ForgotPassword from "./views/auth/ForgotPassword";
@@ -15,6 +15,8 @@ import MainWrapper from "./layouts/MainWrapper";
 import { CartContext } from "./plugin/Context.jsx";
 import NotFund from "./layouts/NotFound.jsx";
 import AdminRoute from "./layouts/AdminRoute.jsx";
+import ProtectedRoute from "./layouts/ProtectedRoute.jsx";
+import PublicLayout from "./layouts/PublicLayout.jsx"; // ← NEW IMPORT
 
 // Lazy load all page-level components
 const Products = lazy(() => import("./views/shop/Products/Products"));
@@ -80,8 +82,7 @@ const AdminNotifications = lazy(
 );
 const AdminSettings = lazy(() => import("./views/admin/AdminSettings.jsx"));
 
-// Generic full-screen spinner (consistent with your previous approved spinners)
-// This avoids showing a mismatched ProductsPlaceholder skeleton on non-list pages
+// Generic full-screen spinner
 const LoadingSpinner = () => (
   <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
     <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-600 mb-8"></div>
@@ -102,105 +103,124 @@ export default function App() {
         <StoreHeader />
         <MainWrapper>
           <Routes>
-            {/* Public Shop Routes */}
-            <Route
-              path="/"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Products />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/product/:slug"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <ProductDetail />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/detail/:slug"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <ProductDetail />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/category/:slug"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <CategoryProducts />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/cart"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Cart />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/address"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Address />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/checkout/:order_id"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Checkout />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/search"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Search />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/track-order"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <TrackOrder />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/payments-success/:order_id"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <PaymentSuccess />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/payments-failed/:order_id"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <PaymentFailed />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/view-order/:order_oid/"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <ViewOrder />
-                </Suspense>
-              }
-            />
+            {/* Public Shop Routes + Vendor Register - All under PublicLayout for centralized admin redirect */}
+            <Route element={<PublicLayout />}>
+              <Route
+                path="/"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Products />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/product/:slug"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ProductDetail />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/detail/:slug"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ProductDetail />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/category/:slug"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <CategoryProducts />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/cart"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Cart />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/address"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Address />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/checkout/:order_id"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Checkout />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/search"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Search />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/track-order"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <TrackOrder />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/payments-success/:order_id"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PaymentSuccess />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/payments-failed/:order_id"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PaymentFailed />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/view-order/:order_oid/"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ViewOrder />
+                  </Suspense>
+                }
+              />
+              {/* Vendor Public Routes */}
+              <Route
+                path="/vendor/register/"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <VendorRegister />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/vendor/:slug/"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Shop />
+                  </Suspense>
+                }
+              />
+            </Route>
 
-            {/* Auth Routes (lightweight – no lazy/Suspense needed) */}
+            {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/logout" element={<Logout />} />
@@ -210,32 +230,14 @@ export default function App() {
               element={<CreateNewPassword />}
             />
 
-            {/* Public Vendor Routes */}
-            <Route
-              path="/vendor/register/"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <VendorRegister />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/vendor/:slug/"
-              element={
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Shop />
-                </Suspense>
-              }
-            />
-
             {/* Private Customer Routes */}
             <Route
               path="/customer/account/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Account />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -243,9 +245,9 @@ export default function App() {
               path="/customer/orders/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Orders />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -253,9 +255,9 @@ export default function App() {
               path="/customer/order/detail/:order_oid/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <OrderDetail />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -263,9 +265,9 @@ export default function App() {
               path="/customer/wishlist/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Wishlist />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -273,9 +275,9 @@ export default function App() {
               path="/customer/notifications/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Notifications />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -283,9 +285,9 @@ export default function App() {
               path="/customer/profile/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Profile />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -293,9 +295,9 @@ export default function App() {
               path="/customer/addresses/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Addresses />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -303,9 +305,9 @@ export default function App() {
               path="/customer/settings/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Settings />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -313,9 +315,9 @@ export default function App() {
               path="/customer/order/invoice/:order_oid"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Invoice />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -325,7 +327,9 @@ export default function App() {
               path="/dashboard"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <Dashboard />
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -333,9 +337,9 @@ export default function App() {
               path="/vendor/dashboard/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Dashboard />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -343,9 +347,9 @@ export default function App() {
               path="/vendor/products/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <VendorProducts />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -353,9 +357,9 @@ export default function App() {
               path="/vendor/orders/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <VendorOrders />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -363,9 +367,9 @@ export default function App() {
               path="/vendor/orders/:oid/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <VendorOrderDetail />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -373,9 +377,9 @@ export default function App() {
               path="/vendor/orders/:oid/:id/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <AddTracking />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -383,9 +387,9 @@ export default function App() {
               path="/vendor/earning/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Earning />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -393,9 +397,9 @@ export default function App() {
               path="/vendor/reviews/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Reviews />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -403,9 +407,9 @@ export default function App() {
               path="/vendor/reviews/:id/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <ReviewDetail />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -413,9 +417,9 @@ export default function App() {
               path="/vendor/coupon/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Coupon />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -423,9 +427,9 @@ export default function App() {
               path="/vendor/coupon/:id/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <EditCoupon />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -433,9 +437,9 @@ export default function App() {
               path="/vendor/notifications/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <VendorNotifications />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -443,9 +447,9 @@ export default function App() {
               path="/vendor/settings/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <VendorSettings />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -453,9 +457,9 @@ export default function App() {
               path="/vendor/product/new/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <AddProduct />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -463,9 +467,9 @@ export default function App() {
               path="/vendor/product/update/:product_pid/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <UpdateProduct />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />
@@ -473,9 +477,9 @@ export default function App() {
               path="/vendor/offers/"
               element={
                 <Suspense fallback={<LoadingSpinner />}>
-                  <PrivateRoute>
+                  <ProtectedRoute>
                     <Offers />
-                  </PrivateRoute>
+                  </ProtectedRoute>
                 </Suspense>
               }
             />

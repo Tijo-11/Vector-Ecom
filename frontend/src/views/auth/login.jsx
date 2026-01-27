@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { login, googleLogin } from "../../utils/auth";
-import { useNavigate, useSearchParams } from "react-router-dom"; // ← Added useSearchParams
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import { Link } from "react-router-dom";
 import apiInstance from "../../utils/axios";
 import Swal from "sweetalert2";
+import Cookies from "js-cookie";
+import { jwtDecode } from "jwt-decode";
 
 const Toast = Swal.mixin({
   toast: true,
@@ -16,8 +18,8 @@ const Toast = Swal.mixin({
 
 export default function Login() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams(); // ← To read ?ref=TOKEN
-  const refToken = searchParams.get("ref"); // Get referral token from URL
+  const [searchParams] = useSearchParams();
+  const refToken = searchParams.get("ref");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,14 +28,12 @@ export default function Login() {
 
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
-  // Redirect if already logged in
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/");
     }
   }, [isLoggedIn, navigate]);
 
-  // Load Google Sign-In script
   useEffect(() => {
     const loadGoogleScript = () => {
       const script = document.createElement("script");
@@ -46,7 +46,6 @@ export default function Login() {
     loadGoogleScript();
   }, []);
 
-  // Initialize Google button
   useEffect(() => {
     if (isGoogleScriptLoaded && window.google?.accounts) {
       window.google.accounts.id.initialize({
@@ -55,19 +54,16 @@ export default function Login() {
       });
       window.google.accounts.id.renderButton(
         document.getElementById("googleSignInDiv"),
-        { theme: "outline", size: "large" }
+        { theme: "outline", size: "large" },
       );
     }
   }, [isGoogleScriptLoaded]);
 
-  // Apply referral if token exists and user just signed in
   const applyReferralIfNeeded = async () => {
     if (!refToken) return;
-
     try {
       const userData = JSON.parse(localStorage.getItem("userData") || "{}");
       const newUserId = userData?.user_id;
-
       if (newUserId) {
         await apiInstance.post("referral/apply/", {
           token: refToken,
@@ -80,14 +76,12 @@ export default function Login() {
       }
     } catch (error) {
       console.error("Failed to apply referral:", error);
-      // Silent fail — don't interrupt login flow
     }
   };
 
-  // Google Login Handler
   const handleGoogleResponse = async (response) => {
     setIsLoading(true);
-    const { error, data } = await googleLogin(response.credential);
+    const { error } = await googleLogin(response.credential);
 
     if (error) {
       Toast.fire({ icon: "error", title: error });
@@ -96,15 +90,26 @@ export default function Login() {
     }
 
     Toast.fire({ icon: "success", title: "Logged in with Google!" });
-
-    // Apply referral only after successful login
     await applyReferralIfNeeded();
 
-    navigate("/");
+    const accessToken = Cookies.get("access_token");
+    if (accessToken) {
+      const user = jwtDecode(accessToken);
+      console.log("Decoded token (Google):", user);
+      if (user.is_admin) {
+        navigate("/admin/dashboard");
+      } else if (user.vendor_id > 0) {
+        navigate("/vendor/dashboard/");
+      } else {
+        navigate("/");
+      }
+    } else {
+      navigate("/");
+    }
+
     setIsLoading(false);
   };
 
-  // Regular Email/Password Login
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -118,17 +123,24 @@ export default function Login() {
     }
 
     Toast.fire({ icon: "success", title: "Login Successful!" });
-
-    // Apply referral if this was a new signup via referral link
     await applyReferralIfNeeded();
 
-    navigate("/");
-    setIsLoading(false);
-  };
+    const accessToken = Cookies.get("access_token");
+    if (accessToken) {
+      const user = jwtDecode(accessToken);
+      console.log("Decoded token (Email):", user);
+      if (user.is_admin) {
+        navigate("/admin/dashboard");
+      } else if (user.vendor_id > 0) {
+        navigate("/vendor/dashboard/");
+      } else {
+        navigate("/");
+      }
+    } else {
+      navigate("/");
+    }
 
-  const resetForm = () => {
-    setEmail("");
-    setPassword("");
+    setIsLoading(false);
   };
 
   return (

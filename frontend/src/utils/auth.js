@@ -38,7 +38,7 @@ export const register = async (
   email,
   phone,
   password,
-  password2
+  password2,
 ) => {
   try {
     const { data, status } = await apiInstance.post("user/register/", {
