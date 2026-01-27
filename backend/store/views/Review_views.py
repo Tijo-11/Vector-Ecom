@@ -96,7 +96,8 @@ class SearchProductView(generics.ListAPIView):  # Changed to ListAPIView (no nee
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
-        queryset = Product.objects.filter(status='published')
+        # Filter by published status and active vendor
+        queryset = Product.objects.filter(status='published', vendor__active=True)
 
         # Text search query (optional)
         query = self.request.GET.get('query')

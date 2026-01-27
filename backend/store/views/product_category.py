@@ -14,7 +14,8 @@ class ProductListView(generics.ListAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
-        queryset = Product.objects.filter(status='published')
+        # Filter by published status and active vendor
+        queryset = Product.objects.filter(status='published', vendor__active=True)
         category_slug = self.request.query_params.get('category')
         if category_slug:
             queryset = queryset.filter(category__slug=category_slug)
@@ -22,7 +23,8 @@ class ProductListView(generics.ListAPIView):
 
 class FeaturedProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
-    queryset = Product.objects.filter(status="published", featured=True)[:3]
+    # Filter by published status, featured flag, and active vendor
+    queryset = Product.objects.filter(status="published", featured=True, vendor__active=True)[:3]
     permission_classes = (AllowAny,)
 
 class ProductDetailView(generics.RetrieveAPIView):
@@ -31,4 +33,5 @@ class ProductDetailView(generics.RetrieveAPIView):
 
     def get_object(self):
         slug = self.kwargs.get('slug')
-        return Product.objects.get(slug=slug)
+        # Ensure product is published and vendor is active
+        return Product.objects.get(slug=slug, status='published', vendor__active=True)
