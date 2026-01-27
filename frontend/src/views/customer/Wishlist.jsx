@@ -165,7 +165,7 @@ function Wishlist() {
       );
       setCartCount(totalQty);
 
-      // Remove from wishlist
+      // Remove from wishlist after successful add to cart
       await addToWishlist(product_id, userData?.user_id);
       fetchWishlist(currentPage);
     } catch (error) {
@@ -207,33 +207,38 @@ function Wishlist() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                               {wishlist.map((w) => (
                                 <div
-                                  key={w.id || w.product.id}
-                                  className="bg-white rounded-lg shadow-lg overflow-hidden"
+                                  key={w.product.id}
+                                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
                                 >
-                                  <div className="w-full h-64 flex items-center justify-center bg-gray-100">
+                                  {/* Clickable Image Area - Navigates to Product Detail */}
+                                  <Link
+                                    to={`/detail/${w.product.slug || ""}`}
+                                    className="block w-full h-64 flex items-center justify-center bg-gray-100 group"
+                                  >
                                     <img
                                       src={w.product.image || placeholderImage}
                                       alt={w.product.title || "Product Image"}
                                       onError={handleImageError}
-                                      className="max-h-full max-w-full object-contain"
+                                      className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
                                     />
-                                  </div>
+                                  </Link>
 
                                   <div className="p-4">
+                                    {/* Clickable Title - Navigates to Product Detail */}
                                     <Link
                                       to={`/detail/${w.product.slug || ""}`}
-                                      className="text-gray-800 hover:text-blue-600"
+                                      className="block text-gray-800 hover:text-blue-600 transition-colors"
                                     >
-                                      <h6 className="text-lg font-semibold mb-2">
-                                        {w.product.title?.slice(0, 30) ||
-                                          "No Title"}
-                                        ...
+                                      <h6 className="text-lg font-semibold mb-2 line-clamp-2">
+                                        {w.product.title || "No Title"}
                                       </h6>
                                     </Link>
+
+                                    {/* Brand */}
                                     {w.product?.brand ? (
                                       <Link
                                         to={`/brand/${w.product.brand.slug || ""}`}
-                                        className="text-gray-600 hover:text-blue-600"
+                                        className="text-gray-600 hover:text-blue-600 transition-colors"
                                       >
                                         <p className="text-sm mb-2">
                                           {w.product.brand.title ||
@@ -245,32 +250,37 @@ function Wishlist() {
                                         No Brand
                                       </p>
                                     )}
-                                    <h6 className="text-lg font-bold mb-3">
+
+                                    <h6 className="text-lg font-bold mb-4">
                                       ₹{w.product.price || "0.00"}
                                     </h6>
-                                    <button
-                                      onClick={() =>
-                                        handleAddToWishlist(w.product.id)
-                                      }
-                                      type="button"
-                                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
-                                    >
-                                      <Heart size={18} /> Remove
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleAddToCart(
-                                          w.product.id,
-                                          w.product.price,
-                                          w.product.shipping_amount || 0,
-                                          w.product.slug,
-                                        )
-                                      }
-                                      type="button"
-                                      className="bg-blue-600 text-white mx-3 px-3 py-1 rounded hover:bg-blue-700 transition-colors"
-                                    >
-                                      <ShoppingCart size={18} /> Add to Cart
-                                    </button>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-3">
+                                      <button
+                                        onClick={() =>
+                                          handleAddToWishlist(w.product.id)
+                                        }
+                                        type="button"
+                                        className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+                                      >
+                                        <Heart size={18} /> Remove
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleAddToCart(
+                                            w.product.id,
+                                            w.product.price,
+                                            w.product.shipping_amount || 0,
+                                            w.product.slug,
+                                          )
+                                        }
+                                        type="button"
+                                        className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                                      >
+                                        <ShoppingCart size={18} /> Add to Cart
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               ))}

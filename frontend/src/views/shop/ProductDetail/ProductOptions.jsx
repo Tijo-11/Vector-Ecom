@@ -42,11 +42,17 @@ export default function ProductOptions({
     if (!userData?.user_id) return;
     try {
       const response = await apiInstance.get(
-        `customer/wishlist/${userData?.user_id}/`
+        `customer/wishlist/${userData?.user_id}/`,
       );
-      setWishlist(response.data);
+
+      // Robust handling: support both direct array and paginated { results: [...] }
+      const data = response.data;
+      const wishlistItems = Array.isArray(data) ? data : data?.results || [];
+
+      setWishlist(wishlistItems);
     } catch (error) {
       log.error("Error fetching wishlist:", error);
+      setWishlist([]); // Ensure it's always an array even on error
     }
   };
 
@@ -113,7 +119,7 @@ export default function ProductOptions({
 
       const cartRes = await apiInstance.get(url);
       const existingItem = cartRes.data.find(
-        (item) => item.product.id === product.id
+        (item) => item.product.id === product.id,
       );
       const existingQty = existingItem ? existingItem.qty : 0;
 
@@ -171,6 +177,11 @@ export default function ProductOptions({
       console.log("Error updating wishlist:", error);
     }
   };
+
+  // Safe check for wishlist membership (prevents crash if structure is unexpected)
+  const isInWishlist =
+    Array.isArray(wishlist) &&
+    wishlist.some((item) => item?.product?.id === product.id);
 
   return (
     <div>
@@ -266,15 +277,13 @@ export default function ProductOptions({
             onClick={() => handleAddToWishlist(product.id)}
             disabled={isOutOfStock}
             className={`flex items-center justify-center gap-2 w-2/5 rounded-lg py-1.5 transition ${
-              wishlist.some((item) => item.product.id === product.id)
+              isInWishlist
                 ? "bg-gray-400 text-white hover:bg-gray-500"
                 : "bg-red-600 text-white hover:bg-red-700"
             } ${isOutOfStock ? "opacity-60 cursor-not-allowed" : ""}`}
           >
             <Heart size={16} />
-            {wishlist.some((item) => item.product.id === product.id)
-              ? "Remove from Wishlist"
-              : "Add to Wishlist"}
+            {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
           </button>
         )}
       </div>
