@@ -273,26 +273,29 @@ class AdminReportsAPIView(APIView):
 
     def get_vendor_performance(self):
         """Generate vendor performance report"""
-        vendors = Vendor.objects.annotate(
-            total_revenue=Sum(
-                'cartorder__total',
-                filter=Q(cartorder__payment_status='paid')
-            ),
-            total_orders=Count(
-                'cartorder',
-                filter=Q(cartorder__payment_status='paid')
-            ),
-            total_products=Count('vendor')
+        # Aggregate directly on CartOrderItem to avoid Cartesian product duplicates
+        vendor_performance = CartOrderItem.objects.filter(
+            order__payment_status='paid',
+            vendor__isnull=False
+        ).values(
+            'vendor__id', 'vendor__name'
+        ).annotate(
+            total_revenue=Sum('total'),
+            total_orders=Count('order', distinct=True)
         ).order_by('-total_revenue')[:10]
 
         data = []
-        for vendor in vendors:
+        for item in vendor_performance:
+            vendor_id = item['vendor__id']
+            # Fetch product count separately
+            total_products = Product.objects.filter(vendor_id=vendor_id).count()
+            
             data.append({
-                'vendor_id': vendor.id,
-                'vendor_name': vendor.name,
-                'total_revenue': vendor.total_revenue or 0,
-                'total_orders': vendor.total_orders or 0,
-                'total_products': vendor.total_products or 0
+                'vendor_id': vendor_id,
+                'vendor_name': item['vendor__name'], # Note: vendor__name might need to be vendor__name (from values)
+                'total_revenue': item['total_revenue'] or 0,
+                'total_orders': item['total_orders'] or 0,
+                'total_products': total_products
             })
 
         serializer = VendorPerformanceSerializer(data, many=True)
