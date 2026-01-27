@@ -1,4 +1,4 @@
-// Settings.jsx (Complete Working Version)
+// Settings.jsx
 
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
@@ -28,6 +28,7 @@ function Settings() {
     new_password: "",
     new_password2: "",
   });
+  const [passwordError, setPasswordError] = useState(""); // New state for mismatch error
 
   // Email change state
   const [emailData, setEmailData] = useState({
@@ -133,6 +134,18 @@ function Settings() {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+
+    // Final validation check before submitting
+    if (passwordData.new_password !== passwordData.new_password2) {
+      setPasswordError("Passwords do not match");
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "New passwords do not match",
+      });
+      return;
+    }
+
     try {
       await axios.post(`user/change-password/`, passwordData);
       Swal.fire("Success", "Password changed successfully", "success");
@@ -141,6 +154,7 @@ function Settings() {
         new_password: "",
         new_password2: "",
       });
+      setPasswordError(""); // Clear any lingering error
     } catch (err) {
       Swal.fire(
         "Error",
@@ -176,7 +190,7 @@ function Settings() {
       setOtpSent(false);
       window.location.reload();
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || "Invalid OTP", "error");
+      Swall.fire("Error", err.response?.data?.error || "Invalid OTP", "error");
     }
   };
 
@@ -382,32 +396,61 @@ function Settings() {
                           required
                           className="w-full border rounded px-3 py-2"
                         />
-                        <input
-                          type="password"
-                          placeholder="New Password"
-                          value={passwordData.new_password}
-                          onChange={(e) =>
-                            setPasswordData({
-                              ...passwordData,
-                              new_password: e.target.value,
-                            })
-                          }
-                          required
-                          className="w-full border rounded px-3 py-2"
-                        />
-                        <input
-                          type="password"
-                          placeholder="Confirm New Password"
-                          value={passwordData.new_password2}
-                          onChange={(e) =>
-                            setPasswordData({
-                              ...passwordData,
-                              new_password2: e.target.value,
-                            })
-                          }
-                          required
-                          className="w-full border rounded px-3 py-2"
-                        />
+                        <div>
+                          <input
+                            type="password"
+                            placeholder="New Password"
+                            value={passwordData.new_password}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setPasswordData({
+                                ...passwordData,
+                                new_password: value,
+                              });
+                              if (
+                                value !== "" &&
+                                passwordData.new_password2 !== "" &&
+                                value !== passwordData.new_password2
+                              ) {
+                                setPasswordError("Passwords do not match");
+                              } else {
+                                setPasswordError("");
+                              }
+                            }}
+                            required
+                            className="w-full border rounded px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="password"
+                            placeholder="Confirm New Password"
+                            value={passwordData.new_password2}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setPasswordData({
+                                ...passwordData,
+                                new_password2: value,
+                              });
+                              if (
+                                passwordData.new_password !== "" &&
+                                value !== "" &&
+                                passwordData.new_password !== value
+                              ) {
+                                setPasswordError("Passwords do not match");
+                              } else {
+                                setPasswordError("");
+                              }
+                            }}
+                            required
+                            className="w-full border rounded px-3 py-2"
+                          />
+                          {passwordError && (
+                            <p className="text-red-500 text-sm mt-1">
+                              {passwordError}
+                            </p>
+                          )}
+                        </div>
                         <button
                           type="submit"
                           className="px-6 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
