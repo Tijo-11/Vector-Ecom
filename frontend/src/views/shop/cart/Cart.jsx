@@ -1,4 +1,4 @@
-//Cart.jsx
+// Cart.jsx
 import React, { useState, useEffect, useContext } from "react";
 import CartItem from "./CartItem";
 import CartSummary from "./CartSummary";
@@ -82,7 +82,7 @@ function Cart() {
             product: item.product.id,
             qty: newQty,
             price: item.price,
-            shipping_amount: perUnitShipping * newQty, // Fixed: prorated total shipping
+            shipping_amount: perUnitShipping, // Fixed: send per-unit shipping (backend multiplies by qty)
             country: item.country,
             cart_id: cart_id,
             size: item.size || "",

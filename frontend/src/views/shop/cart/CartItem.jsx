@@ -1,5 +1,4 @@
-// Fixed CartItem.jsx (Remove button fully working + all previous features)
-
+// CartItem.jsx
 import React, { useState, useEffect, useRef, useContext } from "react";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
@@ -18,6 +17,40 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
   const cart_id = cartID();
   const currentAddress = UserCountry();
   const [cartCount, setCartCount] = useContext(CartContext);
+
+  // Shared fetch function that handles both paginated and non-paginated responses
+  const fetchCartItems = async () => {
+    if (!cart_id || cart_id === "undefined") return [];
+
+    try {
+      let items = [];
+      let nextUrl = user?.user_id
+        ? `/cart-list/${cart_id}/${user.user_id}/`
+        : `/cart-list/${cart_id}/`;
+
+      while (nextUrl) {
+        const response = await apiInstance.get(nextUrl);
+        const data = response.data;
+
+        let pageItems = [];
+
+        if (Array.isArray(data)) {
+          pageItems = data;
+          nextUrl = null;
+        } else if (data && data.results) {
+          pageItems = data.results || [];
+          nextUrl = data.next || null;
+        }
+
+        items = [...items, ...pageItems];
+      }
+
+      return items;
+    } catch (error) {
+      log.error("Error fetching cart items in CartItem:", error);
+      return [];
+    }
+  };
 
   useEffect(() => {
     const initial = {};
@@ -90,26 +123,40 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         toast.fire({ icon: "success", title: "Cart updated" });
       }
 
-      const url = user?.user_id
-        ? `/cart-list/${cart_id}/${user.user_id}/`
-        : `/cart-list/${cart_id}/`;
-      const updatedCartResponse = await apiInstance.get(url);
-      setCart(updatedCartResponse.data || []);
+      // Properly fetch fresh cart items (handles pagination)
+      const updatedItems = await fetchCartItems();
+      setCart(updatedItems);
 
-      const totalQty = updatedCartResponse.data.reduce(
-        (sum, item) => sum + item.qty,
+      const totalQty = updatedItems.reduce(
+        (sum, item) => sum + (item.qty || 0),
         0,
       );
       setCartCount(totalQty);
 
-      const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
-      setCartTotal({
-        itemCount: updatedCartResponse.data.length || 0,
-        mrp_total: totalResponse.data?.mrp_total || 0,
-        discounted_total: totalResponse.data?.discounted_total || 0,
-        shipping: totalResponse.data?.shipping || 0,
-        grand_total: totalResponse.data?.grand_total || 0,
-      });
+      // Fetch totals with fallback for empty cart (404)
+      let totals = {
+        itemCount: updatedItems.length || 0,
+        mrp_total: 0,
+        discounted_total: 0,
+        shipping: 0,
+        grand_total: 0,
+      };
+      try {
+        const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
+        totals = {
+          ...totals,
+          mrp_total: totalResponse.data?.mrp_total || 0,
+          discounted_total: totalResponse.data?.discounted_total || 0,
+          shipping: totalResponse.data?.shipping || 0,
+          grand_total: totalResponse.data?.grand_total || 0,
+        };
+      } catch (totalError) {
+        log.warn(
+          "Failed to fetch cart totals (likely empty cart):",
+          totalError,
+        );
+      }
+      setCartTotal(totals);
     } catch (error) {
       log.error("Error updating cart:", error);
       setCartCount(previousCount);
@@ -229,42 +276,41 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       // Delete the item
       await apiInstance.delete(deleteUrl);
 
-      // Refetch cart list
-      const cartUrl = user?.user_id
-        ? `/cart-list/${cart_id}/${user.user_id}/`
-        : `/cart-list/${cart_id}/`;
-      const cartResponse = await apiInstance.get(cartUrl);
-
-      setCart(cartResponse.data || []);
+      // Properly fetch fresh cart items (handles pagination)
+      const updatedItems = await fetchCartItems();
+      setCart(updatedItems);
 
       // Update global cart count
-      const totalQty = cartResponse.data.reduce(
-        (sum, item) => sum + item.qty,
+      const totalQty = updatedItems.reduce(
+        (sum, item) => sum + (item.qty || 0),
         0,
       );
       setCartCount(totalQty);
 
-      // Update totals
+      // Update totals with fallback
+      let totals = {
+        itemCount: updatedItems.length || 0,
+        mrp_total: 0,
+        discounted_total: 0,
+        shipping: 0,
+        grand_total: 0,
+      };
       try {
         const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
-        setCartTotal({
-          itemCount: cartResponse.data.length || 0,
+        totals = {
+          ...totals,
           mrp_total: totalResponse.data?.mrp_total || 0,
           discounted_total: totalResponse.data?.discounted_total || 0,
           shipping: totalResponse.data?.shipping || 0,
           grand_total: totalResponse.data?.grand_total || 0,
-        });
+        };
       } catch (totalError) {
-        log.warn("Failed to fetch totals after delete:", totalError);
-        // Fallback totals
-        setCartTotal({
-          itemCount: cartResponse.data.length || 0,
-          mrp_total: 0,
-          discounted_total: 0,
-          shipping: 0,
-          grand_total: 0,
-        });
+        log.warn(
+          "Failed to fetch totals after delete (likely empty cart):",
+          totalError,
+        );
       }
+      setCartTotal(totals);
 
       toast.fire({ icon: "success", title: "Item removed from cart" });
     } catch (error) {
