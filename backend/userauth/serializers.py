@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 import logging
+from vendor.models import Vendor  # <-- NEW IMPORT
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,19 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({
                 'detail': 'No active account found with the given credentials'
             })
-            
+
+        # === BLOCKED VENDOR CHECK ===
+        try:
+            vendor = authenticated_user.vendor
+            if vendor and not vendor.active:
+                logger.warning(f"Blocked vendor attempted login: {authenticated_user.email} (Vendor ID: {vendor.id})")
+                raise serializers.ValidationError({
+                    'detail': 'Your account is blocked, please contact admin.'
+                })
+        except Vendor.DoesNotExist:
+            pass  # Not a vendor → allow login
+        # ============================
+
         refresh = self.get_token(authenticated_user)
         
         data = {
@@ -96,7 +109,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('full_name', 'email', 'phone', 'password', 'password2')
+        fields = ('full_name', 'email', 'phone', 'password', 'RegisterSerializer')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:

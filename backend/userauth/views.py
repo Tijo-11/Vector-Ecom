@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError  # <-- NEW IMPORT
 from .serializers import (
     MyTokenObtainPairSerializer,
     RegisterSerializer,
@@ -29,6 +30,9 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from store.models import Address
 from store.serializers import AddressSerializer
 
+# NEW IMPORT FOR VENDOR BLOCK CHECK
+from vendor.models import Vendor
+
 logger = logging.getLogger(__name__)
 
 token_generator = PasswordResetTokenGenerator()
@@ -41,10 +45,6 @@ def mask_email(email: str) -> str:
         return f"{masked_local}@{domain}"
     except Exception:
         return "***@***"  # fallback if email is malformed
-
-
-
-
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -62,13 +62,17 @@ class MyTokenObtainPairView(TokenObtainPairView):
             response = super().post(request, *args, **kwargs)
             logger.info("Token generation successful")
             return response
+        except ValidationError:
+            # Re-raise ValidationError (including our blocked vendor message) 
+            # so DRF returns the correct {"detail": "..."} with the original message
+            raise
         except Exception as e:
             logger.error(f"Token generation failed: {str(e)}", exc_info=True)
             return Response(
                 {
                     "error": str(e),
                     "detail": "Token generation failed",
-                    "received_fields": list(request.data.keys()),
+                    "received_fields": list(request.data.keys()), 
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -244,7 +248,6 @@ class PasswordChangeView(generics.CreateAPIView):
         logger.info("Request contains data payload" if request.data else "No request data provided")
         logger.info("Request data logged in generic form (sensitive fields masked)")
 
-
         payload = request.data
         token = payload.get("token")
         uidb64 = payload.get("uidb64")
@@ -324,7 +327,7 @@ class VerifyEmailOTP(generics.CreateAPIView):
         return Response({"message": "Email verified successfully"}, status=status.HTTP_200_OK)
 
 
-# Updated google_login view in userauth/views.py
+# Updated google_login view with blocked vendor check
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def google_login(request):
@@ -358,6 +361,19 @@ def google_login(request):
         user.email_verified = id_info.get("email_verified", False)
         user.save()
 
+        # === BLOCKED VENDOR CHECK ===
+        try:
+            vendor = user.vendor
+            if vendor and not vendor.active:
+                logger.warning(f"Blocked vendor attempted Google login: {user.email} (Vendor ID: {vendor.id})")
+                return Response(
+                    {"error": "Your account is blocked, please contact admin."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Vendor.DoesNotExist:
+            pass  # Not a vendor → continue
+        # ===============================
+
         token = MyTokenObtainPairSerializer.get_token(user)
 
         response_data = {
@@ -378,6 +394,7 @@ def google_login(request):
     except Exception as e:
         logger.error(f"Unexpected error in google_login: {str(e)}", exc_info=True)
         return Response({"error": "Authentication failed"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 # Address Management ViewSet
 class AddressViewSet(viewsets.ModelViewSet):
@@ -430,7 +447,6 @@ class UserProfileUpdateView(generics.UpdateAPIView):
 
 
 # Change Password (logged-in user)
-# ChangePasswordView (Logged-in user password change)
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -465,6 +481,7 @@ class ChangePasswordView(APIView):
         request.user.set_password(new_password)
         request.user.save()
         return Response({"message": "Password changed successfully."})
+
 
 # Request Email Change
 class ChangeEmailRequestView(APIView):
