@@ -24,7 +24,7 @@ function AddProduct() {
     title: "",
     image: null,
     description: "",
-    category: "",
+    category_id: "", // ← Changed to category_id to match backend expectation
     tags: "",
     brand: "",
     price: "",
@@ -122,12 +122,13 @@ function AddProduct() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    // Validate only required fields
+
+    // Validate required fields (updated for category_id)
     if (
       product.title === "" ||
       product.description === "" ||
       product.price === "" ||
-      product.category === "" ||
+      product.category_id === "" || // ← Updated
       product.shipping_amount === "" ||
       product.stock_qty === "" ||
       product.image === null
@@ -143,17 +144,16 @@ function AddProduct() {
     }
 
     try {
-      setIsLoading(true);
       const formData = new FormData();
       Object.entries(product).forEach(([key, value]) => {
         if (key === "image" && value) {
           formData.append(key, value.file);
-        } else {
+        } else if (value !== "" && value !== null && value !== undefined) {
           formData.append(key, value);
         }
       });
 
-      // Only include specifications with non-empty title or content
+      // Valid specifications
       const validSpecifications = specifications.filter(
         (spec) => spec.title?.trim() || spec.content?.trim(),
       );
@@ -163,7 +163,7 @@ function AddProduct() {
         });
       });
 
-      // Only include colors with at least one non-empty field
+      // Valid colors
       const validColors = colors.filter(
         (color) =>
           color.name?.trim() || color.color_code?.trim() || color.image,
@@ -187,7 +187,7 @@ function AddProduct() {
         });
       });
 
-      // Only include sizes with non-empty name or price
+      // Valid sizes
       const validSizes = sizes.filter(
         (size) => size.name?.trim() || size.price,
       );
@@ -197,7 +197,7 @@ function AddProduct() {
         });
       });
 
-      // Include gallery images if present
+      // Gallery
       gallery.forEach((item, index) => {
         if (item.image && item.image.file) {
           formData.append(`gallery[${index}][image]`, item.image.file);
@@ -222,13 +222,17 @@ function AddProduct() {
 
       // navigate('/vendor/products/');
     } catch (error) {
-      log.error("Error submitting form:", error);
+      console.error("Error submitting form:", error.response?.data || error);
       setIsLoading(false);
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Failed to create product. Please try again.",
+        text:
+          error.response?.data?.detail ||
+          "Failed to create product. Please try again.",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 

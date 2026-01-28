@@ -7,22 +7,6 @@ function ProductBasicInfo({
   handleProductInputChange,
   handleProductFileChange,
 }) {
-  // Robustly extract the current category ID (handles object, id string/number, or missing)
-  const rawCategoryId =
-    product.category && typeof product.category === "object"
-      ? product.category.id
-      : product.category;
-
-  // Coerce to string for reliable matching (common issue: API returns number, select uses string)
-  const currentCategoryId = rawCategoryId ? String(rawCategoryId) : "";
-
-  // Optional: Find the current category title for fallback display if needed
-  // (Not used in dropdown, but helpful if you want to show it separately)
-  const currentCategoryTitle =
-    category.find((c) => String(c.id) === currentCategoryId)?.title ||
-    (typeof product.category === "object" ? product.category.title : null) ||
-    "- Select -";
-
   return (
     <div className="bg-white shadow-lg rounded-lg p-6">
       <h4 className="text-xl font-semibold mb-4">Product Details</h4>
@@ -41,10 +25,15 @@ function ProductBasicInfo({
             <h4 className="mt-3 text-lg font-medium text-gray-800">
               {product.title || "Product Title"}
             </h4>
-            {/* Optional: Show current category prominently if you want it "at top" */}
-            {currentCategoryTitle !== "- Select -" && (
+            {/* Show selected category name for better UX */}
+            {product.category_id && (
               <p className="mt-2 text-sm text-gray-600">
-                Current Category: <strong>{currentCategoryTitle}</strong>
+                Category:{" "}
+                <strong>
+                  {category.find(
+                    (c) => String(c.id) === String(product.category_id),
+                  )?.title || "Unknown"}
+                </strong>
               </p>
             )}
           </div>
@@ -54,18 +43,19 @@ function ProductBasicInfo({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Thumbnail
+                  Product Thumbnail <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="file"
                   className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
                   name="image"
                   onChange={handleProductFileChange}
+                  required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title
+                  Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -73,11 +63,12 @@ function ProductBasicInfo({
                   name="title"
                   value={product.title || ""}
                   onChange={handleProductInputChange}
+                  required
                 />
               </div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                  Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
@@ -86,29 +77,37 @@ function ProductBasicInfo({
                   name="description"
                   value={product.description || ""}
                   onChange={handleProductInputChange}
+                  required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
+                  Category <span className="text-red-500">*</span>
                 </label>
                 <select
                   className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                  name="category"
-                  value={currentCategoryId}
+                  name="category_id" // ← CRITICAL FIX: Must be category_id
+                  value={product.category_id || ""}
                   onChange={handleProductInputChange}
+                  required
                 >
-                  <option value="">- Select -</option>
+                  <option value="">- Select Category -</option>
                   {category.map((c) => (
-                    <option key={c.id} value={String(c.id)}>
+                    <option key={c.id} value={c.id}>
                       {c.title}
                     </option>
                   ))}
                 </select>
-                {/* Shows current category name below dropdown for clarity */}
-                {currentCategoryTitle !== "- Select -" && (
-                  <p className="mt-1 text-xs text-gray-600">
-                    Currently selected: <strong>{currentCategoryTitle}</strong>
+                {/* Helpful feedback below dropdown */}
+                {product.category_id && (
+                  <p className="mt-1 text-xs text-green-600">
+                    Selected:{" "}
+                    <strong>
+                      {
+                        category.find((c) => c.id === product.category_id)
+                          ?.title
+                      }
+                    </strong>
                   </p>
                 )}
               </div>
@@ -126,7 +125,7 @@ function ProductBasicInfo({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sale Price
+                  Sale Price <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -135,12 +134,15 @@ function ProductBasicInfo({
                   value={product.price || ""}
                   onChange={handleProductInputChange}
                   placeholder="₹0.00"
+                  min="0"
+                  step="0.01"
+                  required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Shipping Amount
+                  Shipping Amount <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -149,11 +151,14 @@ function ProductBasicInfo({
                   value={product.shipping_amount || ""}
                   onChange={handleProductInputChange}
                   placeholder="₹0.00"
+                  min="0"
+                  step="0.01"
+                  required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Stock Qty
+                  Stock Qty <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -161,6 +166,8 @@ function ProductBasicInfo({
                   name="stock_qty"
                   value={product.stock_qty || ""}
                   onChange={handleProductInputChange}
+                  min="0"
+                  required
                 />
               </div>
               <div className="col-span-2">

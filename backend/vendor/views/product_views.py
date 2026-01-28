@@ -113,18 +113,21 @@ class ProductUpdateAPIView(generics.RetrieveUpdateAPIView):
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
+        # ← CRITICAL FIX: Handle partial updates correctly for PATCH requests
+        partial = kwargs.pop('partial', False)
+
         product = self.get_object()
 
-        # Deserialize product data
-        serializer = self.get_serializer(product, data=request.data)
+        # Pass partial=partial to the serializer
+        serializer = self.get_serializer(product, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
-        # Delete all existing nested data
-        product.specification().delete()
-        product.color().delete()
-        product.size().delete()
-        product.gallery().delete()
+        # Delete all existing nested data (your existing logic)
+        product.specification.all().delete()
+        product.color.all().delete()
+        product.size.all().delete()
+        product.gallery.all().delete()
 
         specifications_data = []
         colors_data = []
@@ -132,9 +135,7 @@ class ProductUpdateAPIView(generics.RetrieveUpdateAPIView):
         gallery_data = []
         # Loop through the keys of self.request.data
         for key, value in self.request.data.items():
-            # Example key: specifications[0][title]
             if key.startswith('specifications') and '[title]' in key:
-                # Extract index from key
                 index = key.split('[')[1].split(']')[0]
                 title = value
                 content_key = f'specifications[{index}][content]'
@@ -142,41 +143,29 @@ class ProductUpdateAPIView(generics.RetrieveUpdateAPIView):
                 specifications_data.append(
                     {'title': title, 'content': content})
 
-            # Example key: colors[0][name]
             elif key.startswith('colors') and '[name]' in key:
-                # Extract index from key
                 index = key.split('[')[1].split(']')[0]
                 name = value
                 color_code_key = f'colors[{index}][color_code]'
                 color_code = self.request.data.get(color_code_key)
                 image_key = f'colors[{index}][image]'
-                image = self.request.data.get(image_key)
+                image = self.request.files.get(image_key)  # Use get for File
                 colors_data.append(
                     {'name': name, 'color_code': color_code, 'image': image})
 
-            # Example key: sizes[0][name]
             elif key.startswith('sizes') and '[name]' in key:
-                # Extract index from key
                 index = key.split('[')[1].split(']')[0]
                 name = value
                 price_key = f'sizes[{index}][price]'
                 price = self.request.data.get(price_key)
                 sizes_data.append({'name': name, 'price': price})
 
-            # Example key: gallery[0][image]
             elif key.startswith('gallery') and '[image]' in key:
-                # Extract index from key
                 index = key.split('[')[1].split(']')[0]
-                image = value
+                image = self.request.files.get(value)  # Gallery images are files
                 gallery_data.append({'image': image})
 
-        # Log or print the data for debugging
-        print('specifications_data:', specifications_data)
-        print('colors_data:', colors_data)
-        print('sizes_data:', sizes_data)
-        print('gallery_data:', gallery_data)
-
-        # Save nested serializers with the product instance
+        # Save nested data
         self.save_nested_data(
             product, SpecificationSerializer, specifications_data)
         self.save_nested_data(product, ColorSerializer, colors_data)
@@ -190,7 +179,6 @@ class ProductUpdateAPIView(generics.RetrieveUpdateAPIView):
                                       'product_instance': product_instance})
         serializer.is_valid(raise_exception=True)
         serializer.save(product=product_instance)
-
 
 class ProductDeleteAPIView(generics.DestroyAPIView):
     queryset = Product.objects.all()

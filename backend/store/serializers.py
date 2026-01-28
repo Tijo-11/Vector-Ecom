@@ -68,7 +68,14 @@ class ColorSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProductSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(read_only=True)
+    category = CategorySerializer(read_only=True)  # Nested object for reading
+    category_id = serializers.PrimaryKeyRelatedField(  # ← NEW: For writing (accepts category ID)
+        source='category',
+        queryset=Category.objects.all(),
+        write_only=True,
+        required=True,
+        allow_null=False
+    )
     tags = TagSerializer(many=True, read_only=True)
     gallery = GallerySerializer(many=True, read_only=True, required=False)
     color = ColorSerializer(many=True, read_only=True, required=False)
@@ -88,6 +95,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "image",
             "description",
             "category",
+            "category_id",  # ← Added to fields
             "tags",
             "brand",
             "price",
@@ -170,7 +178,7 @@ class ProductSerializer(serializers.ModelSerializer):
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
-
+            
 class ProductFaqSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
