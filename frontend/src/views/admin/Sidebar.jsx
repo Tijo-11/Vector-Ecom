@@ -103,7 +103,7 @@ export default function AdminSidebar() {
             <BarChart2 size={18} /> <span>Reports</span>
           </Link>
         </li>
-        <li>
+        {/* <li>
           <Link
             to="/admin/notifications"
             className={
@@ -114,8 +114,8 @@ export default function AdminSidebar() {
           >
             <Bell size={18} /> <span>Notifications</span>
           </Link>
-        </li>
-        <li>
+        </li> */}
+        {/* <li>
           <Link
             to="/admin/settings"
             className={
@@ -126,7 +126,7 @@ export default function AdminSidebar() {
           >
             <Settings size={18} /> <span>Settings</span>
           </Link>
-        </li>
+        </li> */}
         <li>
           <Link
             to="/logout"

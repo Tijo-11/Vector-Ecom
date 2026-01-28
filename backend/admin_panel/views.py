@@ -5,6 +5,7 @@ from django.db.models import Count, Sum, Q
 from django.db.models.functions import TruncMonth
 from datetime import datetime, timedelta
 from django.utils import timezone
+from rest_framework.pagination import PageNumberPagination
 
 from vendor.models import Vendor
 from store.models import Product, CartOrder, CartOrderItem, CategoryOffer, Notification
@@ -121,12 +122,10 @@ class AdminOrdersChartAPIView(APIView):
 
 
 class AdminVendorListAPIView(generics.ListAPIView):
-    """
-    GET: List all vendors with product counts
-    """
     permission_classes = [IsAdminUser]
     serializer_class = AdminVendorSerializer
     queryset = Vendor.objects.all().order_by('-date')
+    pagination_class = PageNumberPagination
 
 
 class AdminVendorToggleAPIView(APIView):

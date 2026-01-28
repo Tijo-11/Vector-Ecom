@@ -4,6 +4,7 @@ from store.models import Product, CartOrder, CategoryOffer
 from django.db.models import Count, Sum
 
 
+
 class AdminStatsSerializer(serializers.Serializer):
     """Serializer for admin dashboard statistics"""
     total_vendors = serializers.IntegerField()
@@ -29,10 +30,15 @@ class AdminVendorSerializer(serializers.ModelSerializer):
     products = serializers.SerializerMethodField()
     email = serializers.EmailField(source='user.email', read_only=True)
     status = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()  # ← Makes URL absolute
+    mobile = serializers.CharField(read_only=True, allow_null=True)  # ← Add mobile
 
     class Meta:
         model = Vendor
-        fields = ['id', 'vid', 'name', 'email', 'products', 'active', 'status', 'date']
+        fields = [
+            'id', 'vid', 'name', 'image', 'email', 'mobile',  # ← Added image & mobile
+            'products', 'active', 'status', 'date'
+        ]
 
     def get_products(self, obj):
         return Product.objects.filter(vendor=obj).count()
@@ -40,19 +46,39 @@ class AdminVendorSerializer(serializers.ModelSerializer):
     def get_status(self, obj):
         return "Active" if obj.active else "Blocked"
 
+    def get_image(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url  # fallback relative URL
+        return None  # frontend will show placeholder
 
 class AdminProductSerializer(serializers.ModelSerializer):
     """Serializer for product management"""
-    vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    vendor_name = serializers.CharField(source='vendor.name', read_only=True, allow_null=True)
+    category_title = serializers.CharField(source='category.title', read_only=True, allow_null=True)
+    image = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'pid', 'title', 'vendor', 'vendor_name', 'price', 'status', 'status_display', 'in_stock', 'stock_qty', 'date']
+        fields = [
+            'id', 'pid', 'title', 'image', 'category_title', 'vendor_name',
+            'price', 'status', 'status_display', 'in_stock', 'stock_qty', 'date'
+        ]
+        # Removed 'vendor' (the ID) to avoid confusion — we only need the name
+
+    def get_image(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url  # fallback (relative)
+        return None  # will show placeholder in frontend
 
     def get_status_display(self, obj):
         return obj.get_status_display() if hasattr(obj, 'get_status_display') else obj.status
-
 
 class AdminOrderSerializer(serializers.ModelSerializer):
     """Serializer for order management"""
