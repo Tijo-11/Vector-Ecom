@@ -7,21 +7,31 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def mask_email(email: str) -> str:
+    try:
+        local, domain = email.split("@")
+        # Keep only first 2 characters of local part, mask the rest
+        masked_local = local[:2] + "*" * (len(local) - 2)
+        return f"{masked_local}@{domain}"
+    except ValueError:
+        # If email is malformed, just return masked
+        return "***"
+
+
+# serializers are often the right place for request validation and token customization.
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
+    '''
     Custom serializer that accepts email instead of username for login
-    """
-    
+    '''
     username_field = User.USERNAME_FIELD if hasattr(User, 'USERNAME_FIELD') else 'email'
-    
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Replace username field with email field
+        super.__init__(*args, **kwargs)
+         # Replace username field with email field
         self.fields[self.username_field] = serializers.EmailField()
         # Remove username field if it exists and we're using email
         if self.username_field == 'email' and 'username' in self.fields:
             del self.fields['username']
-    
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
@@ -33,21 +43,18 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             token['vendor_id'] = user.vendor.id
         except:  # noqa
             token['vendor_id'] = 0
-        
-        # === THIS IS THE MOST IMPORTANT PART ===
-        # Without these two lines, the frontend cannot detect admin
         token['is_admin'] = user.is_superuser
         token['is_staff'] = user.is_staff
-        # =======================================
         
         return token
-
+    
+    
+    
     def validate(self, attrs):
-        # Get email and password from the request
         email = attrs.get('email', attrs.get(self.username_field))
         password = attrs.get('password')
         
-        logger.info(f"Login attempt for email: {email}")
+        logger.info(f"Login attempt for email: {mask_email(email)}")
         
         # Try to find the user by email
         try:
@@ -57,24 +64,20 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({
                 'detail': 'No active account found with the given credentials'
             })
-        
         # === Allow superusers to login even if email not verified ===
         if not user.email_verified and not user.is_superuser:
             logger.warning(f"Email not verified for: {email}")
             raise serializers.ValidationError({
                 'detail': 'Email not verified. Please check your email for OTP.'
             })
-        # =============================================================
-        
         # Authenticate using the correct identifier (email, since USERNAME_FIELD='email')
         authenticated_user = authenticate(
-            request=self.context.get('request'),
-            username=email,  # Pass email here, not user.username
+            request=self.context.get("request"),
+            username=email,
             password=password
         )
-        
         if not authenticated_user:
-            logger.warning(f"Authentication failed for: {email}")
+            logger.warning(f"Authentication failed for: {mask_email(email)}")
             raise serializers.ValidationError({
                 'detail': 'No active account found with the given credentials'
             })
@@ -85,25 +88,24 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
-        
-        logger.info(f"Login successful for: {email}")
+        logger.info(f"Login successful for: {mask_email(email)}")
         
         return data
-
+    
+    
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
-
+    
     class Meta:
         model = User
         fields = ('full_name', 'email', 'phone', 'password', 'password2')
-
+    
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields do not match"})
-        
         return attrs
-
+    
     def create(self, validated_data):
         validated_data.pop('password2', None)
         email = validated_data['email']
@@ -112,8 +114,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         counter = 1
         while User.objects.filter(username=username).exists():
             username = f"{email_username}{counter}"
-            counter += 1
-        
+            counter+=1
         user = User.objects.create(
             full_name=validated_data['full_name'],
             email=email,
@@ -123,10 +124,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         user.set_password(validated_data['password'])
         user.save()
-        
         return user
-
-
+    
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -134,6 +133,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    '''t exposes both fields from the Profile model itself (about, address, city, state, etc.) 
+    and some related fields from the User model (full_name, email).
+    It also adds computed fields (can_change_password, can_change_email) and a nested 
+    serializer (user_details). You don’t have to provide state when creating/updating a profile
+    If you do provide it, you can leave it blank ("") instead of a real value.
+    '''
     full_name = serializers.CharField(source="user.full_name", required=False)
     email = serializers.EmailField(source="user.email", read_only=True)
     about = serializers.CharField(allow_blank=True, required=False)
@@ -143,11 +148,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     country = serializers.CharField(allow_blank=True, required=False)
     postal_code = serializers.CharField(allow_blank=True, required=False)
     image = serializers.ImageField(allow_null=True, required=False, use_url=True)
-
+    
     can_change_password = serializers.SerializerMethodField()
     can_change_email = serializers.SerializerMethodField()
     user_details = UserSerializer(source="user", read_only=True)
-
     class Meta:
         model = Profile
         fields = [
@@ -156,16 +160,18 @@ class ProfileSerializer(serializers.ModelSerializer):
             "can_change_email", "user_details",
         ]
         extra_kwargs = {"image": {"required": False, "allow_null": True}}
-
-    def get_can_change_password(self, obj):
-        return obj.user.has_usable_password()
-
-    def get_can_change_email(self, obj):
-        return obj.user.has_usable_password()
-
-    def update(self, instance, validated_data):
-        user_data = validated_data.pop("user", {})
-        if "full_name" in user_data:
-            instance.user.full_name = user_data["full_name"]
-            instance.user.save()
-        return super().update(instance, validated_data)
+        def get_can_change_password(self, obj):
+            return obj.user.has_usable_password()
+        
+        def get_can_change_email(self, obj):
+            return obj.user.has_usable_password()
+        def update(self, instance, validated_data):
+            '''Handles updates to nested user data (e.g., updating full_name inside the User model
+            when updating the profile).'''
+            
+            
+            user_data = validated_data.pop("user", {})
+            if "full_name" in user_data:
+                instance.user.full_name = user_data["full_name"]
+                instance.user.save()
+            return super().update(instance, validated_data)

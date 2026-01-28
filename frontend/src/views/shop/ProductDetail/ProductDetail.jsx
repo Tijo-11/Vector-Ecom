@@ -186,7 +186,7 @@ export default function ProductDetail() {
                   </span>
                 </div>
 
-                <p className="text-gray-700 mb-6">{product.brand || "-"}</p>
+                {/* <p className="text-gray-700 mb-6">{product.brand || "-"}</p> */}
 
                 {/* Product Options & Add to Cart */}
                 <ProductOptions

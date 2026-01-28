@@ -186,7 +186,7 @@ export default function ProductOptions({
   return (
     <div>
       {/* Features */}
-      <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
+      {/* <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
       <ul className="list-disc list-inside text-gray-700">
         {specification.length > 0 ? (
           specification.map((s, index) => (
@@ -197,7 +197,7 @@ export default function ProductOptions({
         ) : (
           <li>No specifications available.</li>
         )}
-      </ul>
+      </ul> */}
 
       {/* Color */}
       {color.length > 0 && (
