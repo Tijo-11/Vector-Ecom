@@ -50,7 +50,6 @@ function ProductBasicInfo({
                   className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
                   name="image"
                   onChange={handleProductFileChange}
-                  required
                 />
               </div>
               <div>

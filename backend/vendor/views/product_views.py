@@ -124,10 +124,10 @@ class ProductUpdateAPIView(generics.RetrieveUpdateAPIView):
         self.perform_update(serializer)
 
         # Delete all existing nested data (your existing logic)
-        product.specification.all().delete()
-        product.color.all().delete()
-        product.size.all().delete()
-        product.gallery.all().delete()
+        product.specification().delete()
+        product.color().delete()
+        product.size().delete()
+        product.gallery().delete()
 
         specifications_data = []
         colors_data = []
