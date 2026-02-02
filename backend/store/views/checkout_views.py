@@ -245,6 +245,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                                 return Response({"message": "already_paid"}, status=status.HTTP_200_OK)
                             locked_order.payment_status = "paid"
                             locked_order.order_status = "Confirmed"
+                            locked_order.payment_method = "Paypal"
                             locked_order.paypal_capture_id = capture_id
                            
                             # ============================================
@@ -300,6 +301,7 @@ class PaymentSuccessView(generics.CreateAPIView):
                             return Response({"message": "already_paid"}, status=status.HTTP_200_OK)
                         locked_order.payment_status = "paid"
                         locked_order.order_status = "Confirmed"
+                        locked_order.payment_method = "Credit/Debit Card"
                         locked_order.razorpay_payment_id = session_id
                        
                         # ============================================
@@ -400,6 +402,7 @@ class PayPalWebhookView(generics.CreateAPIView):
                         if order.payment_status != "paid":
                             order.payment_status = "paid"
                             order.order_status = "Confirmed"
+                            order.payment_method = "Paypal"
                            
                             # ============================================
                             # MARK COUPONS AS USED BY THIS USER
@@ -533,6 +536,7 @@ class WalletPaymentView(APIView):
             # Update order status
             locked_order.payment_status = "paid"
             locked_order.order_status = "Confirmed"
+            locked_order.payment_method = "Wallet"
 
             # Mark coupons as used
             if locked_order.buyer and locked_order.coupons.exists():

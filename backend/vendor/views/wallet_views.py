@@ -79,13 +79,18 @@ class VendorTransactionsListView(APIView):
                         'total': str(order.total),
                         'order_status': order.order_status,
                         'payment_status': order.payment_status,
+                        'payment_method': order.payment_method,
                     },
+                    'payment_method': order.payment_method,
                     'order_type': 'paid',
                 })
         
         # 2. Pending Orders (not yet paid)
         if not type_filter or type_filter == 'pending':
-            pending_orders = vendor_orders.exclude(payment_status='paid')
+            # Only show valid pending orders (processing/pending), exclude abandoned (initiated/failed)
+            pending_orders = vendor_orders.exclude(payment_status='paid').filter(
+                payment_status__in=['processing', 'pending']
+            )
             
             for order in pending_orders:
                 vendor_items = order.orderitem.filter(vendor=vendor)
@@ -118,7 +123,9 @@ class VendorTransactionsListView(APIView):
                         'total': str(order.total),
                         'order_status': order.order_status,
                         'payment_status': order.payment_status,
+                        'payment_method': order.payment_method,
                     },
+                    'payment_method': order.payment_method,
                     'order_type': 'pending',
                     'is_delivered': all_delivered,
                 })
@@ -155,7 +162,9 @@ class VendorTransactionsListView(APIView):
                         'total': str(txn.related_order.total) if txn.related_order else None,
                         'order_status': txn.related_order.order_status if txn.related_order else None,
                         'payment_status': txn.related_order.payment_status if txn.related_order else None,
+                        'payment_method': txn.related_order.payment_method if txn.related_order else None,
                     } if txn.related_order else None,
+                    'payment_method': txn.related_order.payment_method if txn.related_order else None,
                     'order_type': 'refund',
                 })
         
@@ -249,7 +258,9 @@ class VendorWalletStatsView(APIView):
         
         # Calculate stats
         paid_orders = vendor_orders.filter(payment_status='paid')
-        pending_orders = vendor_orders.exclude(payment_status='paid')
+        pending_orders = vendor_orders.exclude(payment_status='paid').filter(
+            payment_status__in=['processing', 'pending']
+        )
         
         # Calculate vendor's total from paid orders
         total_paid = Decimal('0.00')

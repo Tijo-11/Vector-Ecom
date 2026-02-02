@@ -282,6 +282,12 @@ function VendorWallet() {
                     <p className="font-medium">{formatDate(selectedTransaction.created_at)}</p>
                   </div>
                   <div>
+                    <label className="text-xs text-gray-500 uppercase">Payment Method</label>
+                    <p className="font-medium text-gray-700">
+                      {selectedTransaction.payment_method || (selectedTransaction.transaction_type === "pending" ? "Pay on Delivery (Pending)" : "Online Funding")}
+                    </p>
+                  </div>
+                  <div>
                     <label className="text-xs text-gray-500 uppercase">Status</label>
                     <p className="font-medium">
                       <span
