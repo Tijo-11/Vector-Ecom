@@ -6,7 +6,7 @@ import UserData from "../../../plugin/UserData";
 import { useAuthStore } from "../../../store/auth";
 import log from "loglevel";
 import ProductCard from "./ProductCard";
-import { Filter, ShoppingBag } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 
 const PAGE_SIZE = 12;
 
@@ -21,13 +21,7 @@ export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
-  const selectedCategories = searchParams.getAll("category"); // array of slugs
-  const priceMin = searchParams.get("price_min") || "";
-  const priceMax = searchParams.get("price_max") || "";
-
-  // Temp price inputs (for debounce)
-  const [tempPriceMin, setTempPriceMin] = useState(priceMin);
-  const [tempPriceMax, setTempPriceMax] = useState(priceMax);
+  const selectedCategory = searchParams.get("category") || ""; // single slug
 
   const userData = UserData();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -52,23 +46,13 @@ export default function Products() {
     }
   };
 
-  const fetchData = async (
-    page = 1,
-    cats = [],
-    minPrice = "",
-    maxPrice = "",
-  ) => {
+  const fetchData = async (page = 1, cat = "") => {
     setLoading(true);
     try {
       const timestamp = Date.now();
       let url = `products/?page=${page}&_=${timestamp}`;
 
-      cats.forEach((cat) => {
-        url += `&category=${cat}`;
-      });
-
-      if (minPrice) url += `&price_min=${minPrice}`;
-      if (maxPrice) url += `&price_max=${maxPrice}`;
+      if (cat) url += `&category=${cat}`;
 
       const [prodResponse, catResponse] = await Promise.all([
         apiInstance.get(url),
@@ -88,34 +72,8 @@ export default function Products() {
 
   // Sync from URL and fetch
   useEffect(() => {
-    setTempPriceMin(priceMin);
-    setTempPriceMax(priceMax);
-    fetchData(currentPage, selectedCategories, priceMin, priceMax);
+    fetchData(currentPage, selectedCategory);
   }, [searchParams]);
-
-  // Debounce price input changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const params = new URLSearchParams(searchParams);
-
-      if (tempPriceMin.trim()) {
-        params.set("price_min", tempPriceMin.trim());
-      } else {
-        params.delete("price_min");
-      }
-
-      if (tempPriceMax.trim()) {
-        params.set("price_max", tempPriceMax.trim());
-      } else {
-        params.delete("price_max");
-      }
-
-      params.set("page", "1"); // Reset to first page on price filter change
-      setSearchParams(params);
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [tempPriceMin, tempPriceMax]);
 
   useEffect(() => {
     fetchWishlist();
@@ -128,36 +86,21 @@ export default function Products() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleCategoryToggle = (slug) => {
+  const handleCategoryChange = (slug) => {
     const params = new URLSearchParams(searchParams);
+    const newSlug = selectedCategory === slug ? "" : slug;
 
-    if (selectedCategories.includes(slug)) {
-      // Remove
-      const newCats = selectedCategories.filter((c) => c !== slug);
-      params.delete("category");
-      newCats.forEach((c) => params.append("category", c));
+    if (newSlug) {
+      params.set("category", newSlug);
     } else {
-      // Add
-      params.append("category", slug);
+      params.delete("category");
     }
 
-    params.set("page", "1"); // Reset to first page
-    setSearchParams(params);
-  };
-
-  const handleClearFilters = () => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("category");
-    params.delete("price_min");
-    params.delete("price_max");
     params.set("page", "1");
     setSearchParams(params);
   };
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-
-  const hasActiveFilters =
-    selectedCategories.length > 0 || priceMin || priceMax;
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans pb-12">
@@ -171,77 +114,37 @@ export default function Products() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Filters */}
+          {/* Sidebar Categories */}
           <aside className="w-full lg:w-64 flex-shrink-0">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sticky top-24">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5 text-gray-700" />
-                  <h2 className="font-bold text-gray-900">Filters</h2>
-                </div>
-                {hasActiveFilters && (
+              <h2 className="font-bold text-gray-900 text-lg mb-6">
+                Categories
+              </h2>
+
+              <div className="space-y-1">
+                <button
+                  onClick={() => handleCategoryChange("")}
+                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                    !selectedCategory
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  All Products
+                </button>
+                {categories.map((cat) => (
                   <button
-                    onClick={handleClearFilters}
-                    className="text-sm text-red-600 hover:underline font-medium"
+                    key={cat.id}
+                    onClick={() => handleCategoryChange(cat.slug)}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                      selectedCategory === cat.slug
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
                   >
-                    Clear All
+                    {cat.title}
                   </button>
-                )}
-              </div>
-
-              <div className="space-y-8">
-                {/* Categories */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                    Categories
-                  </h3>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {categories.map((cat) => (
-                      <label
-                        key={cat.id}
-                        className="flex items-center space-x-3 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedCategories.includes(cat.slug)}
-                          onChange={() => handleCategoryToggle(cat.slug)}
-                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">
-                          {cat.title}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Price Range */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                    Price Range (₹)
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="number"
-                      placeholder="Min"
-                      min="0"
-                      value={tempPriceMin}
-                      onChange={(e) => setTempPriceMin(e.target.value)}
-                      className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Max"
-                      min="0"
-                      value={tempPriceMax}
-                      onChange={(e) => setTempPriceMax(e.target.value)}
-                      className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-3">
-                    Changes apply automatically after typing
-                  </p>
-                </div>
+                ))}
               </div>
             </div>
           </aside>
@@ -337,18 +240,8 @@ export default function Products() {
                   No products found
                 </h3>
                 <p className="text-gray-500 mt-2">
-                  {hasActiveFilters
-                    ? "Try adjusting your filters or clearing them."
-                    : "No products available at the moment. Come back later."}
+                  No products available in this category at the moment.
                 </p>
-                {hasActiveFilters && (
-                  <button
-                    onClick={handleClearFilters}
-                    className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Clear Filters
-                  </button>
-                )}
               </div>
             )}
           </div>
