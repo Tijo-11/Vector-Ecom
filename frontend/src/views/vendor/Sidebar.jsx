@@ -10,6 +10,7 @@ import {
   Bell,
   Settings,
   LogOut,
+  User,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 export default function VendorSidebar() {
@@ -146,6 +147,18 @@ export default function VendorSidebar() {
             }
           >
             <Settings size={18} /> <span>Settings</span>
+          </Link>
+        </li>
+        <li>
+          <Link
+            to="/customer/account/"
+            className={
+              isActiveLink(location.pathname, "/customer/account/")
+                ? activeLink
+                : nonActiveLink
+            }
+          >
+            <User size={18} /> <span>Account</span>
           </Link>
         </li>
         <li>

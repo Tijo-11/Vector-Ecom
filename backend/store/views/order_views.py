@@ -10,6 +10,7 @@ from store.models import CartOrderItem, Cart, CartOrder, Coupon
 from decimal import Decimal
 from django.utils import timezone
 from django.db.models import Max
+from rest_framework.views import APIView
 
 class CreateOrderView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
@@ -368,3 +369,30 @@ class OrdersDetailAPIView(generics.RetrieveAPIView):
             oid=order_id
         )
         return order
+    
+    
+class CODOrderConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        order_oid = request.data.get("order_oid")
+
+        if not order_oid:
+            return Response({"message": "Order OID is required", "icon": "error"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            order = CartOrder.objects.get(oid=order_oid)
+
+            if order.payment_status != "initiated":
+                return Response({"message": "Order has already been processed", "icon": "warning"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if order.total >= Decimal("1000"):
+                return Response({"message": "Cash on Delivery is only available for orders below ₹1000", "icon": "warning"}, status=status.HTTP_400_BAD_REQUEST)
+
+            order.payment_status = "processing"
+            order.save()
+
+            return Response({"message": "Order placed successfully with Cash on Delivery!", "icon": "success"}, status=status.HTTP_200_OK)
+
+        except CartOrder.DoesNotExist:
+            return Response({"message": "Invalid Order ID", "icon": "error"}, status=status.HTTP_404_NOT_FOUND)

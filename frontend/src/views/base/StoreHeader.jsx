@@ -9,24 +9,19 @@ function StoreHeader() {
   const { user, isLoggedIn, isVendor, isAdmin } = useAuthStore(); // ← isAdmin included
   const [cartCount] = useContext(CartContext);
   const userProfile = UseProfileData();
-
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
-
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isVendorOpen, setIsVendorOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const accountRef = useRef(null);
   const vendorRef = useRef(null);
 
   const handleSearchChange = (event) => setSearch(event.target.value);
-
   const handleSearchSubmit = () => {
     navigate(`/search?query=${search}`);
     setIsMobileMenuOpen(false);
   };
-
   const toggleAccountDropdown = () => setIsAccountOpen(!isAccountOpen);
   const toggleVendorDropdown = () => setIsVendorOpen(!isVendorOpen);
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -45,7 +40,6 @@ function StoreHeader() {
 
   // Show public features (search, track order, account dropdown) only if NOT admin
   const showPublicFeatures = !isAdmin;
-
   // Show cart only if NOT admin
   const showCart = !isAdmin;
 
@@ -77,7 +71,7 @@ function StoreHeader() {
                   Vendor ▾
                 </button>
                 <div
-                  className={`absolute left-0 mt-2 w-56 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
+                  className={`absolute left-0 mt-2 w-56 bg-white text-gray-900 rounded-md shadow-md z-50 flex flex-col ${
                     isVendorOpen ? "flex" : "hidden"
                   }`}
                 >
@@ -187,8 +181,8 @@ function StoreHeader() {
             {/* Account + Logout + Cart */}
             {isLoggedIn ? (
               <>
-                {/* Account Dropdown - Hidden for Admin (and vendors have their own dropdown) */}
-                {showPublicFeatures && !isVendor && (
+                {/* Account Dropdown - Visible for customers + vendors, hidden ONLY for admin */}
+                {showPublicFeatures && (
                   <div className="relative" ref={accountRef}>
                     <button
                       onClick={toggleAccountDropdown}
@@ -197,7 +191,7 @@ function StoreHeader() {
                       Account ▾
                     </button>
                     <div
-                      className={`absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-md z-50 flex-col ${
+                      className={`absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-md z-50 flex flex-col ${
                         isAccountOpen ? "flex" : "hidden"
                       }`}
                     >
@@ -334,8 +328,8 @@ function StoreHeader() {
 
             {isLoggedIn ? (
               <>
-                {/* Mobile Account Links - Hidden for Admin */}
-                {showPublicFeatures && !isVendor && (
+                {/* Mobile Account Links - Visible for customers + vendors, hidden ONLY for admin */}
+                {showPublicFeatures && (
                   <>
                     <Link
                       to="/customer/account/"
@@ -350,6 +344,20 @@ function StoreHeader() {
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Orders
+                    </Link>
+                    <Link
+                      to="/customer/wishlist/"
+                      className="px-3 py-2 hover:bg-gray-800 rounded"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Wishlist
+                    </Link>
+                    <Link
+                      to="/customer/notifications/"
+                      className="px-3 py-2 hover:bg-gray-800 rounded"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Notifications
                     </Link>
                   </>
                 )}

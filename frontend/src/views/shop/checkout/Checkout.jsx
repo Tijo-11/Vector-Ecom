@@ -1,6 +1,6 @@
 // Checkout.jsx (Consistent display: Original Subtotal, Offers Saved, Coupon Saved, Shipping, Grand Total)
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
 import Swal from "sweetalert2";
 import RazorpayButton from "./Razorpay";
@@ -12,6 +12,7 @@ function Checkout() {
   const [couponCode, setCouponCode] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const { order_id } = useParams();
+  const navigate = useNavigate();
 
   const fetchOrderData = async () => {
     try {
@@ -104,6 +105,36 @@ function Checkout() {
         });
       }
     }
+  };
+
+  const handleCOD = async () => {
+    Swal.fire({
+      title: "Confirm Cash on Delivery",
+      text: "You will pay in cash when the order is delivered.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, place order",
+      cancelButtonText: "Cancel",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        const formdata = new FormData();
+        formdata.append("order_oid", order_id);
+        try {
+          const response = await apiInstance.post("cod-confirm/", formdata);
+          Swal.fire({
+            icon: response.data.icon || "success",
+            title: response.data.message,
+          });
+          navigate(`/payment-success/${order_id}`);
+        } catch (err) {
+          Swal.fire({
+            icon: "error",
+            title: err.response?.data?.message || "Failed to place COD order",
+          });
+          nat;
+        }
+      }
+    });
   };
 
   // Coupon detection logic
@@ -244,6 +275,7 @@ function Checkout() {
             </div>
           </div>
         </div>
+
         {/* Right side */}
         <div className="w-full lg:w-1/3 bg-white rounded-lg shadow-md px-6 py-8 sm:px-8 sm:py-10 h-fit sticky top-4">
           <h2 className="font-semibold text-xl mb-4">Order Summary</h2>
@@ -282,6 +314,7 @@ function Checkout() {
               <span>₹{parseFloat(order.total || 0).toFixed(2)}</span>
             </div>
           </div>
+
           {/* Coupon Section */}
           <div className="mt-6 bg-gray-50 p-5 rounded-lg border border-gray-200">
             <label className="font-semibold block mb-3 text-sm uppercase text-gray-700">
@@ -322,10 +355,27 @@ function Checkout() {
               </div>
             )}
           </div>
-          {/* Payment */}
-          <div className="mt-6 space-y-3">
+
+          {/* Payment Options */}
+          <div className="mt-6 space-y-4">
             <RazorpayButton order={order} order_id={order_id} />
             <PaypalButton order={order} order_id={order_id} />
+
+            {parseFloat(order.total || 0) < 1000 && (
+              <>
+                <div className="border-t border-gray-300 my-4"></div>
+                <button
+                  onClick={handleCOD}
+                  className="w-full bg-green-600 text-white py-4 rounded-md font-bold uppercase hover:bg-green-700 transition"
+                >
+                  Place Order - Cash on Delivery
+                </button>
+                <p className="text-center text-xs text-gray-500">
+                  Pay when you receive your order (Available only for orders
+                  below ₹1000)
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ShoppingCart, Plus, Edit, CheckCircle, AlertCircle, X } from "lucide-react";
+import { ShoppingCart, Plus, Edit, CheckCircle, AlertCircle, X, RefreshCw, Truck } from "lucide-react";
 
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
@@ -11,9 +11,26 @@ function OrderDetail() {
   const [order, setOrder] = useState({});
   const [orderItems, setOrderItems] = useState([]);
   const [showDeliveredModal, setShowDeliveredModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [returnAction, setReturnAction] = useState("");
+  const [returnNote, setReturnNote] = useState("");
   const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [returnLoading, setReturnLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+
+  const deliveryStatuses = [
+    { value: "On Hold", label: "On Hold", color: "bg-gray-100 text-gray-800" },
+    { value: "Shipping Processing", label: "Shipping Processing", color: "bg-yellow-100 text-yellow-800" },
+    { value: "Shipped", label: "Shipped", color: "bg-blue-100 text-blue-800" },
+    { value: "Out for Delivery", label: "Out for Delivery", color: "bg-indigo-100 text-indigo-800" },
+    { value: "Delivered", label: "Delivered", color: "bg-green-100 text-green-800" },
+    { value: "Returning", label: "Returning", color: "bg-orange-100 text-orange-800" },
+    { value: "Returned", label: "Returned", color: "bg-purple-100 text-purple-800" },
+  ];
 
   if (UserData()?.vendor_id === 0) {
     window.location.href = "/vendor/register/";
@@ -39,6 +56,7 @@ function OrderDetail() {
     fetchOrderDetails();
   }, []);
 
+  // Handle Mark as Delivered (existing functionality)
   const handleMarkAsDelivered = (item) => {
     setSelectedItem(item);
     setShowDeliveredModal(true);
@@ -57,7 +75,7 @@ function OrderDetail() {
       
       setTimeout(() => {
         setShowDeliveredModal(false);
-        fetchOrderDetails(); // Refresh order details
+        fetchOrderDetails();
       }, 1500);
     } catch (error) {
       log.error("Error marking as delivered:", error);
@@ -68,6 +86,106 @@ function OrderDetail() {
     } finally {
       setDeliveryLoading(false);
     }
+  };
+
+  // Handle Status Change
+  const handleStatusChange = (item) => {
+    setSelectedItem(item);
+    setSelectedStatus(item.delivery_status);
+    setShowStatusModal(true);
+    setMessage({ type: "", text: "" });
+  };
+
+  const confirmStatusChange = async () => {
+    if (selectedStatus === selectedItem.delivery_status) {
+      setShowStatusModal(false);
+      return;
+    }
+    
+    setStatusLoading(true);
+    try {
+      await axios.put(`vendor/order-item-status/${selectedItem.id}/`, {
+        delivery_status: selectedStatus
+      });
+      
+      setMessage({
+        type: "success",
+        text: `Status updated to "${selectedStatus}"`,
+      });
+      
+      setTimeout(() => {
+        setShowStatusModal(false);
+        fetchOrderDetails();
+      }, 1500);
+    } catch (error) {
+      log.error("Error updating status:", error);
+      setMessage({
+        type: "error",
+        text: error.response?.data?.error || "Failed to update status. Please try again.",
+      });
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  // Handle Return Request
+  const handleReturnRequest = (item, action) => {
+    setSelectedItem(item);
+    setReturnAction(action);
+    setReturnNote("");
+    setShowReturnModal(true);
+    setMessage({ type: "", text: "" });
+  };
+
+  const confirmReturnAction = async () => {
+    setReturnLoading(true);
+    try {
+      await axios.post(`vendor/return-request/${selectedItem.return_request.id}/handle/`, {
+        action: returnAction,
+        note: returnNote
+      });
+      
+      setMessage({
+        type: "success",
+        text: returnAction === "approve" 
+          ? "Return request approved. Stock has been restored." 
+          : "Return request rejected.",
+      });
+      
+      setTimeout(() => {
+        setShowReturnModal(false);
+        fetchOrderDetails();
+      }, 1500);
+    } catch (error) {
+      log.error("Error handling return request:", error);
+      setMessage({
+        type: "error",
+        text: error.response?.data?.error || "Failed to process return request.",
+      });
+    } finally {
+      setReturnLoading(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const statusConfig = deliveryStatuses.find(s => s.value === status);
+    return statusConfig ? statusConfig.color : "bg-gray-100 text-gray-800";
+  };
+
+  const getReturnStatusBadge = (returnRequest) => {
+    if (!returnRequest) return null;
+    
+    const statusColors = {
+      pending: "bg-yellow-100 text-yellow-800",
+      approved: "bg-green-100 text-green-800",
+      rejected: "bg-red-100 text-red-800",
+    };
+    
+    return (
+      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColors[returnRequest.status]}`}>
+        Return: {returnRequest.status.charAt(0).toUpperCase() + returnRequest.status.slice(1)}
+      </span>
+    );
   };
 
   return (
@@ -163,20 +281,25 @@ function OrderDetail() {
                           -₹{item.saved}
                         </td>
                         <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              item.product_delivered
-                                ? "bg-green-100 text-green-800"
-                                : item.product_shipped
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            {item.delivery_status}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}
+                            >
+                              {item.delivery_status}
+                            </span>
+                            {item.return_request && getReturnStatusBadge(item.return_request)}
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-col gap-2">
+                            {/* Status Change Button */}
+                            <button
+                              onClick={() => handleStatusChange(item)}
+                              className="flex items-center bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 text-sm"
+                            >
+                              <Truck className="w-4 h-4 mr-1" /> Update Status
+                            </button>
+
                             {/* Tracking Management */}
                             {item.tracking_id == null ||
                             item.tracking_id === "undefined" ? (
@@ -195,14 +318,32 @@ function OrderDetail() {
                               </Link>
                             )}
                             
-                            {/* Mark as Delivered Button */}
-                            {!item.product_delivered && (
+                            {/* Quick Mark as Delivered Button */}
+                            {!item.product_delivered && item.delivery_status !== "Cancelled" && (
                               <button
                                 onClick={() => handleMarkAsDelivered(item)}
                                 className="flex items-center bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm"
                               >
                                 <CheckCircle className="w-4 h-4 mr-1" /> Mark Delivered
                               </button>
+                            )}
+
+                            {/* Return Request Actions */}
+                            {item.return_request && item.return_request.status === "pending" && (
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => handleReturnRequest(item, "approve")}
+                                  className="flex items-center bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 text-xs"
+                                >
+                                  <CheckCircle className="w-3 h-3 mr-1" /> Accept
+                                </button>
+                                <button
+                                  onClick={() => handleReturnRequest(item, "reject")}
+                                  className="flex items-center bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 text-xs"
+                                >
+                                  <X className="w-3 h-3 mr-1" /> Reject
+                                </button>
+                              </div>
                             )}
                           </div>
                         </td>
@@ -226,6 +367,157 @@ function OrderDetail() {
           </main>
         </div>
       </div>
+
+      {/* Status Update Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Update Delivery Status</h3>
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {message.text && (
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg mb-4 ${
+                  message.type === "success"
+                    ? "bg-green-50 text-green-700"
+                    : "bg-red-50 text-red-700"
+                }`}
+              >
+                {message.type === "success" ? (
+                  <CheckCircle size={20} />
+                ) : (
+                  <AlertCircle size={20} />
+                )}
+                <span className="text-sm">{message.text}</span>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                Select new status for: <strong>{selectedItem?.product?.title}</strong>
+              </p>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              >
+                {deliveryStatuses.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmStatusChange}
+                disabled={statusLoading}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg disabled:bg-gray-400"
+              >
+                {statusLoading ? "Updating..." : "Update Status"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Return Request Modal */}
+      {showReturnModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">
+                {returnAction === "approve" ? "Approve Return" : "Reject Return"}
+              </h3>
+              <button
+                onClick={() => setShowReturnModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {message.text && (
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg mb-4 ${
+                  message.type === "success"
+                    ? "bg-green-50 text-green-700"
+                    : "bg-red-50 text-red-700"
+                }`}
+              >
+                {message.type === "success" ? (
+                  <CheckCircle size={20} />
+                ) : (
+                  <AlertCircle size={20} />
+                )}
+                <span className="text-sm">{message.text}</span>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <div className="bg-gray-50 p-3 rounded-lg mb-3">
+                <p className="font-medium text-gray-900">{selectedItem?.product?.title}</p>
+                <p className="text-sm text-gray-600">Reason: {selectedItem?.return_request?.reason}</p>
+                {selectedItem?.return_request?.reason_detail && (
+                  <p className="text-sm text-gray-600">Details: {selectedItem?.return_request?.reason_detail}</p>
+                )}
+              </div>
+              
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Response Note (optional)
+              </label>
+              <textarea
+                value={returnNote}
+                onChange={(e) => setReturnNote(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                placeholder="Add a note for the customer..."
+              />
+            </div>
+
+            {returnAction === "approve" && (
+              <div className="bg-blue-50 text-blue-700 p-3 rounded-lg mb-4 text-sm">
+                <RefreshCw className="inline w-4 h-4 mr-1" />
+                Approving will restore stock and update delivery status to "Returning".
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowReturnModal(false)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReturnAction}
+                disabled={returnLoading}
+                className={`flex-1 text-white px-4 py-2 rounded-lg disabled:bg-gray-400 ${
+                  returnAction === "approve" 
+                    ? "bg-green-600 hover:bg-green-700" 
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {returnLoading ? "Processing..." : (returnAction === "approve" ? "Approve Return" : "Reject Return")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mark as Delivered Confirmation Modal */}
       {showDeliveredModal && (

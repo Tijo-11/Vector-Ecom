@@ -174,7 +174,9 @@ function OrderDetail() {
                             )}
                           </div>
                           {order.order_status !== "Cancelled" &&
-                            order.order_status !== "Delivered" && (
+                            order.order_status !== "Delivered" &&
+                            order.order_status !== "Fulfilled" &&
+                            order.order_status !== "Partially Fulfilled" && (
                               <button
                                 onClick={() => handleCancelOrder("full")}
                                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm"
@@ -250,6 +252,7 @@ function OrderDetail() {
                                   <th className="p-3">Qty</th>
                                   <th className="p-3">Subtotal</th>
                                   <th className="p-3 text-red-600">Saved</th>
+                                  <th className="p-3">Status</th>
                                   <th className="p-3">Tracking</th>
                                   <th className="p-3">Actions</th>
                                 </tr>
@@ -283,6 +286,47 @@ function OrderDetail() {
                                       ₹{orderItem.saved}
                                     </td>
                                     <td className="p-3">
+                                      <div className="flex flex-col gap-1">
+                                        {/* Delivery Status Badge */}
+                                        <span
+                                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-center ${
+                                            orderItem.delivery_status === "Delivered"
+                                              ? "bg-green-100 text-green-800"
+                                              : orderItem.delivery_status === "Shipped" || orderItem.delivery_status === "Out for Delivery"
+                                              ? "bg-blue-100 text-blue-800"
+                                              : orderItem.delivery_status === "Cancelled"
+                                              ? "bg-red-100 text-red-800"
+                                              : orderItem.delivery_status === "Returning" || orderItem.delivery_status === "Returned"
+                                              ? "bg-purple-100 text-purple-800"
+                                              : "bg-yellow-100 text-yellow-800"
+                                          }`}
+                                        >
+                                          {orderItem.delivery_status}
+                                        </span>
+                                        {/* Return Request Status */}
+                                        {orderItem.return_request && (
+                                          <>
+                                            <span
+                                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-center ${
+                                                orderItem.return_request.status === "approved"
+                                                  ? "bg-green-100 text-green-800"
+                                                  : orderItem.return_request.status === "rejected"
+                                                  ? "bg-red-100 text-red-800"
+                                                  : "bg-yellow-100 text-yellow-800"
+                                              }`}
+                                            >
+                                              Return: {orderItem.return_request.status.charAt(0).toUpperCase() + orderItem.return_request.status.slice(1)}
+                                            </span>
+                                            {orderItem.return_request.vendor_response_note && (
+                                              <span className="text-xs text-gray-600 italic">
+                                                "{orderItem.return_request.vendor_response_note}"
+                                              </span>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="p-3">
                                       {orderItem.tracking_id == null ||
                                       orderItem.tracking_id === "undefined" ? (
                                         <button
@@ -313,8 +357,8 @@ function OrderDetail() {
                                         ) : (
                                           <>
                                             {/* Cancel Item Button */}
-                                            {order.order_status !==
-                                              "Cancelled" &&
+                                            {order.order_status !== "Cancelled" &&
+                                              order.order_status !== "Fulfilled" &&
                                               !orderItem.product_delivered && (
                                                 <button
                                                   onClick={() =>
@@ -329,8 +373,8 @@ function OrderDetail() {
                                                 </button>
                                               )}
 
-                                            {/* Return Item Button */}
-                                            {orderItem.product_delivered && (
+                                            {/* Return Item Button - only show if delivered and no existing return request */}
+                                            {orderItem.product_delivered && !orderItem.return_request && (
                                               <button
                                                 onClick={() =>
                                                   handleReturnItem(orderItem.id)

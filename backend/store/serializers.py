@@ -211,6 +211,8 @@ class CartSerializer(serializers.ModelSerializer):
 
 class CartOrderItemSerializer(serializers.ModelSerializer):
     is_cancelled = serializers.SerializerMethodField()
+    return_status = serializers.SerializerMethodField()
+    return_request = serializers.SerializerMethodField()
 
     class Meta:
         model = CartOrderItem
@@ -219,6 +221,26 @@ class CartOrderItemSerializer(serializers.ModelSerializer):
     def get_is_cancelled(self, obj):
         from store.models import OrderCancellation
         return OrderCancellation.objects.filter(items=obj).exists()
+
+    def get_return_status(self, obj):
+        """Get return request status if exists"""
+        if hasattr(obj, 'orderreturn'):
+            return obj.orderreturn.status
+        return None
+
+    def get_return_request(self, obj):
+        """Get full return request details if exists"""
+        if hasattr(obj, 'orderreturn'):
+            return {
+                'id': obj.orderreturn.id,
+                'status': obj.orderreturn.status,
+                'reason': obj.orderreturn.reason,
+                'reason_detail': obj.orderreturn.reason_detail,
+                'requested_at': obj.orderreturn.requested_at,
+                'vendor_response_note': obj.orderreturn.vendor_response_note,
+                'processed_at': obj.orderreturn.processed_at,
+            }
+        return None
 
     def __init__(self, *args, **kwargs):
         super(CartOrderItemSerializer, self).__init__(*args, **kwargs)

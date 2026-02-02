@@ -70,7 +70,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     product_id,
     qty_value,
     price,
-    shipping_amount,
     color,
     size,
   ) => {
@@ -103,7 +102,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       user: user?.user_id || null,
       qty,
       price,
-      shipping_amount,
+      // shipping_amount: 0, // Handled by backend
       color: color || null,
       size: size || null,
       cart_id,
@@ -193,7 +192,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         product_id,
         newQty,
         cartItem.product.price,
-        cartItem.product.shipping_amount,
         cartItem.color,
         cartItem.size,
       );
@@ -215,7 +213,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         product_id,
         newQty,
         cartItem.product.price,
-        cartItem.product.shipping_amount,
         cartItem.color,
         cartItem.size,
       );
@@ -256,7 +253,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
         product_id,
         value || 1,
         cartItem.product.price,
-        cartItem.product.shipping_amount,
         cartItem.color,
         cartItem.size,
       );
@@ -442,12 +438,12 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                   {discount > 0 ? (
                     <>
                       <span className="line-through text-gray-500 mr-2">
-                        ₹{originalPrice.toFixed(2)}
+                        £{originalPrice.toFixed(2)}
                       </span>
-                      ₹{offerPrice.toFixed(2)}
+                      £{offerPrice.toFixed(2)}
                     </>
                   ) : (
-                    `₹${originalPrice.toFixed(2)}`
+                    `£${originalPrice.toFixed(2)}`
                   )}
                 </p>
               </div>

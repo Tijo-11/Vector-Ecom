@@ -18,10 +18,8 @@ function PaymentSuccess() {
   const cart_id = cartID();
   const user = useAuthStore((state) => state.user);
   const [cartCount, setCartCount] = useContext(CartContext);
-
   const MAX_RETRIES = 5;
   const RETRY_DELAY = 2000;
-
   const urlParams = new URLSearchParams(location.search);
   const razorpayPaymentId = urlParams.get("session_id");
   const paypalCaptureId = urlParams.get("paypal_capture_id");
@@ -34,57 +32,41 @@ function PaymentSuccess() {
       }
       return;
     }
-
     try {
-      // Fetch ALL cart items with full pagination support (same as Cart.jsx)
       let items = [];
       let nextUrl = user?.user_id
         ? `/cart-list/${cart_id}/${user.user_id}/`
         : `/cart-list/${cart_id}/`;
-
       while (nextUrl) {
         const response = await apiInstance.get(nextUrl);
         const data = response.data;
-
         let pageItems = [];
         if (Array.isArray(data)) {
-          // Non-paginated (backward compatible)
           pageItems = data;
           nextUrl = null;
         } else if (data && data.results) {
-          // Paginated DRF response
           pageItems = data.results || [];
           nextUrl = data.next || null;
         }
-
         items = [...items, ...pageItems];
       }
-
-      // Delete each item individually (with error handling per item)
       for (const item of items) {
         const deleteUrl = user?.user_id
           ? `/cart-delete/${cart_id}/${item.id}/${user.user_id}/`
           : `/cart-delete/${cart_id}/${item.id}/`;
-
         try {
           await apiInstance.delete(deleteUrl);
         } catch (err) {
           log.error(`Failed to delete cart item ${item.id}:`, err);
-          // Continue deleting others even if one fails
         }
       }
-
-      // Always reset global count and clear guest cart ID
       setCartCount(0);
-
       if (!user?.user_id) {
         localStorage.removeItem("random_string");
       }
-
       log.debug("Cart cleared successfully");
     } catch (error) {
       log.error("Error clearing cart:", error);
-      // Even on full failure, reset count to avoid stale UI
       setCartCount(0);
     }
   };
@@ -93,12 +75,6 @@ function PaymentSuccess() {
     const verifyPayment = async () => {
       if (hasRun) return;
       setHasRun(true);
-
-      // If no payment IDs in URL, treat as failed verification (safe fallback)
-      if (!razorpayPaymentId && !paypalCaptureId) {
-        setStatus("unpaid");
-        return;
-      }
 
       const requestId = uuidv4();
       log.debug(
@@ -111,6 +87,30 @@ function PaymentSuccess() {
             await new Promise((resolve) => setTimeout(resolve, 1500));
           }
 
+          // If no payment IDs (likely COD or direct access), fetch via public view-order endpoint
+          if (!razorpayPaymentId && !paypalCaptureId) {
+            const orderResponse = await apiInstance.get(
+              `/view-order/${order_id}/`,
+            );
+            const fetchedOrder = orderResponse.data;
+
+            if (
+              fetchedOrder &&
+              (fetchedOrder.payment_status === "processing" ||
+                fetchedOrder.payment_status === "paid")
+            ) {
+              await clearCart();
+              setOrder(fetchedOrder);
+              setStatus("payment_successful");
+              window.dispatchEvent(new Event("paymentSuccess"));
+              return;
+            } else {
+              setStatus("unpaid");
+              return;
+            }
+          }
+
+          // Normal online payment verification
           const formData = new FormData();
           formData.append("order_id", order_id);
           if (razorpayPaymentId)
@@ -131,16 +131,13 @@ function PaymentSuccess() {
             responseStatus === "already_paid"
           ) {
             window.dispatchEvent(new Event("paymentSuccess"));
-
-            // Run clearCart and order fetch in parallel
             const clearPromise = clearCart();
-            const orderPromise = apiInstance.get(`/checkout/${order_id}/`);
-
+            // Use public view-order endpoint for consistency (works for paid/processing orders)
+            const orderPromise = apiInstance.get(`/view-order/${order_id}/`);
             const [orderResponse] = await Promise.all([
               orderPromise,
               clearPromise,
             ]);
-
             setOrder(orderResponse.data || {});
             setStatus(responseStatus);
           } else if (responseStatus === "unpaid" && attempt < MAX_RETRIES - 1) {
@@ -152,18 +149,14 @@ function PaymentSuccess() {
           }
         } catch (error) {
           log.error("PaymentSuccess error:", error);
-
           if (error.response?.data?.message === "already_paid") {
             window.dispatchEvent(new Event("paymentSuccess"));
-
             const clearPromise = clearCart();
-            const orderPromise = apiInstance.get(`/checkout/${order_id}/`);
-
+            const orderPromise = apiInstance.get(`/view-order/${order_id}/`);
             const [orderResponse] = await Promise.all([
               orderPromise,
               clearPromise,
             ]);
-
             setOrder(orderResponse.data || {});
             setStatus("already_paid");
           } else if (attempt < MAX_RETRIES - 1) {
@@ -182,7 +175,6 @@ function PaymentSuccess() {
     verifyPayment();
   }, [order_id, razorpayPaymentId, paypalCaptureId, hasRun, cart_id, user]);
 
-  // New centered spinner loading screen (replaces the previous card-style verifying screen)
   if (status === "verifying") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
@@ -229,10 +221,10 @@ function PaymentSuccess() {
               Retry Verification
             </button>
             <a
-              href="/checkout"
+              href="/"
               className="bg-gray-500 text-white py-2 px-4 rounded-md text-sm uppercase font-semibold hover:bg-gray-600 transition"
             >
-              Back to Checkout
+              Back to Home
             </a>
           </div>
         </div>
@@ -244,23 +236,35 @@ function PaymentSuccess() {
   const originalSubTotal =
     order.orderitem?.reduce((acc, item) => acc + item.price * item.qty, 0) || 0;
 
+  const isCOD =
+    !razorpayPaymentId &&
+    !paypalCaptureId &&
+    order.payment_status === "processing";
+
   return (
     <>
       <div id="invoice-section" className="container mx-auto mt-10 px-4">
         <div className="bg-white shadow-md rounded-md p-8">
           <h1 className="font-semibold text-2xl mb-4 text-green-600 print:hidden">
             <i className="fas fa-check-circle mr-2"></i>
-            {status === "already_paid"
-              ? "Payment Already Confirmed"
-              : "Thank you for shopping with us!"}
+            {isCOD
+              ? "Order Placed Successfully with Cash on Delivery!"
+              : status === "already_paid"
+                ? "Payment Already Confirmed"
+                : "Thank you for shopping with us!"}
           </h1>
           <h1 className="hidden print:block font-semibold text-2xl mb-4 text-green-600">
             <i className="fas fa-file-invoice-dollar mr-2"></i>
             Invoice #{order_id}
           </h1>
-
           <p className="text-gray-700 mb-2">
             Order ID: <strong>#{order_id}</strong>
+          </p>
+          <p className="text-gray-700 mb-2">
+            Payment Method:{" "}
+            <strong>
+              {isCOD ? "Cash on Delivery (Pay on Delivery)" : "Online Payment"}
+            </strong>
           </p>
           {razorpayPaymentId && (
             <p className="text-gray-700 mb-2">
@@ -275,7 +279,6 @@ function PaymentSuccess() {
           <p className="text-gray-700 mb-4">
             Order confirmation sent to: <strong>{order.email || "N/A"}</strong>
           </p>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             {/* Customer Details */}
             <div>
@@ -295,11 +298,9 @@ function PaymentSuccess() {
                 {order.country || "N/A"}
               </p>
             </div>
-
             {/* Payment Summary */}
             <div>
               <h2 className="font-semibold text-xl mb-4">Payment Summary</h2>
-
               {order.orderitem && order.orderitem.length > 0 ? (
                 order.orderitem.map((item, index) => (
                   <div
@@ -317,52 +318,48 @@ function PaymentSuccess() {
               ) : (
                 <p className="text-gray-500 italic">No items found.</p>
               )}
-
               <div className="mt-6 border-t pt-4 space-y-2">
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Subtotal</span>
                   <span>₹{originalSubTotal.toFixed(2)}</span>
                 </div>
-
                 {order.offer_saved && parseFloat(order.offer_saved) > 0 && (
                   <div className="flex justify-between text-green-600 font-semibold">
                     <span>Offers Saved</span>
                     <span>-₹{parseFloat(order.offer_saved).toFixed(2)}</span>
                   </div>
                 )}
-
                 {order.coupon_saved && parseFloat(order.coupon_saved) > 0 && (
                   <div className="flex justify-between text-blue-600 font-semibold">
                     <span>Coupon Saved</span>
-                    <span>-₹{parseFloat(order.coupon_saved).toFixed(2)}</span>
+                    <span>
+                      -₹{parseFloat(order.coupon_saved).toFixed(2463)}
+                    </span>
                   </div>
                 )}
-
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
                   <span>
                     ₹{parseFloat(order.shipping_amount || 0).toFixed(2)}
                   </span>
                 </div>
-
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Tax</span>
                   <span>₹{parseFloat(order.tax_fee || 0).toFixed(2)}</span>
                 </div>
-
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Service Fee</span>
                   <span>₹{parseFloat(order.service_fee || 0).toFixed(2)}</span>
                 </div>
-
                 <div className="flex justify-between text-xl font-bold border-t pt-3 mt-4 text-gray-900">
-                  <span>Total Paid</span>
+                  <span>
+                    {isCOD ? "Amount to Pay on Delivery" : "Total Paid"}
+                  </span>
                   <span>₹{parseFloat(order.total || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
           </div>
-
           <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4 print:hidden">
             <button
               onClick={() => navigate(`/view-order/${order_id}/`)}

@@ -69,7 +69,7 @@ function CartSummary({ cartItems, setCartTotal }) {
   const isAddressPage = location.pathname === "/address";
 
   const shippingDisplay =
-    cart_total.shipping > 0 ? `₹${cart_total.shipping.toFixed(2)}` : "Free";
+    cart_total.shipping > 0 ? `£${cart_total.shipping.toFixed(2)}` : "Free";
 
   return (
     <div id="summary" className="w-full sm:w-1/4 md:w-1/2 px-8 py-10">
@@ -80,7 +80,7 @@ function CartSummary({ cartItems, setCartTotal }) {
             MRP ({itemCount} {itemCount > 1 ? "items" : "item"})
           </span>
           <span className="font-semibold text-sm">
-            ₹{cart_total.mrp_total.toFixed(2)}
+            £{cart_total.mrp_total.toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between">
@@ -88,7 +88,7 @@ function CartSummary({ cartItems, setCartTotal }) {
             Discounted Price
           </span>
           <span className="font-semibold text-sm">
-            ₹{cart_total.discounted_total.toFixed(2)}
+            £{cart_total.discounted_total.toFixed(2)}
           </span>
         </div>
         <div>
@@ -102,7 +102,7 @@ function CartSummary({ cartItems, setCartTotal }) {
         <div className="border-t mt-8 pt-4">
           <div className="flex font-semibold justify-between py-4 text-sm uppercase text-gray-700">
             <span>Grand Total</span>
-            <span>₹{cart_total.grand_total.toFixed(2)}</span>
+            <span>£{cart_total.grand_total.toFixed(2)}</span>
           </div>
         </div>
 

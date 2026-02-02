@@ -73,8 +73,8 @@ function Cart() {
             item.product?.title || `Item #${item.product?.id}`,
           );
 
-          const perUnitShipping =
-            currentQty > 0 ? item.shipping_amount / currentQty : 0;
+          // const perUnitShipping =
+          //   currentQty > 0 ? item.shipping_amount / currentQty : 0;
 
           const newQty = availableStock;
 
@@ -82,7 +82,7 @@ function Cart() {
             product: item.product.id,
             qty: newQty,
             price: item.price,
-            shipping_amount: perUnitShipping, // Fixed: send per-unit shipping (backend multiplies by qty)
+            // shipping_amount: perUnitShipping, // Fixed: send per-unit shipping (backend multiplies by qty)
             country: item.country,
             cart_id: cart_id,
             size: item.size || "",

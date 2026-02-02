@@ -75,10 +75,13 @@ DELIVERY_STATUS = (
     ("On Hold", "On Hold"),
     ("Shipping Processing", "Shipping Processing"),
     ("Shipped", "Shipped"),
+    ("Out for Delivery", "Out for Delivery"),
     ("Arrived", "Arrived"),
     ("Delivered", "Delivered"),
+    ("Return Requested", "Return Requested"),
     ("Returning", "Returning"),
     ("Returned", "Returned"),
+    ("Cancelled", "Cancelled"),
 )
 
 PAYMENT_METHOD = (

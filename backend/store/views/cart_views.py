@@ -36,7 +36,7 @@ class CartAPIView(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         try:
             payload = request.data
-            required = ['product', 'qty', 'price', 'shipping_amount', 'country', 'cart_id']
+            required = ['product', 'qty', 'price', 'country', 'cart_id']
             if not all(k in payload for k in required):
                 raise ValidationError("Missing required fields")
 
@@ -51,11 +51,26 @@ class CartAPIView(generics.ListCreateAPIView):
             available_stock = product.stock_qty or 0
             cart_id_payload = payload['cart_id']
 
-            existing_cart_item = Cart.objects.filter(
+            # Robust lookup handling potential duplicates
+            cart_items = Cart.objects.filter(
                 cart_id=cart_id_payload,
                 product=product,
                 is_active=True
-            ).first()
+            )
+
+            existing_cart_item = None
+            if cart_items.exists():
+                existing_cart_item = cart_items.first()
+                # Clean up duplicates if any exist
+                if cart_items.count() > 1:
+                    for dup in cart_items[1:]:
+                        dup.is_active = False
+                        dup.save()
+            
+            # DEBUG LOGGING
+            print(f"DEBUG: Cart Update - Product: {product.id}, Payload Qty: {requested_qty}, Existing Item Found: {existing_cart_item is not None}")
+            if existing_cart_item:
+                print(f"DEBUG: Existing Qty: {existing_cart_item.qty}")
 
             adjusted = False
             final_qty = requested_qty
@@ -64,7 +79,7 @@ class CartAPIView(generics.ListCreateAPIView):
                 adjusted = True
                 final_qty = available_stock
 
-            # If final_qty becomes 0 → remove the item entirely
+            # If final_qty becomes 0 → remove the item (and duplicates)
             if final_qty <= 0:
                 if existing_cart_item:
                     existing_cart_item.is_active = False
@@ -85,7 +100,8 @@ class CartAPIView(generics.ListCreateAPIView):
 
             # Use server price to prevent manipulation
             price = product.price
-            shipping_amount = Decimal(payload['shipping_amount'])
+            # shipping_amount = Decimal(payload['shipping_amount'])
+            shipping_amount = Decimal('0.00')
             country = payload['country']
             size = payload.get('size', '')
             color = payload.get('color', '')
@@ -283,8 +299,17 @@ class CartDetailView(generics.RetrieveAPIView):
             mrp_total += original_sub_total
             offer_saved += item_offer_saved
             discounted_total += item_discounted
-            shipping += item_shipping
-            grand_total += item_total
+            # shipping += item_shipping  # No longer summing item shipping
+            # grand_total += item_total # Recalculate grand total at end
+
+        # Global Shipping Logic
+        if discounted_total < Decimal('70.00') and discounted_total > 0:
+            shipping = Decimal('2.99')
+        else:
+            shipping = Decimal('0.00')
+
+        grand_total = discounted_total + shipping
+
         totals = {
             'mrp_total': mrp_total,
             'offer_saved': offer_saved,

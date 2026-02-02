@@ -13,6 +13,10 @@ from .views.product_views import (ProductCreateView, ProductUpdateAPIView, Produ
                                   FilterProductsAPIView)
 from .views.report_views import SalesReportAPIView, SalesReportPDFView, SalesReportExcelView
 from .views.offer_views import ProductOfferListCreateAPIView, ProductOfferDetailAPIView
+from .views.order_status_views import (
+    UpdateOrderStatusView, VendorReturnRequestsListView, 
+    HandleReturnRequestView, VendorPendingReturnsCountView
+)
 
 urlpatterns=[
     path('vendor/stats/<vendor_id>/', DashboardStatsAPIView.as_view(), name='vendor-stats'),
@@ -55,6 +59,13 @@ urlpatterns=[
    
     # Order Management - Mark as Delivered
     path('vendor/order-item-delivered/<int:pk>/', MarkOrderAsDeliveredView.as_view(), name='mark-order-delivered'),
+    
+    # Order Status Management
+    path('vendor/order-item-status/<int:pk>/', UpdateOrderStatusView.as_view(), name='update-order-status'),
+    path('vendor/return-requests/<int:vendor_id>/', VendorReturnRequestsListView.as_view(), name='vendor-return-requests'),
+    path('vendor/return-request/<int:pk>/handle/', HandleReturnRequestView.as_view(), name='handle-return-request'),
+    path('vendor/return-requests-count/<int:vendor_id>/', VendorPendingReturnsCountView.as_view(), name='vendor-return-requests-count'),
+    
     # Sales Reports
     path('vendor/sales-report/<vendor_id>/', SalesReportAPIView.as_view(), name='vendor-sales-report'),
     path('vendor/sales-report-pdf/<vendor_id>/', SalesReportPDFView.as_view(), name='vendor-sales-report-pdf'),
