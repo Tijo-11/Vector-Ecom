@@ -1,3 +1,4 @@
+# cancel_views.py (Updated)
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -17,7 +18,6 @@ from decimal import Decimal
 import logging
 
 log = logging.getLogger(__name__)
-
 
 class CancelOrderView(APIView):
     permission_classes = [AllowAny]  # Adjust with IsAuthenticated later
@@ -42,16 +42,25 @@ class CancelOrderView(APIView):
         except CartOrder.DoesNotExist:
             return Response({"error": "Order not found"}, status=404)
 
+        # Prevent cancellation if order is already in terminal states
         if order.order_status in ['Delivered', 'Returned', 'Cancelled']:
-            return Response({"error": "Order cannot be cancelled"}, status=400)
+            return Response({"error": "Order cannot be cancelled as it is already in a terminal state"}, status=400)
 
         is_full = len(item_ids) == 0
         items = CartOrderItem.objects.filter(order=order)
+
         if not is_full:
             items = items.filter(id__in=item_ids)
 
         if not items.exists():
             return Response({"error": "No valid items to cancel"}, status=400)
+
+        # NEW: Prevent cancellation of any delivered items
+        delivered_items = items.filter(product_delivered=True)
+        if delivered_items.exists():
+            return Response({
+                "error": "Cannot cancel delivered items. Return option is available for delivered items."
+            }, status=400)
 
         # Create cancellation record
         log.info(f"Creating cancellation record. is_full={is_full}, item_count={items.count()}")
@@ -63,36 +72,39 @@ class CancelOrderView(APIView):
             is_full_order=is_full
         )
         log.info(f"Cancellation created with ID: {cancellation.id}")
+
+        # Associate items and mark them as cancelled
         cancellation.items.set(items)
-        log.info(f"Items set on cancellation. Item count: {cancellation.items.count()}")
-        
-        # Restore stock after items are set
+        for item in items:
+            item.delivery_status = "Cancelled"
+            item.save(update_fields=['delivery_status'])
+
+        log.info(f"Items marked as Cancelled. Item count: {items.count()}")
+
+        # Restore stock
         log.info("Calling restore_stock()")
         cancellation.restore_stock()
         log.info("restore_stock() completed")
 
-        # Update order status
+        # Update order status if full cancellation
         if is_full:
             order.order_status = "Cancelled"
             order.payment_status = "cancelled"
             order.save()
             log.info(f"Full order marked as cancelled")
         else:
-            # Check if all items are now cancelled
+            # For partial: check if ALL items are now cancelled
             total_items = order.orderitem.count()
-            cancelled_items = OrderCancellation.objects.filter(order=order).values_list('items', flat=True).distinct().count()
-            log.info(f"Partial cancellation. Total items: {total_items}, Cancelled items: {cancelled_items}")
-            
-            if cancelled_items >= total_items:
+            cancelled_items_count = order.orderitem.filter(delivery_status="Cancelled").count()
+            if cancelled_items_count == total_items:
                 order.order_status = "Cancelled"
                 order.payment_status = "cancelled"
                 order.save()
-                log.info(f"All items cancelled - marking order as cancelled")
+                log.info(f"All items cancelled - marking entire order as cancelled")
 
-        log.info(f"Order {order_oid} cancellation created. Full order: {is_full}, Items: {items.count()}, Stock restored")
-
+        log.info(f"Order {order_oid} cancellation processed successfully. Full order: {is_full}, Items cancelled: {items.count()}")
         return Response({
-            "message": "Order cancellation requested successfully",
+            "message": "Order cancellation request submitted successfully",
             "cancellation_id": cancellation.id
         }, status=200)
 
@@ -119,19 +131,19 @@ class ReturnOrderItemView(APIView):
         except CartOrderItem.DoesNotExist:
             return Response({"error": "Order item not found"}, status=404)
 
+        # Existing checks (unchanged)
         if not item.product_delivered:
             return Response({"error": "Item must be delivered before return"}, status=400)
 
         if hasattr(item, 'orderreturn'):
             return Response({"error": "Return already requested"}, status=400)
 
+        # Create return request (unchanged)
         OrderReturn.objects.create(
             order_item=item,
             returned_by=item.order.buyer,
             reason=reason,
             reason_detail=reason_detail
         )
-
         log.info(f"Return request created for order item {item_id}")
-
         return Response({"message": "Return request submitted successfully"}, status=200)

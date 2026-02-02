@@ -1,4 +1,4 @@
-// OrderDetail.jsx
+// src/components/customer/OrderDetail.jsx (Full Updated File - Customer Side)
 import { useState, useEffect } from "react";
 import { X, AlertCircle, CheckCircle } from "lucide-react";
 import apiInstance from "../../utils/axios";
@@ -23,9 +23,11 @@ function OrderDetail() {
   const [returnDetail, setReturnDetail] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+
   const axios = apiInstance;
   const userData = UserData();
   const param = useParams();
+
   const fetchOrderDetails = () => {
     axios
       .get(`customer/order/detail/${userData?.user_id}/${param?.order_oid}`)
@@ -39,9 +41,14 @@ function OrderDetail() {
         setLoading(false);
       });
   };
+
   useEffect(() => {
     fetchOrderDetails();
   }, []);
+
+  // Check if any item is delivered (to hide full order cancel if partial delivery)
+  const hasDeliveredItems = orderItems.some((item) => item.product_delivered);
+
   const cancelReasons = [
     { value: "changed_mind", label: "Changed my mind" },
     { value: "better_price", label: "Found better price elsewhere" },
@@ -49,6 +56,7 @@ function OrderDetail() {
     { value: "delivery_time", label: "Delivery time too long" },
     { value: "other", label: "Other" },
   ];
+
   const returnReasons = [
     { value: "defective", label: "Defective or damaged product" },
     { value: "wrong_item", label: "Wrong item received" },
@@ -57,6 +65,7 @@ function OrderDetail() {
     { value: "changed_mind", label: "Changed my mind" },
     { value: "other", label: "Other" },
   ];
+
   const handleCancelOrder = (type, itemId = null) => {
     setCancelType(type);
     setSelectedItemId(itemId);
@@ -65,6 +74,7 @@ function OrderDetail() {
     setShowCancelModal(true);
     setMessage({ type: "", text: "" });
   };
+
   const handleReturnItem = (itemId) => {
     setSelectedItemId(itemId);
     setReturnReason("");
@@ -72,6 +82,7 @@ function OrderDetail() {
     setShowReturnModal(true);
     setMessage({ type: "", text: "" });
   };
+
   const submitCancellation = async () => {
     if (!cancelReason) {
       setMessage({
@@ -90,7 +101,6 @@ function OrderDetail() {
         item_ids: cancelType === "item" ? [selectedItemId] : [],
       };
       await axios.post("/cancel-order/", payload);
-
       setMessage({
         type: "success",
         text: "Cancellation request submitted successfully!",
@@ -111,6 +121,7 @@ function OrderDetail() {
       setActionLoading(false);
     }
   };
+
   const submitReturn = async () => {
     if (!returnReason) {
       setMessage({
@@ -128,7 +139,6 @@ function OrderDetail() {
         user_id: userData?.user_id,
       };
       await axios.post("/return-order-item/", payload);
-
       setMessage({
         type: "success",
         text: "Return request submitted successfully!",
@@ -149,6 +159,7 @@ function OrderDetail() {
       setActionLoading(false);
     }
   };
+
   return (
     <div>
       {loading === false && (
@@ -172,11 +183,18 @@ function OrderDetail() {
                                 Order Cancelled
                               </span>
                             )}
+                            {order.order_status === "Delivered" && (
+                              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                                Delivered
+                              </span>
+                            )}
                           </div>
+                          {/* Cancel Entire Order Button - Hidden if cancelled, delivered, fulfilled, partially fulfilled, OR any item delivered */}
                           {order.order_status !== "Cancelled" &&
                             order.order_status !== "Delivered" &&
                             order.order_status !== "Fulfilled" &&
-                            order.order_status !== "Partially Fulfilled" && (
+                            order.order_status !== "Partially Fulfilled" &&
+                            !hasDeliveredItems && (
                               <button
                                 onClick={() => handleCancelOrder("full")}
                                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm"
@@ -240,6 +258,7 @@ function OrderDetail() {
                           </div>
                         </div>
                       </section>
+
                       {/* Section: Order Items */}
                       <section>
                         <div className="rounded-lg shadow p-3 bg-white">
@@ -287,39 +306,59 @@ function OrderDetail() {
                                     </td>
                                     <td className="p-3">
                                       <div className="flex flex-col gap-1">
-                                        {/* Delivery Status Badge */}
                                         <span
                                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-center ${
-                                            orderItem.delivery_status === "Delivered"
+                                            orderItem.delivery_status ===
+                                            "Delivered"
                                               ? "bg-green-100 text-green-800"
-                                              : orderItem.delivery_status === "Shipped" || orderItem.delivery_status === "Out for Delivery"
-                                              ? "bg-blue-100 text-blue-800"
-                                              : orderItem.delivery_status === "Cancelled"
-                                              ? "bg-red-100 text-red-800"
-                                              : orderItem.delivery_status === "Returning" || orderItem.delivery_status === "Returned"
-                                              ? "bg-purple-100 text-purple-800"
-                                              : "bg-yellow-100 text-yellow-800"
+                                              : orderItem.delivery_status ===
+                                                    "Shipped" ||
+                                                  orderItem.delivery_status ===
+                                                    "Out for Delivery"
+                                                ? "bg-blue-100 text-blue-800"
+                                                : orderItem.delivery_status ===
+                                                    "Cancelled"
+                                                  ? "bg-red-100 text-red-800"
+                                                  : orderItem.delivery_status ===
+                                                        "Returning" ||
+                                                      orderItem.delivery_status ===
+                                                        "Returned"
+                                                    ? "bg-purple-100 text-purple-800"
+                                                    : "bg-yellow-100 text-yellow-800"
                                           }`}
                                         >
                                           {orderItem.delivery_status}
                                         </span>
-                                        {/* Return Request Status */}
                                         {orderItem.return_request && (
                                           <>
                                             <span
                                               className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-center ${
-                                                orderItem.return_request.status === "approved"
+                                                orderItem.return_request
+                                                  .status === "approved"
                                                   ? "bg-green-100 text-green-800"
-                                                  : orderItem.return_request.status === "rejected"
-                                                  ? "bg-red-100 text-red-800"
-                                                  : "bg-yellow-100 text-yellow-800"
+                                                  : orderItem.return_request
+                                                        .status === "rejected"
+                                                    ? "bg-red-100 text-red-800"
+                                                    : "bg-yellow-100 text-yellow-800"
                                               }`}
                                             >
-                                              Return: {orderItem.return_request.status.charAt(0).toUpperCase() + orderItem.return_request.status.slice(1)}
+                                              Return:{" "}
+                                              {orderItem.return_request.status
+                                                .charAt(0)
+                                                .toUpperCase() +
+                                                orderItem.return_request.status.slice(
+                                                  1,
+                                                )}
                                             </span>
-                                            {orderItem.return_request.vendor_response_note && (
+                                            {orderItem.return_request
+                                              .vendor_response_note && (
                                               <span className="text-xs text-gray-600 italic">
-                                                "{orderItem.return_request.vendor_response_note}"
+                                                "
+                                                {
+                                                  orderItem.return_request
+                                                    .vendor_response_note
+                                                }
+                                                "
                                               </span>
                                             )}
                                           </>
@@ -349,17 +388,21 @@ function OrderDetail() {
                                     </td>
                                     <td className="p-3">
                                       <div className="flex flex-col gap-2">
-                                        {/* Show Cancelled Status */}
-                                        {orderItem.is_cancelled ? (
+                                        {orderItem.delivery_status ===
+                                        "Cancelled" ? (
                                           <span className="bg-red-100 text-red-800 px-3 py-1 rounded text-xs font-semibold text-center">
                                             Cancelled
                                           </span>
                                         ) : (
                                           <>
-                                            {/* Cancel Item Button */}
-                                            {order.order_status !== "Cancelled" &&
-                                              order.order_status !== "Fulfilled" &&
-                                              !orderItem.product_delivered && (
+                                            {/* Cancel Item Button - Hidden if item delivered or already cancelled */}
+                                            {order.order_status !==
+                                              "Cancelled" &&
+                                              order.order_status !==
+                                                "Fulfilled" &&
+                                              !orderItem.product_delivered &&
+                                              orderItem.delivery_status !==
+                                                "Cancelled" && (
                                                 <button
                                                   onClick={() =>
                                                     handleCancelOrder(
@@ -373,17 +416,20 @@ function OrderDetail() {
                                                 </button>
                                               )}
 
-                                            {/* Return Item Button - only show if delivered and no existing return request */}
-                                            {orderItem.product_delivered && !orderItem.return_request && (
-                                              <button
-                                                onClick={() =>
-                                                  handleReturnItem(orderItem.id)
-                                                }
-                                                className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs"
-                                              >
-                                                Return Item
-                                              </button>
-                                            )}
+                                            {/* Return Item Button */}
+                                            {orderItem.product_delivered &&
+                                              !orderItem.return_request && (
+                                                <button
+                                                  onClick={() =>
+                                                    handleReturnItem(
+                                                      orderItem.id,
+                                                    )
+                                                  }
+                                                  className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs"
+                                                >
+                                                  Return Item
+                                                </button>
+                                              )}
                                           </>
                                         )}
                                       </div>
@@ -403,6 +449,7 @@ function OrderDetail() {
           </div>
         </main>
       )}
+
       {loading === true && (
         <div className="container mx-auto text-center">
           <img
@@ -412,7 +459,8 @@ function OrderDetail() {
           />
         </div>
       )}
-      {/* Cancel Order Modal */}
+
+      {/* Cancel Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -493,7 +541,8 @@ function OrderDetail() {
           </div>
         </div>
       )}
-      {/* Return Order Modal */}
+
+      {/* Return Modal */}
       {showReturnModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -575,4 +624,5 @@ function OrderDetail() {
     </div>
   );
 }
+
 export default OrderDetail;

@@ -66,13 +66,7 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     };
   }, []);
 
-  const updateCart = async (
-    product_id,
-    qty_value,
-    price,
-    color,
-    size,
-  ) => {
+  const updateCart = async (product_id, qty_value, price, color, size) => {
     const qty = Number(qty_value);
     if (isNaN(qty) || qty <= 0) return;
 
@@ -438,12 +432,12 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                   {discount > 0 ? (
                     <>
                       <span className="line-through text-gray-500 mr-2">
-                        £{originalPrice.toFixed(2)}
+                        ₹{originalPrice.toFixed(2)}
                       </span>
-                      £{offerPrice.toFixed(2)}
+                      ₹{offerPrice.toFixed(2)}
                     </>
                   ) : (
-                    `£${originalPrice.toFixed(2)}`
+                    `₹${originalPrice.toFixed(2)}`
                   )}
                 </p>
               </div>
