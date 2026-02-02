@@ -118,19 +118,88 @@ class Wallet(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.balance} {self.currency}"
 
-    def deposit(self, amount):
+    def deposit(self, amount, transaction_type='deposit', description='', related_order=None, related_order_item=None):
+        """Deposit amount to wallet and create transaction record."""
         if amount <= 0:
             raise ValueError("Deposit amount must be positive")
         self.balance += Decimal(str(amount))
         self.save()
+        
+        # Create transaction record
+        WalletTransaction.objects.create(
+            wallet=self,
+            transaction_type=transaction_type,
+            amount=Decimal(str(amount)),
+            balance_after=self.balance,
+            description=description,
+            related_order=related_order,
+            related_order_item=related_order_item
+        )
+        return self.balance
 
-    def withdraw(self, amount):
+    def withdraw(self, amount, transaction_type='withdrawal', description='', related_order=None, related_order_item=None):
+        """Withdraw amount from wallet and create transaction record."""
         if amount <= 0:
             raise ValueError("Withdrawal amount must be positive")
         if self.balance < Decimal(str(amount)):
             raise ValueError("Insufficient balance")
         self.balance -= Decimal(str(amount))
         self.save()
+        
+        # Create transaction record
+        WalletTransaction.objects.create(
+            wallet=self,
+            transaction_type=transaction_type,
+            amount=Decimal(str(amount)),
+            balance_after=self.balance,
+            description=description,
+            related_order=related_order,
+            related_order_item=related_order_item
+        )
+        return self.balance
+
+
+class WalletTransaction(models.Model):
+    """Model to track all wallet transactions."""
+    TRANSACTION_TYPES = [
+        ('deposit', 'Deposit'),
+        ('withdrawal', 'Withdrawal'),
+        ('refund', 'Refund'),
+        ('payment', 'Payment'),
+    ]
+    
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    balance_after = models.DecimalField(max_digits=12, decimal_places=2)
+    description = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Reference to related order (for refunds/payments)
+    related_order = models.ForeignKey(
+        'store.CartOrder', 
+        null=True, blank=True, 
+        on_delete=models.SET_NULL,
+        related_name='wallet_transactions'
+    )
+    related_order_item = models.ForeignKey(
+        'store.CartOrderItem', 
+        null=True, blank=True, 
+        on_delete=models.SET_NULL,
+        related_name='wallet_transactions'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.wallet.user.email} - {self.transaction_type} - ₹{self.amount}"
+    
+    @property
+    def transaction_id(self):
+        """Generate a readable transaction ID."""
+        return f"TXN{self.id:08d}"
+
 
 # === Wallet Signals  ===
 def create_user_wallet(sender, instance, created, **kwargs):

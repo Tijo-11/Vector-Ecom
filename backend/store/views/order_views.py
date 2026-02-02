@@ -396,6 +396,7 @@ class CODOrderConfirmView(APIView):
                 return Response({"message": "Cash on Delivery is only available for orders below ₹1000", "icon": "warning"}, status=status.HTTP_400_BAD_REQUEST)
 
             order.payment_status = "processing"
+            order.payment_method = "Cash on Delivery"
             order.save()
 
             return Response({"message": "Order placed successfully with Cash on Delivery!", "icon": "success"}, status=status.HTTP_200_OK)

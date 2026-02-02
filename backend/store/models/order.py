@@ -8,7 +8,7 @@ from userauth.models import User
 from vendor.models import Vendor
 from shortuuid.django_fields import ShortUUIDField
 from .product import Product
-from .choices import PAYMENT_STATUS, ORDER_STATUS, DELIVERY_STATUS
+from .choices import PAYMENT_STATUS, ORDER_STATUS, DELIVERY_STATUS, PAYMENT_METHOD
 from django.core.validators import RegexValidator
 from django.utils.text import gettext_lazy as _
 
@@ -65,6 +65,7 @@ class CartOrder(models.Model):
     # Order status attributes
     payment_status = models.CharField(max_length=100, choices=PAYMENT_STATUS, default="initiated")
     order_status = models.CharField(max_length=100, choices=ORDER_STATUS, default="Pending")
+    payment_method = models.CharField(max_length=100, choices=PAYMENT_METHOD, null=True, blank=True, help_text="Payment method used for this order")
     # Discounts
     initial_total = models.DecimalField(default=0.00, max_digits=12, decimal_places=2, help_text="The original total before discounts")
     #helptext is # Tooltip shown in admin panel for clarity on field purpose

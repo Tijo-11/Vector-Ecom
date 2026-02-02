@@ -17,6 +17,10 @@ from .views.order_status_views import (
     UpdateOrderStatusView, VendorReturnRequestsListView, 
     HandleReturnRequestView, VendorPendingReturnsCountView
 )
+from .views.wallet_views import (
+    VendorTransactionsListView, VendorWalletTransactionDetailView,
+    VendorWalletStatsView
+)
 
 urlpatterns=[
     path('vendor/stats/<vendor_id>/', DashboardStatsAPIView.as_view(), name='vendor-stats'),
@@ -65,6 +69,11 @@ urlpatterns=[
     path('vendor/return-requests/<int:vendor_id>/', VendorReturnRequestsListView.as_view(), name='vendor-return-requests'),
     path('vendor/return-request/<int:pk>/handle/', HandleReturnRequestView.as_view(), name='handle-return-request'),
     path('vendor/return-requests-count/<int:vendor_id>/', VendorPendingReturnsCountView.as_view(), name='vendor-return-requests-count'),
+    
+    # Wallet Transactions
+    path('vendor/wallet-transactions/<int:vendor_id>/', VendorTransactionsListView.as_view(), name='vendor-wallet-transactions'),
+    path('vendor/wallet-transaction/<int:transaction_id>/', VendorWalletTransactionDetailView.as_view(), name='vendor-wallet-transaction-detail'),
+    path('vendor/wallet-stats/<int:vendor_id>/', VendorWalletStatsView.as_view(), name='vendor-wallet-stats'),
     
     # Sales Reports
     path('vendor/sales-report/<vendor_id>/', SalesReportAPIView.as_view(), name='vendor-sales-report'),

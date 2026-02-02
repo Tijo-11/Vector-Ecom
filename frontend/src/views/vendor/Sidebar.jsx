@@ -10,7 +10,7 @@ import {
   Bell,
   Settings,
   LogOut,
-  User,
+  Wallet,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 export default function VendorSidebar() {
@@ -75,6 +75,18 @@ export default function VendorSidebar() {
             }
           >
             <IndianRupee size={18} /> <span>Earning</span>
+          </Link>
+        </li>
+        <li>
+          <Link
+            to="/vendor/wallet-transactions/"
+            className={
+              isActiveLink(location.pathname, "/vendor/wallet-transactions/")
+                ? activeLink
+                : nonActiveLink
+            }
+          >
+            <Wallet size={18} /> <span>Wallet Transactions</span>
           </Link>
         </li>
         <li>
@@ -147,18 +159,6 @@ export default function VendorSidebar() {
             }
           >
             <Settings size={18} /> <span>Settings</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/customer/account/"
-            className={
-              isActiveLink(location.pathname, "/customer/account/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <User size={18} /> <span>Account</span>
           </Link>
         </li>
         <li>

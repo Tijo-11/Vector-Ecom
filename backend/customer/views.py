@@ -349,7 +349,11 @@ class WithdrawView(APIView):
 
         wallet = request.user.wallet
         try:
-            wallet.withdraw(Decimal(amount))
+            wallet.withdraw(
+                amount=Decimal(amount),
+                transaction_type='withdrawal',
+                description='Manual wallet withdrawal'
+            )
             return Response({
                 "status": "success",
                 "message": "Withdrawal successful (internal deduction)",

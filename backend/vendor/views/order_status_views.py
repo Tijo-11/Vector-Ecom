@@ -143,7 +143,25 @@ class HandleReturnRequestView(APIView):
         if action == 'approve':
             return_request.approve(note=note)
             log.info(f"Return request {pk} approved")
-            message = "Return request approved. Stock has been restored."
+            
+            # Credit refund to user's wallet
+            order_item = return_request.order_item
+            refund_amount = order_item.sub_total  # Refund the item subtotal (excludes shipping)
+            user = order_item.order.buyer
+            
+            if user and hasattr(user, 'wallet'):
+                user.wallet.deposit(
+                    amount=refund_amount,
+                    transaction_type='refund',
+                    description=f"Refund for returned item: {order_item.product.title}",
+                    related_order=order_item.order,
+                    related_order_item=order_item
+                )
+                log.info(f"Refund of ₹{refund_amount} credited to user {user.email}'s wallet")
+                message = f"Return request approved. ₹{refund_amount} refunded to customer's wallet. Stock has been restored."
+            else:
+                log.warning(f"Could not credit refund - user or wallet not found for order item {order_item.id}")
+                message = "Return request approved. Stock has been restored. (Note: Refund could not be processed - user wallet not found)"
         else:
             return_request.reject(note=note)
             log.info(f"Return request {pk} rejected")

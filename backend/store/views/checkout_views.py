@@ -522,7 +522,12 @@ class WalletPaymentView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             # Deduct from wallet
-            locked_wallet.withdraw(order_total)
+            locked_wallet.withdraw(
+                amount=order_total,
+                transaction_type='payment',
+                description=f"Payment for order #{locked_order.oid}",
+                related_order=locked_order
+            )
             logger.info(f"Deducted ₹{order_total} from wallet for user {user_id}")
 
             # Update order status
