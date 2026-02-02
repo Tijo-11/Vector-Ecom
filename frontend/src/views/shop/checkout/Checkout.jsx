@@ -247,16 +247,25 @@ function Checkout() {
 
                     {/* Method: COD */}
                     <div 
-                      onClick={() => setPaymentMethod("cod")}
+                      onClick={() => grandTotal <= 1000 && setPaymentMethod("cod")}
                       className={`cursor-pointer border-2 rounded-xl p-4 flex items-center gap-4 transition-all ${
-                         paymentMethod === "cod" ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+                         paymentMethod === "cod" 
+                         ? "border-blue-600 bg-blue-50" 
+                         : grandTotal > 1000 
+                            ? "border-gray-200 opacity-60 cursor-not-allowed bg-gray-50" 
+                            : "border-gray-200 hover:border-blue-300"
                       }`}
                     >
-                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "cod" ? "border-blue-600" : "border-gray-400"}`}>
+                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentMethod === "cod" ? "border-blue-600" : "border-gray-400"}`}>
                           {paymentMethod === "cod" && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
                        </div>
-                       <Truck className="w-6 h-6 text-green-600" />
-                       <span className="font-medium text-gray-900">Cash on Delivery</span>
+                       <Truck className={`w-6 h-6 shrink-0 ${grandTotal > 1000 ? "text-gray-400" : "text-green-600"}`} />
+                       <div className="flex flex-col">
+                          <span className={`font-medium ${grandTotal > 1000 ? "text-gray-500" : "text-gray-900"}`}>Cash on Delivery</span>
+                          {grandTotal > 1000 && (
+                              <span className="text-xs text-red-500 font-semibold">COD not available for orders &gt; ₹1000</span>
+                          )}
+                       </div>
                     </div>
                 </div>
 
@@ -284,14 +293,19 @@ function Checkout() {
 
                 {/* Action Buttons */}
                 <div className="mt-6">
-                   {paymentMethod === "razorpay" && <RazorpayButton order={order} />}
+                   {paymentMethod === "razorpay" && <RazorpayButton order={order} order_id={order_id} />}
                    {paymentMethod === "paypal" && <PaypalButton order={order} />}
                    {paymentMethod === "cod" && (
                       <button 
                          onClick={payWithCashOnDelivery}
-                         className="w-full bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 shadow-md transition-all"
+                         disabled={grandTotal > 1000}
+                         className={`w-full py-4 rounded-xl font-bold text-lg shadow-md transition-all ${
+                            grandTotal > 1000 
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
+                            : "bg-black text-white hover:bg-gray-800"
+                         }`}
                       >
-                         Confirm Order (COD)
+                         {grandTotal > 1000 ? "COD Unavailable" : "Confirm Order (COD)"}
                       </button>
                    )}
                    {paymentMethod === "wallet" && (

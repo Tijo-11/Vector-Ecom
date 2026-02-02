@@ -321,7 +321,7 @@ function PaymentSuccess() {
                   <ShoppingBag className="w-5 h-5" /> Continue Shopping
                </button>
                <button 
-                  onClick={() => navigate("/dashboard/orders")}
+                  onClick={() => navigate("/customer/orders/")}
                   className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition flex items-center gap-2"
                >
                   View My Orders <ArrowRight className="w-5 h-5" />

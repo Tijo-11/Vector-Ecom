@@ -65,7 +65,7 @@ function StoreHeader() {
               <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent group-hover:from-blue-700 group-hover:to-indigo-700 transition-all">
                 RetroRelics
               </span>
-              <span className="text-[10px] tracking-wider font-medium text-gray-500 group-hover:text-blue-600 transition-colors uppercase">
+              <span className="text--[10px] tracking-wider font-medium text-gray-500 group-hover:text-blue-600 transition-colors uppercase">
                 Shop stories, not just stuff
               </span>
             </Link>
@@ -135,6 +135,9 @@ function StoreHeader() {
                     <Link to="/vendor/settings/" className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600">
                       <Settings className="mr-3 h-4 w-4" /> Settings
                     </Link>
+                    <Link to="/logout" className="flex items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                      <LogOut className="mr-3 h-4 w-4" /> Logout
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -179,8 +182,8 @@ function StoreHeader() {
               </Link>
             )}
 
-            {/* User Account */}
-            {isLoggedIn ? (
+            {/* User Account - HIDDEN FOR VENDORS */}
+            {isLoggedIn && !isVendor ? (
               showPublicFeatures && (
                 <div className="relative" ref={accountRef}>
                   <button
@@ -215,10 +218,10 @@ function StoreHeader() {
                     </div>
                     
                     <div className="py-2">
-                      <Link to="/customer/account/" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                       <Link to="/customer/account/" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                         <User className="mr-3 h-4 w-4 text-gray-400 group-hover:text-blue-500" /> My Account
                       </Link>
-                      <Link to="/customer/orders/" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                       <Link to="/customer/orders/" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                         <Package className="mr-3 h-4 w-4 text-gray-400" /> My Orders
                       </Link>
                       <Link to="/customer/wishlist/" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
@@ -235,7 +238,10 @@ function StoreHeader() {
                   </div>
                 </div>
               )
-            ) : (
+            ) : null}
+
+            {/* Login/Signup (If not logged in) */}
+            {!isLoggedIn && (
               <div className="flex items-center gap-3 ml-4">
                 <Link
                   to="/login"
@@ -251,6 +257,16 @@ function StoreHeader() {
                 </Link>
               </div>
             )}
+            
+            {/* Vendor Profile Indicator (if logged in as vendor) */}
+            {isLoggedIn && isVendor && (
+                 <div className="flex items-center gap-3 ml-2 border-l border-gray-200 pl-4">
+                    <div className="h-9 w-9 rounded-full bg-gray-900 flex items-center justify-center text-white shadow-md text-sm font-bold ring-2 ring-gray-100">
+                       {(userProfile?.full_name?.[0] || user?.username?.[0] || "V").toUpperCase()}
+                    </div>
+                 </div>
+            )}
+            
           </div>
 
           {/* Mobile Menu Button */}
@@ -366,7 +382,7 @@ function StoreHeader() {
                 </div>
               )}
 
-              {isLoggedIn && !isAdmin && (
+              {isLoggedIn && !isAdmin && !isVendor && (
                 <div className="space-y-1">
                    <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-2">My Account</p>
                    <Link to="/customer/account/" className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors">
