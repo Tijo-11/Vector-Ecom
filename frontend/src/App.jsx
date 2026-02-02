@@ -66,6 +66,7 @@ const VendorRegister = lazy(() => import("./views/vendor/VendorRegister"));
 const AddProduct = lazy(() => import("./views/vendor/AddProduct"));
 const UpdateProduct = lazy(() => import("./views/vendor/UpdateProduct.jsx"));
 const Offers = lazy(() => import("./views/vendor/Offers.jsx"));
+const Wallet = lazy(() => import("./views/customer/Wallet.jsx"));
 
 const AdminDashboard = lazy(() => import("./views/admin/AdminDashboard.jsx"));
 const VendorManagement = lazy(
@@ -134,6 +135,16 @@ export default function App() {
                 element={
                   <Suspense fallback={<LoadingSpinner />}>
                     <CategoryProducts />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/customer/wallet/"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ProtectedRoute>
+                      <Wallet />
+                    </ProtectedRoute>
                   </Suspense>
                 }
               />

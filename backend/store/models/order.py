@@ -1,4 +1,4 @@
-# models.py/order.py (Kept fields but they will be set to 0 in views)
+# models.py/order.py 
 #Cart, CartOrder, CartOrderItem, CancelOrder, Coupon, CouponUsers, DeliveryCountries
 from django.db import models
 from django.utils.html import mark_safe

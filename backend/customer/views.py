@@ -1,23 +1,30 @@
 #Django Packages
 from django.db.models import Q
 import logging
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 # Restframework Packages
 from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from rest_framework.views import APIView
 
 # Serializers
 from userauth.serializers import ProfileSerializer
 from store.serializers import CartOrderSerializer, WishlistSerializer, NotificationSerializer
 
 # Models
-from userauth.models import Profile, User 
+from userauth.models import Profile, User , Wallet
 from store.models import Product, CartOrder, Wishlist, Notification
+
+import razorpay
+from decimal import Decimal
 
 # Setup logger
 logger = logging.getLogger(__name__)
+client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 
 class OrdersAPIView(generics.ListAPIView):
@@ -262,3 +269,92 @@ class CustomerUpdateView(generics.RetrieveUpdateAPIView):
         
         logger.info("=" * 50)
         return profile
+    
+#------Wallet views--------------
+class WalletView(APIView):
+    permission_classes = [IsAuthenticated,]
+    
+    def get(self, request, user_id):
+        if request.user.id != user_id:
+            return Response({"error": "Unauthorized"},status=status.HTTP_403_FORBIDDEN)
+        wallet = get_object_or_404(Wallet, user__id= user_id)#user is the related model
+        #Find a Wallet where the related User’s id equals user_id
+        return Response({'balance':str(wallet.balance),
+                        "currency": wallet.currency})
+        
+class DepositView(APIView):
+    permission_classes = [IsAuthenticated,]
+    
+    def post(self, request, user_id):
+        if request.user.id != user_id:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+        amount = request.data.get("amount")
+        if not amount or Decimal(amount) <=0:
+            return Response({'error':"Invalid amount"}, status = status.HTTP_400_BAD_REQUEST)
+        amount_in_paise = int(Decimal(amount)*100)
+        
+        order_data = {
+            'amount':amount_in_paise,
+            'currency': "INR",
+            "receipt": f"deposit_{request.user.id}"
+        }
+        order = client.order.create(order_data)
+        return Response({
+            "order_id": order["id"],
+            "amount": amount_in_paise,
+            "key": settings.RAZORPAY_KEY_ID  # Public key for frontend
+        })
+        
+class VerifyPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, user_id):
+        if request.user.id != user_id:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+        
+        razorpay_payment_id = request.data.get("razorpay_payment_id")
+        razorpay_order_id = request.data.get("razorpay_order_id")
+        razorpay_signature = request.data.get("razorpay_signature")
+        
+        if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
+            return Response({"error": "Missing payment data"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            client.utility.verify_payment_signature({
+                "razorpay_order_id": razorpay_order_id,
+                "razorpay_payment_id": razorpay_payment_id,
+                "razorpay_signature": razorpay_signature,
+            })
+        # Fetch amount from order
+            order = client.order.fetch(razorpay_order_id)
+            amount = Decimal(order["amount"]) / 100
+            wallet = request.user.wallet
+            wallet.deposit(amount)
+        
+            return Response({"status": "success", "message": "Wallet credited successfully"})
+        except razorpay.errors.SignatureVerificationError:
+            return Response({"error": "Payment verification failed"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class WithdrawView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        if request.user.id != user_id:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        amount = request.data.get("amount")
+        if not amount or Decimal(amount) <= 0:
+            return Response({"error": "Invalid amount"}, status=status.HTTP_400_BAD_REQUEST)
+
+        wallet = request.user.wallet
+        try:
+            wallet.withdraw(Decimal(amount))
+            return Response({
+                "status": "success",
+                "message": "Withdrawal successful (internal deduction)",
+                "new_balance": str(wallet.balance)
+            })
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            

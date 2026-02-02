@@ -15,6 +15,7 @@ const Sidebar = () => {
   const [orderCount, setOrderCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [walletBalance, setWalletBalance] = useState("0.00");
 
   // Early return for guest users or profile error
   if (!userData?.user_id || profileError) {
@@ -43,6 +44,10 @@ const Sidebar = () => {
           apiInstance.get(`customer/wishlist/${userData.user_id}/`),
           apiInstance.get(`customer/notifications/${userData.user_id}/`),
         ]);
+        const walletRes = await apiInstance.get(
+          `customer/wallet/${userData.user_id}/`,
+        );
+        setWalletBalance(walletRes.data.balance || "0.00");
 
         // Safe handling for paginated responses
         const getCount = (data) =>
@@ -119,6 +124,14 @@ const Sidebar = () => {
           </Link>
           <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
             {notificationCount}
+          </span>
+        </li>
+        <li className="flex justify-between items-center bg-white p-3 rounded shadow">
+          <Link to="/customer/wallet/" className="font-bold text-gray-800">
+            <i className="fas fa-wallet mr-2"></i> Wallet
+          </Link>
+          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+            ₹{walletBalance}
           </span>
         </li>
         <li className="flex justify-between items-center bg-white p-3 rounded shadow">

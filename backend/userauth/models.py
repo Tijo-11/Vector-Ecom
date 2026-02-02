@@ -5,6 +5,7 @@ from django.utils.html import mark_safe
 from django.core.validators import RegexValidator
 from django.utils.text import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
+from decimal import Decimal
 
 GENDER = (
     ("female", "Female"),
@@ -101,3 +102,46 @@ def save_user_profile(sender, instance, **kwargs):
 
 post_save.connect(create_user_profile, sender=User)
 post_save.connect(save_user_profile, sender=User)
+
+
+
+class Wallet(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='wallet')
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    currency = models.CharField(max_length=3, default='INR')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.balance} {self.currency}"
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive")
+        self.balance += Decimal(str(amount))
+        self.save()
+
+    def withdraw(self, amount):
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive")
+        if self.balance < Decimal(str(amount)):
+            raise ValueError("Insufficient balance")
+        self.balance -= Decimal(str(amount))
+        self.save()
+
+# === Wallet Signals  ===
+def create_user_wallet(sender, instance, created, **kwargs):
+    if created:
+        Wallet.objects.create(user=instance)
+
+def save_user_wallet(sender, instance, **kwargs):
+    try:
+        instance.wallet.save()
+    except Wallet.DoesNotExist:
+        Wallet.objects.create(user=instance)
+
+post_save.connect(create_user_wallet, sender=User)
+post_save.connect(save_user_wallet, sender=User)
