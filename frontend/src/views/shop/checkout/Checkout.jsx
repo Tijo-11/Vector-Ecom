@@ -6,13 +6,17 @@ import Swal from "sweetalert2";
 import RazorpayButton from "./Razorpay";
 import PaypalButton from "./Paypal";
 import log from "loglevel";
+import { useAuthStore } from "../../../store/auth";
 
 function Checkout() {
   const [order, setOrder] = useState({});
   const [couponCode, setCouponCode] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletLoading, setWalletLoading] = useState(false);
   const { order_id } = useParams();
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
 
   const fetchOrderData = async () => {
     try {
@@ -23,6 +27,20 @@ function Checkout() {
       log.error("Error fetching order:", error);
     } finally {
       setIsInitialLoading(false);
+    }
+  };
+
+  const fetchWalletBalance = async () => {
+    if (!user?.user_id) return;
+    try {
+      setWalletLoading(true);
+      const response = await apiInstance.get(`/customer/wallet/${user.user_id}/`);
+      setWalletBalance(parseFloat(response.data.balance) || 0);
+    } catch (error) {
+      log.error("Error fetching wallet:", error);
+      setWalletBalance(0);
+    } finally {
+      setWalletLoading(false);
     }
   };
 
@@ -43,6 +61,10 @@ function Checkout() {
   useEffect(() => {
     if (order_id) fetchOrderData();
   }, [order_id]);
+
+  useEffect(() => {
+    if (user?.user_id) fetchWalletBalance();
+  }, [user]);
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -125,13 +147,66 @@ function Checkout() {
             icon: response.data.icon || "success",
             title: response.data.message,
           });
-          navigate(`/payment-success/${order_id}`);
+          navigate(`/payments-success/${order_id}`);
         } catch (err) {
           Swal.fire({
             icon: "error",
             title: err.response?.data?.message || "Failed to place COD order",
           });
-          nat;
+        }
+      }
+    });
+  };
+
+  const handleWalletPayment = async () => {
+    if (!user?.user_id) {
+      Swal.fire({
+        icon: "warning",
+        title: "Please login to use wallet payment",
+      });
+      return;
+    }
+
+    const orderTotal = parseFloat(order.total || 0);
+    if (walletBalance < orderTotal) {
+      Swal.fire({
+        icon: "error",
+        title: "Insufficient Wallet Balance",
+        text: `Your wallet balance (₹${walletBalance.toFixed(2)}) is less than the order total (₹${orderTotal.toFixed(2)})`,
+      });
+      return;
+    }
+
+    Swal.fire({
+      title: "Confirm Wallet Payment",
+      html: `
+        <p>Order Total: <strong>₹${orderTotal.toFixed(2)}</strong></p>
+        <p>Wallet Balance: <strong>₹${walletBalance.toFixed(2)}</strong></p>
+        <p>Balance after payment: <strong>₹${(walletBalance - orderTotal).toFixed(2)}</strong></p>
+      `,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Pay with Wallet",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#8B5CF6",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        const formdata = new FormData();
+        formdata.append("order_oid", order_id);
+        formdata.append("user_id", user.user_id);
+        try {
+          const response = await apiInstance.post("wallet-payment/", formdata);
+          Swal.fire({
+            icon: response.data.icon || "success",
+            title: response.data.message,
+            text: `New wallet balance: ₹${response.data.new_balance}`,
+          });
+          navigate(`/payments-success/${order_id}`);
+        } catch (err) {
+          Swal.fire({
+            icon: "error",
+            title: err.response?.data?.message || "Failed to process wallet payment",
+          });
         }
       }
     });
@@ -360,6 +435,34 @@ function Checkout() {
           <div className="mt-6 space-y-4">
             <RazorpayButton order={order} order_id={order_id} />
             <PaypalButton order={order} order_id={order_id} />
+
+            {/* Wallet Payment Option */}
+            {user?.user_id && (
+              <>
+                <div className="border-t border-gray-300 my-4"></div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-medium text-purple-800">💰 Wallet Balance</span>
+                    <span className="font-bold text-purple-900">
+                      {walletLoading ? "Loading..." : `₹${walletBalance.toFixed(2)}`}
+                    </span>
+                  </div>
+                  {walletBalance >= parseFloat(order.total || 0) ? (
+                    <button
+                      onClick={handleWalletPayment}
+                      disabled={walletLoading}
+                      className="w-full bg-purple-600 text-white py-4 rounded-md font-bold uppercase hover:bg-purple-700 transition disabled:opacity-50"
+                    >
+                      Pay with Wallet
+                    </button>
+                  ) : (
+                    <p className="text-center text-sm text-purple-600">
+                      Insufficient balance. Add ₹{(parseFloat(order.total || 0) - walletBalance).toFixed(2)} more to use wallet.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
 
             {parseFloat(order.total || 0) < 1000 && (
               <>

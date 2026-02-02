@@ -302,9 +302,9 @@ class CartDetailView(generics.RetrieveAPIView):
             # shipping += item_shipping  # No longer summing item shipping
             # grand_total += item_total # Recalculate grand total at end
 
-        # Global Shipping Logic
-        if discounted_total < Decimal('70.00') and discounted_total > 0:
-            shipping = Decimal('2.99')
+        # Global Shipping Logic - ₹50 for orders below ₹500
+        if discounted_total < Decimal('500.00') and discounted_total > 0:
+            shipping = Decimal('50.00')
         else:
             shipping = Decimal('0.00')
 

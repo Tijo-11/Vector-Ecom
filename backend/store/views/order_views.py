@@ -154,13 +154,19 @@ class CreateOrderView(generics.CreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
+            # Calculate global shipping fee: ₹50 for orders below ₹500
+            if total_subtotal < Decimal('500.00') and total_subtotal > 0:
+                global_shipping = Decimal('50.00')
+            else:
+                global_shipping = Decimal('0.00')
+            
             order.sub_total = total_subtotal
-            order.shipping_amount = total_shipping
+            order.shipping_amount = global_shipping
             order.tax_fee = Decimal('0.00')
             order.service_fee = Decimal('0.00')
-            order.initial_total = total_initial_total
-            order.total = total_total
-            order.offer_saved = total_initial_total - total_total
+            order.initial_total = total_initial_total + global_shipping
+            order.total = total_subtotal + global_shipping
+            order.offer_saved = total_initial_total - total_subtotal
             order.coupon_saved = Decimal(0.00)
             order.saved = order.offer_saved
             order.save()

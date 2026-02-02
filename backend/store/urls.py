@@ -6,7 +6,7 @@ from .views.order_views import (
     CreateOrderView, CheckoutView, CouponAPIView, OrdersDetailAPIView,
     RemoveCouponAPIView, CODOrderConfirmView  # <-- Added COD view
 )
-from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView
+from .views.checkout_views import RazorpayCheckoutView, PaymentSuccessView, WalletPaymentView
 from .views.Review_views import ReviewListAPIView, SearchProductView, HasPurchasedView, ReviewDetailAPIView
 from .views.cancel_views import CancelOrderView, ReturnOrderItemView
 from .views.order_management_views import GuestOrderTrackingView
@@ -58,4 +58,7 @@ urlpatterns = [
 
     # Cash on Delivery confirmation
     path('cod-confirm/', CODOrderConfirmView.as_view(), name='cod-confirm'),
+
+    # Wallet payment
+    path('wallet-payment/', WalletPaymentView.as_view(), name='wallet-payment'),
 ]

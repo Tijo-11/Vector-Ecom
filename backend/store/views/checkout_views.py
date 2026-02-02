@@ -13,11 +13,13 @@ from django.template.loader import render_to_string
 from rest_framework.response import Response
 from rest_framework import generics,status
 from rest_framework.permissions import AllowAny
+from rest_framework.views import APIView
 # Serializers
 from store.serializers import CartOrderSerializer
 from userauth.tasks import send_async_email
 # Models
 from store.models import CartOrderItem,Notification, CartOrder, Cart
+from userauth.models import User, Wallet
 #other packages
 import time
 
@@ -433,3 +435,121 @@ class PayPalWebhookView(generics.CreateAPIView):
             except Exception as e:
                 logger.error(f"Error processing denied capture: {str(e)}")
         return Response(status=status.HTTP_200_OK)
+
+
+class WalletPaymentView(APIView):
+    """Handle payment using wallet balance."""
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        logger.info("Entering WalletPaymentView.post")
+        order_oid = request.data.get("order_oid")
+        user_id = request.data.get("user_id")
+
+        if not order_oid or not user_id:
+            return Response(
+                {"message": "Order ID and User ID are required", "icon": "error"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            order = CartOrder.objects.get(oid=order_oid)
+        except CartOrder.DoesNotExist:
+            logger.error(f"Order not found: {order_oid}")
+            return Response(
+                {"message": "Order not found", "icon": "error"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            logger.error(f"User not found: {user_id}")
+            return Response(
+                {"message": "User not found", "icon": "error"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            wallet = Wallet.objects.get(user=user)
+        except Wallet.DoesNotExist:
+            logger.error(f"Wallet not found for user: {user_id}")
+            return Response(
+                {"message": "Wallet not found", "icon": "error"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if order.payment_status == "paid":
+            logger.warning(f"Order {order_oid} already paid")
+            return Response(
+                {"message": "Order already paid", "icon": "warning"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if order.buyer and order.buyer != user:
+            logger.warning(f"Unauthorized wallet payment attempt for order {order_oid}")
+            return Response(
+                {"message": "Unauthorized", "icon": "error"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        order_total = order.total
+        if wallet.balance < order_total:
+            logger.info(f"Insufficient wallet balance. Required: {order_total}, Available: {wallet.balance}")
+            return Response({
+                "message": f"Insufficient wallet balance. Required: ₹{order_total}, Available: ₹{wallet.balance}",
+                "icon": "error"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        order_items = CartOrderItem.objects.filter(order=order)
+
+        with transaction.atomic():
+            # Lock the order and wallet
+            locked_order = CartOrder.objects.select_for_update().get(oid=order_oid)
+            locked_wallet = Wallet.objects.select_for_update().get(user=user)
+
+            # Double-check payment status and balance
+            if locked_order.payment_status == "paid":
+                return Response(
+                    {"message": "Order already paid", "icon": "warning"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if locked_wallet.balance < order_total:
+                return Response({
+                    "message": f"Insufficient wallet balance. Required: ₹{order_total}, Available: ₹{locked_wallet.balance}",
+                    "icon": "error"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Deduct from wallet
+            locked_wallet.withdraw(order_total)
+            logger.info(f"Deducted ₹{order_total} from wallet for user {user_id}")
+
+            # Update order status
+            locked_order.payment_status = "paid"
+            locked_order.order_status = "Confirmed"
+
+            # Mark coupons as used
+            if locked_order.buyer and locked_order.coupons.exists():
+                for coupon in locked_order.coupons.all():
+                    coupon.used_by.add(locked_order.buyer)
+                    logger.info(f"Marked coupon {coupon.code} as used by user {locked_order.buyer.id}")
+
+            locked_order.save()
+
+            # Deactivate cart and deduct stock
+            deactivate_cart(locked_order.oid, locked_order.buyer_id if locked_order.buyer else None)
+            deduct_stock(order_items)
+
+        # Send notifications outside transaction
+        try:
+            send_all_notifications(locked_order, order_items)
+        except Exception as e:
+            logger.error(f"Notification failed: {str(e)}")
+
+        logger.info(f"Wallet payment successful for order {order_oid}")
+        return Response({
+            "message": "Payment successful! Amount deducted from wallet.",
+            "icon": "success",
+            "new_balance": str(locked_wallet.balance)
+        }, status=status.HTTP_200_OK)

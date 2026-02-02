@@ -88,6 +88,8 @@ PAYMENT_METHOD = (
     ("Paypal", "Paypal"),
     ("Credit/Debit Card", "Credit/Debit Card"),
     ("Wallet Points", "Wallet Points"),
+    ("Wallet", "Wallet"),
+    ("Cash on Delivery", "Cash on Delivery"),
 )
 
 RATING = (
