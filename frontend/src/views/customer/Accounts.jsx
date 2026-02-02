@@ -3,6 +3,8 @@ import UseProfileData from "../../plugin/UserProfileData";
 import { useState, useEffect } from "react";
 import apiInstance from "../../utils/axios";
 import Swal from "sweetalert2";
+import { Copy, Gift, Ticket, ArrowRight, Loader2, Sparkles, ShoppingBag, MapPin, Settings as SettingsIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Account() {
   const userProfile = UseProfileData();
@@ -12,7 +14,7 @@ export default function Account() {
 
   const Toast = Swal.mixin({
     toast: true,
-    position: "top",
+    position: "top-end",
     showConfirmButton: false,
     timer: 3000,
     timerProgressBar: true,
@@ -31,8 +33,14 @@ export default function Account() {
   };
 
   const copyLink = () => {
+    if (!referralLink) return;
     navigator.clipboard.writeText(referralLink);
-    Toast.fire({ icon: "success", title: "Link copied to clipboard!" });
+    Toast.fire({ icon: "success", title: "Copied to clipboard!" });
+  };
+
+  const copyCoupon = (code) => {
+    navigator.clipboard.writeText(code);
+    Toast.fire({ icon: "success", title: "Code copied!" });
   };
 
   useEffect(() => {
@@ -42,228 +50,175 @@ export default function Account() {
         setCoupons(response.data);
       } catch (error) {
         console.error("Error fetching coupons:", error);
-        Toast.fire({ icon: "error", title: "Failed to load coupons" });
       }
     };
     fetchCoupons();
   }, []);
 
   return (
-    <div>
-      <main className="mt-5 mb-[170px]">
-        <div className="max-w-7xl mx-auto px-4">
-          <section>
-            <div className="flex flex-col lg:flex-row gap-4">
-              <Sidebar />
-              <div className="w-full lg:w-3/4 mt-1">
-                <main className="mb-5">
-                  <div className="px-4">
-                    {/* Main Account Info Section */}
-                    <section>
-                      <div className="rounded shadow p-4 bg-white">
-                        <h2 className="text-xl font-semibold mb-2">
-                          Hi {userProfile?.full_name},
-                        </h2>
-                        <div className="mb-4">
-                          From your account dashboard, you can easily check &
-                          view your{" "}
-                          <a href="/orders" className="text-blue-600 underline">
-                            orders
-                          </a>
-                          , manage your{" "}
-                          <a
-                            href="/address"
-                            className="text-blue-600 underline"
-                          >
-                            shipping address
-                          </a>
-                          ,{" "}
-                          <a
-                            href="/settings"
-                            className="text-blue-600 underline"
-                          >
-                            change password
-                          </a>{" "}
-                          and{" "}
-                          <a
-                            href="/profile"
-                            className="text-blue-600 underline"
-                          >
-                            edit account
-                          </a>{" "}
-                          information.
-                        </div>
-                      </div>
-                    </section>
+    <div className="bg-gray-50 min-h-screen py-8 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          <Sidebar />
+          
+          <div className="flex-1">
+             {/* Welcome Hero */}
+             <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-3xl p-8 text-white shadow-lg mb-8 relative overflow-hidden">
+                <div className="relative z-10">
+                   <h1 className="text-3xl font-bold mb-2">Welcome back, {userProfile?.full_name?.split(' ')[0]}!</h1>
+                   <p className="text-blue-100 max-w-xl">
+                      Manage your profile, check orders, and earn rewards all in one place.
+                   </p>
+                </div>
+                <div className="absolute right-0 top-0 opacity-10">
+                   <Sparkles size={200} />
+                </div>
+             </div>
 
-                    {/* Referral Program Section */}
-                    <section className="mt-6">
-                      <div className="rounded shadow p-4 bg-white">
-                        <h2 className="text-xl font-semibold mb-4">
-                          Referral Program
-                        </h2>
-                        <p className="mb-4 text-gray-700">
-                          Share your referral link with friends and earn coupons
-                          when they sign up!
-                        </p>
-                        <button
-                          onClick={generateReferral}
-                          disabled={isGenerating}
-                          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 transition"
-                        >
-                          {isGenerating
-                            ? "Generating..."
-                            : "Generate Referral Link"}
-                        </button>
-                        {referralLink && (
-                          <div className="mt-4 flex items-center">
-                            <input
-                              type="text"
-                              value={referralLink}
-                              readOnly
-                              className="flex-1 px-4 py-2 border rounded-l bg-gray-50"
-                            />
-                            <button
-                              onClick={copyLink}
-                              className="bg-green-600 text-white px-4 py-2 rounded-r hover:bg-green-700 transition"
+             {/* Quick Actions Grid */}
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <Link to="/customer/orders/" className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                   <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <ShoppingBag size={24} />
+                   </div>
+                   <h3 className="font-bold text-gray-900">Your Orders</h3>
+                   <p className="text-sm text-gray-500 mt-1">Track, return, or buy again</p>
+                </Link>
+
+                <Link to="/customer/addresses/" className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                   <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                      <MapPin size={24} />
+                   </div>
+                   <h3 className="font-bold text-gray-900">Addresses</h3>
+                   <p className="text-sm text-gray-500 mt-1">Manage shipping locations</p>
+                </Link>
+
+                <Link to="/customer/settings/" className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                   <div className="w-12 h-12 bg-gray-50 text-gray-600 rounded-xl flex items-center justify-center mb-4 group-hover:bg-gray-800 group-hover:text-white transition-colors">
+                      <SettingsIcon size={24} />
+                   </div>
+                   <h3 className="font-bold text-gray-900">Account Settings</h3>
+                   <p className="text-sm text-gray-500 mt-1">Password, email, login</p>
+                </Link>
+             </div>
+
+             {/* Referral Section */}
+             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                
+                {/* Generate Link */}
+                <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
+                   <div className="flex items-center gap-3 mb-6">
+                      <div className="bg-purple-100 p-2 rounded-lg text-purple-600">
+                         <Gift size={24} />
+                      </div>
+                      <h2 className="text-xl font-bold text-gray-900">Refer & Earn</h2>
+                   </div>
+                   
+                   <p className="text-gray-600 mb-6 font-medium">
+                      Invite friends and earn exclusive discount coupons when they sign up!
+                   </p>
+
+                   <div className="space-y-4">
+                      {referralLink ? (
+                         <div className="flex bg-gray-50 border border-gray-200 rounded-xl p-2 pl-4 items-center">
+                            <span className="flex-1 truncate text-gray-600 font-mono text-sm">{referralLink}</span>
+                            <button 
+                               onClick={copyLink}
+                               className="bg-purple-600 hover:bg-purple-700 text-white p-2.5 rounded-lg transition-colors"
                             >
-                              Copy
+                               <Copy size={18} />
                             </button>
-                          </div>
-                        )}
+                         </div>
+                      ) : (
+                         <button 
+                            onClick={generateReferral} 
+                            disabled={isGenerating}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3.5 rounded-xl font-bold shadow-md shadow-purple-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                         >
+                            {isGenerating ? <Loader2 className="animate-spin" /> : "Generate Unique Link"}
+                         </button>
+                      )}
+                      
+                      <div className="bg-purple-50 rounded-lg p-4 text-xs text-purple-800">
+                         * Coupons are valid for 30 days from issuance. Terms apply.
                       </div>
-                    </section>
+                   </div>
+                </div>
 
-                    {/* My Referral Coupons Section */}
-                    <section className="mt-6">
-                      <div className="rounded shadow p-4 bg-white">
-                        <h2 className="text-xl font-semibold mb-4">
-                          My Referral Coupons
-                        </h2>
-                        {coupons.length > 0 ? (
-                          <ul className="space-y-3">
-                            {coupons.map((coupon) => (
-                              <li
-                                key={coupon.id}
-                                className={`p-4 border rounded-lg transition ${
-                                  coupon.is_used_by_me
-                                    ? "bg-gray-100 border-gray-300"
-                                    : "bg-green-50 border-green-300"
-                                }`}
-                              >
-                                <div className="flex justify-between items-center">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <strong className="text-gray-700">
-                                        Code:
-                                      </strong>
-                                      <span className="font-mono text-lg font-bold text-gray-900">
-                                        {coupon.code}
-                                      </span>
-                                      {coupon.is_used_by_me ? (
-                                        <span className="text-xs bg-gray-500 text-white px-2 py-1 rounded-full font-semibold">
-                                          USED
-                                        </span>
-                                      ) : (
-                                        <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full font-semibold">
-                                          AVAILABLE
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-sm text-gray-700 mb-1">
-                                      <strong>Discount:</strong>{" "}
-                                      {coupon.discount}% off
-                                    </div>
-                                    {coupon.is_used_by_me ? (
-                                      <div className="text-sm text-gray-600 flex items-center gap-1">
-                                        <svg
-                                          className="w-4 h-4 text-gray-500"
-                                          fill="currentColor"
-                                          viewBox="0 0 20 20"
-                                        >
-                                          <path
-                                            fillRule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clipRule="evenodd"
-                                          />
-                                        </svg>
-                                        You have already used this coupon
-                                      </div>
-                                    ) : (
-                                      <div className="text-sm text-green-700 flex items-center gap-1">
-                                        <svg
-                                          className="w-4 h-4 text-green-600"
-                                          fill="currentColor"
-                                          viewBox="0 0 20 20"
-                                        >
-                                          <path
-                                            fillRule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 011.414-1.414L9 10.586l2.293-2.293a1 1 0 011.414 1.414z"
-                                            clipRule="evenodd"
-                                          />
-                                        </svg>
-                                        Ready to use on your next order
-                                      </div>
-                                    )}
-                                  </div>
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(
-                                        coupon.code
-                                      );
-                                      Toast.fire({
-                                        icon: "success",
-                                        title: "Coupon code copied!",
-                                      });
-                                    }}
-                                    disabled={coupon.is_used_by_me}
-                                    className={`px-4 py-2 rounded font-semibold transition ${
-                                      coupon.is_used_by_me
-                                        ? "bg-gray-400 text-gray-700 cursor-not-allowed"
-                                        : "bg-blue-500 text-white hover:bg-blue-600"
-                                    }`}
-                                  >
-                                    {coupon.is_used_by_me
-                                      ? "Used"
-                                      : "Copy Code"}
-                                  </button>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <div className="text-center py-8">
-                            <svg
-                              className="w-16 h-16 mx-auto text-gray-400 mb-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-                              />
-                            </svg>
-                            <p className="text-gray-600 text-lg font-medium mb-2">
-                              No referral coupons yet
-                            </p>
-                            <p className="text-gray-500 text-sm">
-                              Start referring friends to earn exclusive discount
-                              coupons!
-                            </p>
-                          </div>
-                        )}
+                {/* Coupons List */}
+                <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
+                   <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                         <div className="bg-green-100 p-2 rounded-lg text-green-600">
+                            <Ticket size={24} />
+                         </div>
+                         <h2 className="text-xl font-bold text-gray-900">My Coupons</h2>
                       </div>
-                    </section>
-                  </div>
-                </main>
-              </div>
-            </div>
-          </section>
+                      <span className="text-xs font-bold bg-gray-100 px-2 py-1 rounded-full text-gray-600">{coupons.length} Available</span>
+                   </div>
+
+                   {coupons.length > 0 ? (
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                         {coupons.map((coupon) => (
+                            <div key={coupon.id} className={`p-4 rounded-xl border-2 transition-all group ${
+                               coupon.is_used_by_me 
+                               ? "bg-gray-50 border-gray-200 opacity-60" 
+                               : "bg-white border-green-100 hover:border-green-300 shadow-sm"
+                            }`}>
+                               <div className="flex justify-between items-start">
+                                  <div>
+                                     <div className="flex items-center gap-2">
+                                        <span className="font-mono text-lg font-bold text-gray-800 tracking-wider">
+                                           {coupon.code}
+                                        </span>
+                                     </div>
+                                     <div className="text-green-600 font-bold text-sm mt-1">
+                                        {coupon.discount}% Discount
+                                     </div>
+                                  </div>
+                                  
+                                  {coupon.is_used_by_me ? (
+                                     <span className="px-3 py-1 bg-gray-200 text-gray-500 rounded-lg text-xs font-bold uppercase">Used</span>
+                                  ) : (
+                                     <button 
+                                        onClick={() => copyCoupon(coupon.code)}
+                                        className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition"
+                                        title="Copy Code"
+                                     >
+                                        <Copy size={18} />
+                                     </button>
+                                  )}
+                               </div>
+                               {!coupon.is_used_by_me && (
+                                   <div className="mt-3 text-xs text-gray-400 flex items-center gap-1">
+                                      <Sparkles size={12} className="text-green-500" /> Ready to use
+                                   </div>
+                               )}
+                            </div>
+                         ))}
+                      </div>
+                   ) : (
+                      <div className="text-center py-10 border-2 border-dashed border-gray-100 rounded-xl">
+                         <Ticket size={48} className="mx-auto text-gray-200 mb-2" />
+                         <p className="text-gray-500 font-medium">No coupons yet</p>
+                         <p className="text-xs text-gray-400 mt-1">Start referring to earn rewards!</p>
+                      </div>
+                   )}
+                </div>
+
+             </div>
+
+          </div>
         </div>
-      </main>
+      </div>
+      
+      <style>{`
+         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+      `}</style>
     </div>
   );
 }

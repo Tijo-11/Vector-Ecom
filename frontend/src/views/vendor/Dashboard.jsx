@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
 import {
-  Grid,
+  Package,
   ShoppingCart,
-  Users,
   IndianRupee,
-  Eye,
-  Edit,
-  Trash,
-  LineChart,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+  Filter
 } from "lucide-react";
 import VendorSidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
-import { Bar } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 import { Chart } from "chart.js/auto";
 import zoomPlugin from "chartjs-plugin-zoom";
 import "chartjs-adapter-date-fns";
@@ -50,31 +49,22 @@ export default function Dashboard() {
     fetchChartData();
   }, []);
 
-  // Create maps: month (1-12) → value
+  // --- Chart Prep (Similar Logic) ---
   const orderMap = new Map();
-  orderChartData.forEach((item) => {
-    orderMap.set(item.month, item.orders || 0);
-  });
-
+  orderChartData.forEach((item) => orderMap.set(item.month, item.orders || 0));
   const productMap = new Map();
-  productsChartData.forEach((item) => {
-    // Assuming the field is "orders" or "count" – adjust if backend uses different key
-    productMap.set(item.month, item.orders || item.count || 0);
-  });
-
-  // Generate last 12 months (oldest → newest)
-  const today = new Date();
-  today.setDate(1); // Start of current month (Jan 2026)
+  productsChartData.forEach((item) => productMap.set(item.month, item.orders || item.count || 0));
 
   const chartLabels = [];
   const orderValues = [];
   const productValues = [];
+  const today = new Date();
+  today.setDate(1);
 
   for (let i = 11; i >= 0; i--) {
     const date = new Date(today);
     date.setMonth(today.getMonth() - i);
     chartLabels.push(date);
-
     const monthNum = date.getMonth() + 1;
     orderValues.push(orderMap.get(monthNum) || 0);
     productValues.push(productMap.get(monthNum) || 0);
@@ -83,139 +73,133 @@ export default function Dashboard() {
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+       mode: 'index',
+       intersect: false,
+    },
     scales: {
       x: {
         type: "time",
-        time: {
-          unit: "month",
-          displayFormats: {
-            month: "MMM yy", // Jan 26, Dec 25, etc.
-          },
-        },
-        title: {
-          display: true,
-          text: "Timeline",
-        },
-        ticks: {
-          color: "#555",
-        },
+        time: { unit: "month", displayFormats: { month: "MMM" } },
+        grid: { display: false },
+        ticks: { color: "#9ca3af" }
       },
       y: {
         beginAtZero: true,
-        ticks: {
-          stepSize: 1,
-          color: "#555",
-        },
+        grid: { color: "#f3f4f6" },
+        ticks: { stepSize: 1, color: "#9ca3af" }
       },
     },
     plugins: {
-      zoom: {
-        zoom: {
-          wheel: { enabled: true },
-          pinch: { enabled: true },
-          mode: "x",
-        },
-        pan: {
-          enabled: true,
-          mode: "x",
-        },
-      },
-      tooltip: {
-        callbacks: {
-          title: (tooltipItems) => {
-            return format(tooltipItems[0].parsed.x, "MMM yy");
-          },
-        },
-      },
-    },
+       legend: { displayed: false },
+    }
   };
 
   const order_data = {
     labels: chartLabels,
-    datasets: [
-      {
-        label: "Total Orders",
+    datasets: [{
+        label: "Orders",
         data: orderValues,
-        backgroundColor: "rgba(59, 130, 246, 0.6)", // blue-ish
-        borderColor: "rgb(59, 130, 246)",
-        borderWidth: 1,
-      },
-    ],
+        backgroundColor: "rgba(59, 130, 246, 0.8)",
+        borderRadius: 4,
+        barThickness: 20,
+    }],
   };
 
   const product_data = {
     labels: chartLabels,
-    datasets: [
-      {
-        label: "Total Products",
+    datasets: [{
+        label: "Products Added",
         data: productValues,
-        backgroundColor: "rgba(34, 197, 94, 0.6)", // green-ish
-        borderColor: "rgb(34, 197, 94)",
-        borderWidth: 1,
-      },
-    ],
+        borderColor: "rgb(16, 185, 129)",
+        backgroundColor: "rgba(16, 185, 129, 0.1)",
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+    }],
   };
 
+  const StatCard = ({ title, value, icon: Icon, color, trend }) => (
+     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between hover:shadow-md transition-shadow">
+        <div>
+           <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
+           <h3 className="text-2xl font-bold text-gray-900 mt-2">{value}</h3>
+           <div className={`flex items-center gap-1 mt-2 text-xs font-semibold ${trend === 'up' ? 'text-green-600' : 'text-gray-400'}`}>
+               {trend === 'up' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+               <span>{trend === 'up' ? '+2.5% vs last month' : 'No change'}</span> {/* Mock Trend */}
+           </div>
+        </div>
+        <div className={`p-3 rounded-xl ${color}`}>
+           <Icon size={24} className="text-white" />
+        </div>
+     </div>
+  );
+
   return (
-    <div className="flex h-full">
-      <VendorSidebar />
-      <div className="flex-1 p-6 overflow-y-auto">
-        {/* Stats cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-          <div className="bg-green-500 text-white rounded-2xl shadow-lg p-6 flex flex-col">
-            <div className="self-end opacity-30">
-              <Grid size={64} />
-            </div>
-            <h6 className="uppercase tracking-wider text-sm font-medium">
-              Products
-            </h6>
-            <h1 className="text-4xl font-bold mt-2">{stats?.products || 0}</h1>
+    <div className="flex bg-gray-50 min-h-screen">
+       {/* Sidebar Spacer - Adjust width to match sidebar */}
+       <div className="w-64 hidden lg:block shrink-0" />
+       <VendorSidebar /> 
+       
+       <div className="flex-1 p-8 lg:p-12 overflow-x-hidden">
+          
+          <div className="flex justify-between items-end mb-8">
+             <div>
+                <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
+                <p className="text-gray-500 mt-1">Here is what's happening with your store today.</p>
+             </div>
+             <button className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition">
+                <Calendar size={16} /> Last 30 Days <Filter size={14} />
+             </button>
           </div>
 
-          <div className="bg-red-500 text-white rounded-2xl shadow-lg p-6 flex flex-col">
-            <div className="self-end opacity-30">
-              <ShoppingCart size={64} />
-            </div>
-            <h6 className="uppercase tracking-wider text-sm font-medium">
-              Orders
-            </h6>
-            <h1 className="text-4xl font-bold mt-2">{stats?.orders || 0}</h1>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+             <StatCard 
+                 title="Total Products" 
+                 value={stats?.products || 0} 
+                 icon={Package} 
+                 color="bg-blue-500" 
+                 trend="up" 
+             />
+             <StatCard 
+                 title="Total Orders" 
+                 value={stats?.orders || 0} 
+                 icon={ShoppingCart} 
+                 color="bg-orange-500" 
+                 trend="up" 
+             />
+             <StatCard 
+                 title="Total Revenue" 
+                 value={`₹${stats?.revenue || 0}`} 
+                 icon={IndianRupee} 
+                 color="bg-green-500" 
+                 trend="up" 
+             />
           </div>
 
-          <div className="bg-yellow-500 text-white rounded-2xl shadow-lg p-6 flex flex-col">
-            <div className="self-end opacity-30">
-              <IndianRupee size={64} />
-            </div>
-            <h6 className="uppercase tracking-wider text-sm font-medium">
-              Revenue
-            </h6>
-            <h1 className="text-4xl font-bold mt-2">₹{stats?.revenue || 0}</h1>
-          </div>
-        </div>
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+             
+             {/* Order Bar Chart */}
+             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="font-bold text-gray-900 mb-6">Order Volume</h3>
+                <div className="h-[300px]">
+                   <Bar data={order_data} options={commonOptions} />
+                </div>
+             </div>
 
-        <hr className="my-8 border-gray-300" />
+             {/* Product Line Chart */}
+             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="font-bold text-gray-900 mb-6">Product Growth</h3>
+                <div className="h-[300px]">
+                   <Line data={product_data} options={commonOptions} />
+                </div>
+             </div>
 
-        {/* Chart Section */}
-        <div className="space-y-12">
-          <div>
-            <h2 className="text-xl font-semibold text-center mb-6">
-              Order Analytics
-            </h2>
-            <div className="bg-white rounded-2xl shadow-lg p-6 h-[400px]">
-              <Bar data={order_data} options={commonOptions} />
-            </div>
           </div>
-
-          <div>
-            <h2 className="text-xl font-semibold text-center mb-6">
-              Product Analytics
-            </h2>
-            <div className="bg-white rounded-2xl shadow-lg p-6 h-[400px]">
-              <Bar data={product_data} options={commonOptions} />
-            </div>
-          </div>
-        </div>
-      </div>
+       </div>
     </div>
   );
 }

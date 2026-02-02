@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import CheckoutForm from "../cart/CheckoutForm"; // Adjust path as needed
-import CartSummary from "../cart/CartSummary"; // Adjust path as needed
+import CheckoutForm from "../cart/CheckoutForm"; 
+import CartSummary from "../cart/CartSummary"; 
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
 import cartID from "../ProductDetail/cartId";
 import log from "loglevel";
 import { Link } from "react-router-dom";
+import { MapPin, ArrowLeft } from "lucide-react";
 
 function Address() {
   const [cart, setCart] = useState([]);
@@ -20,55 +21,67 @@ function Address() {
           ? `/cart-list/${cartId}/${userId}/`
           : `/cart-list/${cartId}/`;
         const response = await apiInstance.get(url);
-        setCart(response.data || []);
-        log.debug(response.data);
+        // Handle paginated responses
+        const data = Array.isArray(response.data) ? response.data : response.data.results || [];
+        setCart(data);
       } catch (error) {
         log.error("Error fetching cart items:", error);
       }
     };
 
     if (cart_id && cart_id !== "undefined") {
-      if (user && user.user_id) {
-        fetchCartData(cart_id, user.user_id);
-      } else {
-        fetchCartData(cart_id, null);
-      }
+        fetchCartData(cart_id, user?.user_id);
     }
   }, [cart_id, user]);
 
   return (
-    <div className="container mx-auto mt-10">
-      <div className="sm:flex shadow-md my-10">
+    <div className="bg-gray-50 min-h-screen py-10 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Header */}
+        <div className="mb-8 flex items-center gap-4">
+           <Link to="/cart" className="p-2 rounded-full hover:bg-gray-200 text-gray-600 transition-colors">
+              <ArrowLeft className="w-6 h-6" />
+           </Link>
+           <h1 className="text-3xl font-extrabold text-gray-900">Shipping Information</h1>
+        </div>
+
         {cart.length < 1 ? (
-          <div className="w-full sm:w-3/4 bg-white px-10 py-10">
-            <h1 className="font-semibold text-2xl">Your cart is empty</h1>
-            <Link
-              to="/"
-              className="flex font-semibold text-indigo-600 text-sm mt-10"
-            >
-              <svg
-                className="fill-current mr-2 text-indigo-600 w-4"
-                viewBox="0 0 448 512"
-              >
-                <path d="M134.059 296H436c6.627 0 12-5.373 12-12v-56c0-6.627-5.373-12-12-12H134.059v-46.059c0-21.382-25.851-32.09-40.971-16.971L7.029 239.029c-9.373 9.373-9.373 24.569 0 33.941l86.059 86.059c15.119 15.119 40.971 4.411 40.971-16.971V296z" />
-              </svg>
-              Continue Shopping
-            </Link>
-          </div>
+           <div className="bg-white rounded-2xl shadow-sm p-16 text-center max-w-2xl mx-auto">
+             <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
+             <Link to="/products" className="text-blue-600 hover:underline">Start Shopping</Link>
+           </div>
         ) : (
-          <>
-            <div className="w-full sm:w-3/4 bg-white px-10 py-10">
-              <div className="flex justify-between border-b pb-8">
-                <h1 className="font-semibold text-2xl">Shipping Address</h1>
+          <div className="flex flex-col lg:flex-row gap-8">
+            
+            {/* Left Column: Checkout Form */}
+            <div className="w-full lg:w-2/3">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                    <div className="bg-blue-50 p-2 rounded-full">
+                       <MapPin className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                       <h2 className="text-xl font-bold text-gray-900">Delivery Address</h2>
+                       <p className="text-sm text-gray-500">Where should we send your order?</p>
+                    </div>
+                 </div>
+                 
+                 <CheckoutForm />
               </div>
-              <CheckoutForm />
             </div>
-            <CartSummary
-              cartItems={cart}
-              setCartTotal={setCartTotal}
-              isCartPage={false}
-            />
-          </>
+
+            {/* Right Column: Order Summary */}
+            <div className="w-full lg:w-1/3">
+               <div className="lg:sticky lg:top-24">
+                  <CartSummary
+                    cartItems={cart}
+                    setCartTotal={setCartTotal}
+                  />
+               </div>
+            </div>
+            
+          </div>
         )}
       </div>
     </div>

@@ -1,4 +1,3 @@
-// CartItem.jsx
 import React, { useState, useEffect, useRef, useContext } from "react";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
@@ -8,6 +7,8 @@ import { toast } from "../../../utils/toast";
 import { CartContext } from "../../../plugin/Context";
 import Swal from "sweetalert2";
 import log from "loglevel";
+import { Trash2, Plus, Minus, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 function CartItem({ cartItems, setCart, setCartTotal }) {
   const [productQuantities, setProductQuantities] = useState({});
@@ -18,7 +19,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
   const currentAddress = UserCountry();
   const [cartCount, setCartCount] = useContext(CartContext);
 
-  // Shared fetch function that handles both paginated and non-paginated responses
   const fetchCartItems = async () => {
     if (!cart_id || cart_id === "undefined") return [];
 
@@ -31,7 +31,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       while (nextUrl) {
         const response = await apiInstance.get(nextUrl);
         const data = response.data;
-
         let pageItems = [];
 
         if (Array.isArray(data)) {
@@ -41,10 +40,8 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
           pageItems = data.results || [];
           nextUrl = data.next || null;
         }
-
         items = [...items, ...pageItems];
       }
-
       return items;
     } catch (error) {
       log.error("Error fetching cart items in CartItem:", error);
@@ -74,11 +71,10 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     if (!cartItem) return;
 
     const currentStock = cartItem.product.stock_qty || 0;
-
     if (qty > currentStock) {
       Swal.fire({
         icon: "warning",
-        title: "Cannot Update",
+        title: "Max Quantity Reached",
         text: `Only ${currentStock} unit(s) available.`,
         confirmButtonColor: "#2563eb",
       });
@@ -87,7 +83,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     }
 
     setUpdatingItems((prev) => ({ ...prev, [product_id]: true }));
-
     const previousCount = cartCount;
     setCartCount((prev) => prev + qty - cartItem.qty);
 
@@ -96,7 +91,6 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       user: user?.user_id || null,
       qty,
       price,
-      // shipping_amount: 0, // Handled by backend
       color: color || null,
       size: size || null,
       cart_id,
@@ -107,49 +101,29 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
       const response = await apiInstance.post("/cart/", formData);
 
       if (response.data.message && response.data.message.includes("adjusted")) {
-        toast.fire({
-          icon: "warning",
-          title: "Quantity Adjusted",
-          text: "Stock changed – updated to maximum available.",
-        });
+        toast.fire({ icon: "warning", title: "Quantity Adjusted", text: "Stock limit applied." });
       } else {
         toast.fire({ icon: "success", title: "Cart updated" });
       }
 
-      // Properly fetch fresh cart items (handles pagination)
       const updatedItems = await fetchCartItems();
       setCart(updatedItems);
 
-      const totalQty = updatedItems.reduce(
-        (sum, item) => sum + (item.qty || 0),
-        0,
-      );
+      const totalQty = updatedItems.reduce((sum, item) => sum + (item.qty || 0), 0);
       setCartCount(totalQty);
 
-      // Fetch totals with fallback for empty cart (404)
-      let totals = {
-        itemCount: updatedItems.length || 0,
-        mrp_total: 0,
-        discounted_total: 0,
-        shipping: 0,
-        grand_total: 0,
-      };
+      // Fetch Totals
       try {
         const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
-        totals = {
-          ...totals,
-          mrp_total: totalResponse.data?.mrp_total || 0,
-          discounted_total: totalResponse.data?.discounted_total || 0,
-          shipping: totalResponse.data?.shipping || 0,
-          grand_total: totalResponse.data?.grand_total || 0,
-        };
-      } catch (totalError) {
-        log.warn(
-          "Failed to fetch cart totals (likely empty cart):",
-          totalError,
-        );
+        setCartTotal({
+            mrp_total: totalResponse.data?.mrp_total || 0,
+            discounted_total: totalResponse.data?.discounted_total || 0,
+            shipping: totalResponse.data?.shipping || 0,
+            grand_total: totalResponse.data?.grand_total || 0,
+        });
+      } catch (err) {
+        log.warn("Total fetch failed", err);
       }
-      setCartTotal(totals);
     } catch (error) {
       log.error("Error updating cart:", error);
       setCartCount(previousCount);
@@ -159,289 +133,133 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
     }
   };
 
-  const handleIncrease = (product_id) => {
-    const currentQty = Number(productQuantities[product_id] || 1);
+  const handleQtyChange = (product_id, newQty) => {
     const cartItem = cartItems.find((c) => c.product.id === product_id);
     const maxStock = cartItem?.product.stock_qty || 0;
 
-    if (currentQty + 1 > maxStock) {
-      Swal.fire({
-        icon: "warning",
-        title: "Stock Limit Exceeded",
-        text: `Only ${maxStock} unit(s) available for "${cartItem.product.title}".`,
-        confirmButtonColor: "#2563eb",
-        timer: 5000,
-        timerProgressBar: true,
-      });
-      return;
+    if (newQty < 1) return;
+    if (newQty > maxStock) {
+         Swal.fire({
+            icon: "warning",
+            title: "Max Quantity Reached",
+            text: `Only ${maxStock} available.`,
+            confirmButtonColor: "#2563eb",
+         });
+         return;
     }
 
-    const newQty = currentQty + 1;
     setProductQuantities((prev) => ({ ...prev, [product_id]: newQty }));
 
-    if (debounceTimeouts.current[product_id])
-      clearTimeout(debounceTimeouts.current[product_id]);
+    if (debounceTimeouts.current[product_id]) clearTimeout(debounceTimeouts.current[product_id]);
+    
     debounceTimeouts.current[product_id] = setTimeout(() => {
-      updateCart(
-        product_id,
-        newQty,
-        cartItem.product.price,
-        cartItem.color,
-        cartItem.size,
-      );
+      updateCart(product_id, newQty, cartItem.product.price, cartItem.color, cartItem.size);
     }, 600);
   };
 
-  const handleDecrease = (product_id) => {
-    const currentQty = Number(productQuantities[product_id] || 1);
-    if (currentQty <= 1) return;
-
-    const newQty = currentQty - 1;
-    setProductQuantities((prev) => ({ ...prev, [product_id]: newQty }));
-
-    const cartItem = cartItems.find((c) => c.product.id === product_id);
-    if (debounceTimeouts.current[product_id])
-      clearTimeout(debounceTimeouts.current[product_id]);
-    debounceTimeouts.current[product_id] = setTimeout(() => {
-      updateCart(
-        product_id,
-        newQty,
-        cartItem.product.price,
-        cartItem.color,
-        cartItem.size,
-      );
-    }, 600);
-  };
-
-  const handleInputChange = (e, product_id) => {
-    let value = e.target.value.replace(/[^0-9]/g, "");
-    if (value === "") {
-      setProductQuantities((prev) => ({ ...prev, [product_id]: "" }));
-      return;
-    }
-
-    const num = Number(value);
-    const cartItem = cartItems.find((c) => c.product.id === product_id);
-    const maxStock = cartItem?.product.stock_qty || 0;
-
-    if (num > maxStock) {
-      Swal.fire({
-        icon: "warning",
-        title: "Stock Limit Exceeded",
-        text: `Only ${maxStock} unit(s) available. Quantity capped.`,
-        confirmButtonColor: "#2563eb",
-        timer: 5000,
-        timerProgressBar: true,
-      });
-      value = maxStock.toString();
-    } else if (num < 1) {
-      value = "1";
-    }
-
-    setProductQuantities((prev) => ({ ...prev, [product_id]: value }));
-
-    if (debounceTimeouts.current[product_id])
-      clearTimeout(debounceTimeouts.current[product_id]);
-    debounceTimeouts.current[product_id] = setTimeout(() => {
-      updateCart(
-        product_id,
-        value || 1,
-        cartItem.product.price,
-        cartItem.color,
-        cartItem.size,
-      );
-    }, 600);
-  };
-
-  // Fully working remove button
   const handleDeleteCartItem = async (item_id) => {
     const previousCart = [...cartItems];
     const previousCount = cartCount;
-
     const deleteUrl = user?.user_id
-      ? `/cart-delete/${cart_id}/${item_id}/${user.user_id}/`
-      : `/cart-delete/${cart_id}/${item_id}/`;
+        ? `/cart-delete/${cart_id}/${item_id}/${user.user_id}/`
+        : `/cart-delete/${cart_id}/${item_id}/`;
 
     try {
-      // Delete the item
       await apiInstance.delete(deleteUrl);
-
-      // Properly fetch fresh cart items (handles pagination)
       const updatedItems = await fetchCartItems();
       setCart(updatedItems);
+      setCartCount(updatedItems.reduce((sum, item) => sum + (item.qty || 0), 0));
 
-      // Update global cart count
-      const totalQty = updatedItems.reduce(
-        (sum, item) => sum + (item.qty || 0),
-        0,
-      );
-      setCartCount(totalQty);
+      const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
+      setCartTotal(totalResponse.data);
 
-      // Update totals with fallback
-      let totals = {
-        itemCount: updatedItems.length || 0,
-        mrp_total: 0,
-        discounted_total: 0,
-        shipping: 0,
-        grand_total: 0,
-      };
-      try {
-        const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
-        totals = {
-          ...totals,
-          mrp_total: totalResponse.data?.mrp_total || 0,
-          discounted_total: totalResponse.data?.discounted_total || 0,
-          shipping: totalResponse.data?.shipping || 0,
-          grand_total: totalResponse.data?.grand_total || 0,
-        };
-      } catch (totalError) {
-        log.warn(
-          "Failed to fetch totals after delete (likely empty cart):",
-          totalError,
-        );
-      }
-      setCartTotal(totals);
-
-      toast.fire({ icon: "success", title: "Item removed from cart" });
+      toast.fire({ icon: "success", title: "Item removed" });
     } catch (error) {
-      log.error("Error removing cart item:", error);
-      // Rollback on failure
       setCart(previousCart);
       setCartCount(previousCount);
-      toast.fire({ icon: "error", title: "Failed to remove item" });
+      toast.fire({ icon: "error", title: "Deletion failed" });
     }
   };
 
   return (
     <>
       {cartItems.map((c) => {
-        const currentQty = productQuantities[c.product.id] ?? c.qty;
-        const maxStock = c.product.stock_qty || 0;
-        const atMax = Number(currentQty) >= maxStock;
-
-        const originalPrice = parseFloat(c.product?.price ?? 0);
+        const currentQty =  productQuantities[c.product.id] ?? c.qty;
         const discount = parseFloat(c.product?.offer_discount ?? 0);
-        const offerPrice =
-          discount > 0 ? originalPrice * (1 - discount / 100) : originalPrice;
+        const originalPrice = parseFloat(c.product?.price ?? 0);
+        const finalPrice = discount > 0 ? originalPrice * (1 - discount / 100) : originalPrice;
+        const itemTotal = finalPrice * currentQty;
+        const isUpdating = updatingItems[c.product.id];
+
+        // Ensure we check for null/undefined before accessing strings
+        const colorName = c.color?.name || c.color || "No Color"; // Handle object or string
+        const sizeName = c.size?.name || c.size || "No Size";     // Handle object or string
+
+        // Simplify display if backend returns "no color" / "no size" string literals
+        const hasColor = colorName && colorName.toLowerCase() !== "no color";
+        const hasSize = sizeName && sizeName.toLowerCase() !== "no size";
 
         return (
-          <div
-            key={c.id}
-            className="md:flex items-stretch py-8 md:py-10 lg:py-8 border-t border-gray-50"
-          >
-            <div className="md:w-4/12 2xl:w-1/4 w-full">
-              <img
-                src={c.product.image}
-                alt={c.product.title}
-                className="h-full object-cover md:block hidden rounded-[10px]"
-              />
-              <img
-                src={c.product.image}
-                alt={c.product.title}
-                className="md:hidden w-full h-full object-cover rounded-[10px]"
-              />
-            </div>
-            <div className="md:pl-3 md:w-8/12 2xl:w-3/4 flex flex-col justify-center">
-              <p className="text-xs leading-3 text-gray-800 md:pt-0 pt-4">
-                {c.product.sku || "N/A"}
-              </p>
-              <div className="flex items-center justify-between w-full">
-                <p className="text-base font-black leading-none text-gray-800">
-                  {c.product.title}
-                </p>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center border border-gray-300 rounded-md">
-                      <button
-                        onClick={() => handleDecrease(c.product.id)}
-                        disabled={
-                          Number(currentQty) <= 1 || updatingItems[c.product.id]
-                        }
-                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="text"
-                        value={currentQty}
-                        onChange={(e) => handleInputChange(e, c.product.id)}
-                        disabled={updatingItems[c.product.id]}
-                        className="w-16 text-center py-2 focus:outline-none disabled:bg-gray-100"
-                      />
-                      <button
-                        onClick={() => handleIncrease(c.product.id)}
-                        disabled={atMax || updatingItems[c.product.id]}
-                        title={atMax ? "Stock limit reached" : ""}
-                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
-                      >
-                        +
-                      </button>
-                    </div>
-                    {updatingItems[c.product.id] && (
-                      <div className="flex items-center text-blue-600 text-sm">
-                        <svg
-                          className="animate-spin h-4 w-4 mr-1"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            fill="none"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          />
-                        </svg>
-                        Updating...
-                      </div>
-                    )}
+          <div key={c.id} className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-4 p-6 hover:bg-gray-50 transition-colors group items-center">
+            
+            {/* Product Info (Col 6) */}
+            <div className="md:col-span-6 flex gap-4">
+               <div className="w-20 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                  <Link to={`/product/${c.product.slug}`}>
+                    <img src={c.product.image} alt={c.product.title} className="w-full h-full object-cover" />
+                  </Link>
+               </div>
+               <div className="flex flex-col justify-center">
+                  <Link to={`/product/${c.product.slug}`} className="font-bold text-gray-900 line-clamp-2 hover:text-blue-600 transition-colors mb-1">
+                      {c.product.title}
+                  </Link>
+                  <div className="text-sm text-gray-500 mb-2">
+                     {hasSize && <span className="mr-3 bg-gray-100 px-2 py-0.5 rounded text-xs">Size: {sizeName}</span>}
+                     {hasColor && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">Color: {colorName}</span>}
                   </div>
-                  {atMax && (
-                    <p className="text-orange-600 text-xs font-medium mt-1">
-                      Maximum stock reached ({maxStock} available)
-                    </p>
-                  )}
-                </div>
-              </div>
-              {c.size && c.size !== "no size" && (
-                <p className="text-xs leading-3 text-gray-600 py-4">
-                  Size: {c.size}
-                </p>
-              )}
-              {c.color && c.color !== "no color" && (
-                <p className="text-xs leading-3 text-gray-600 py-4">
-                  Color: {c.color}
-                </p>
-              )}
-              <div className="flex items-center justify-between pt-5">
-                <div className="flex items-center">
-                  <p
-                    onClick={() => handleDeleteCartItem(c.id)}
-                    className="text-xs leading-3 underline text-red-500 hover:text-red-600 cursor-pointer"
-                  >
-                    Remove
-                  </p>
-                </div>
-                <p className="text-base font-black leading-none text-gray-800">
-                  {discount > 0 ? (
-                    <>
-                      <span className="line-through text-gray-500 mr-2">
-                        ₹{originalPrice.toFixed(2)}
-                      </span>
-                      ₹{offerPrice.toFixed(2)}
-                    </>
-                  ) : (
-                    `₹${originalPrice.toFixed(2)}`
-                  )}
-                </p>
-              </div>
+                  <div className="md:hidden font-bold text-gray-900">₹{finalPrice.toFixed(2)}</div>
+               </div>
             </div>
+
+            {/* Quantity (Col 3) */}
+            <div className="md:col-span-3 flex items-center justify-between md:justify-center">
+                <span className="md:hidden text-sm font-medium text-gray-500">Qty:</span>
+                <div className="flex items-center border border-gray-200 rounded-lg bg-white">
+                    <button 
+                       onClick={() => handleQtyChange(c.product.id, Number(currentQty) - 1)}
+                       disabled={Number(currentQty) <= 1 || isUpdating}
+                       className="p-2 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors rounded-l-lg"
+                    >
+                       <Minus className="w-4 h-4" />
+                    </button>
+                    <div className="w-10 text-center font-semibold text-gray-700 text-sm relative">
+                        {isUpdating ? <Loader2 className="w-4 h-4 animate-spin mx-auto text-blue-500" /> : currentQty}
+                    </div>
+                    <button 
+                       onClick={() => handleQtyChange(c.product.id, Number(currentQty) + 1)}
+                       disabled={isUpdating}
+                       className="p-2 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors rounded-r-lg"
+                    >
+                       <Plus className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+
+            {/* Total & Remove (Col 3) */}
+            <div className="md:col-span-3 flex items-center justify-between md:justify-end gap-6">
+                 <div className="hidden md:block font-bold text-gray-900 text-base">
+                    ₹{itemTotal.toFixed(2)}
+                 </div>
+                 <button 
+                    onClick={() => handleDeleteCartItem(c.id)}
+                    className="flex items-center gap-1 text-red-500 hover:text-red-700 text-sm font-medium p-2 hover:bg-red-50 rounded-lg transition-all"
+                    title="Remove item"
+                 >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="md:hidden">Remove</span>
+                 </button>
+            </div>
+
           </div>
         );
       })}

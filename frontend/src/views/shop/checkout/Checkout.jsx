@@ -1,4 +1,3 @@
-// Checkout.jsx (Consistent display: Original Subtotal, Offers Saved, Coupon Saved, Shipping, Grand Total)
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import apiInstance from "../../../utils/axios";
@@ -7,6 +6,7 @@ import RazorpayButton from "./Razorpay";
 import PaypalButton from "./Paypal";
 import log from "loglevel";
 import { useAuthStore } from "../../../store/auth";
+import { CreditCard, Wallet, Truck, Tag, CheckCircle2, ShieldCheck, MapPin, Mail, Phone } from "lucide-react";
 
 function Checkout() {
   const [order, setOrder] = useState({});
@@ -18,13 +18,17 @@ function Checkout() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
 
+  // States for selected payment method
+  const [paymentMethod, setPaymentMethod] = useState("razorpay"); // Default
+
   const fetchOrderData = async () => {
     try {
       const response = await apiInstance.get(`/checkout/${order_id}/`);
-      console.log("=== FULL ORDER RESPONSE ===", response.data);
       setOrder(response.data || {});
     } catch (error) {
       log.error("Error fetching order:", error);
+      Swal.fire({ icon: "error", title: "Order Not Found", text: "Redirecting to cart..." });
+      navigate("/cart");
     } finally {
       setIsInitialLoading(false);
     }
@@ -47,14 +51,9 @@ function Checkout() {
   const refreshOrderData = async () => {
     try {
       const response = await apiInstance.get(`/checkout/${order_id}/`);
-      console.log("=== REFRESH ORDER RESPONSE ===", response.data);
       setOrder(response.data || {});
     } catch (error) {
       log.error("Error refreshing order:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Failed to refresh order details",
-      });
     }
   };
 
@@ -68,10 +67,7 @@ function Checkout() {
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Please enter a coupon code",
-      });
+      Swal.fire({ icon: "warning", title: "Please enter a coupon code" });
       return;
     }
     const formdata = new FormData();
@@ -82,404 +78,319 @@ function Checkout() {
       Swal.fire({
         icon: response.data.icon,
         title: response.data.message,
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000
       });
       if (response.data.icon === "success") {
         setCouponCode("");
         await refreshOrderData();
       }
     } catch (err) {
-      if (err.response) {
-        Swal.fire({
-          icon: err.response.data.icon || "error",
-          title: err.response.data.message || "An error occurred",
-        });
-      } else {
-        log.error(err);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to apply coupon",
-        });
-      }
+      const msg = err.response?.data?.message || "Failed to apply coupon";
+      Swal.fire({ icon: "error", title: msg });
     }
   };
 
   const removeCoupon = async () => {
-    const formdata = new FormData();
-    formdata.append("order_oid", order_id);
     try {
-      const response = await apiInstance.post("coupon/remove/", formdata);
-      await refreshOrderData();
+      const formdata = new FormData();
+      formdata.append("order_oid", order_id);
+      await apiInstance.post("coupon/remove/", formdata);
       Swal.fire({
-        icon: response.data.icon,
-        title: response.data.message,
+          icon: "success", 
+          title: "Coupon Removed",
+          toast: true,
+          position: 'top-end', 
+          showConfirmButton: false, 
+          timer: 1500
       });
+      refreshOrderData();
     } catch (err) {
-      if (err.response) {
-        Swal.fire({
-          icon: err.response.data.icon || "error",
-          title: err.response.data.message || "An error occurred",
-        });
-      } else {
-        log.error(err);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to remove coupon",
-        });
-      }
+      Swal.fire({ icon: "error", title: "Failed to remove coupon" });
     }
   };
 
-  const handleCOD = async () => {
-    Swal.fire({
-      title: "Confirm Cash on Delivery",
-      text: "You will pay in cash when the order is delivered.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, place order",
-      cancelButtonText: "Cancel",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        const formdata = new FormData();
-        formdata.append("order_oid", order_id);
-        try {
-          const response = await apiInstance.post("cod-confirm/", formdata);
-          Swal.fire({
-            icon: response.data.icon || "success",
-            title: response.data.message,
-          });
-          navigate(`/payments-success/${order_id}`);
-        } catch (err) {
-          Swal.fire({
-            icon: "error",
-            title: err.response?.data?.message || "Failed to place COD order",
-          });
-        }
-      }
-    });
+  const payWithCashOnDelivery = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("order_oid", order_id);
+      await apiInstance.post("/cod-confirm/", formData);
+      navigate(`/payments-success/${order_id}/?payment_method=COD`);
+    } catch (error) {
+      log.error("COD Error:", error);
+      Swal.fire({ icon: "error", title: "Failed to confirm COD order." });
+    }
   };
 
-  const handleWalletPayment = async () => {
-    if (!user?.user_id) {
-      Swal.fire({
-        icon: "warning",
-        title: "Please login to use wallet payment",
-      });
-      return;
+  const payWithWallet = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("order_oid", order_id);
+      await apiInstance.post("/wallet-payment/", formData);
+      navigate(`/payments-success/${order_id}/?payment_method=Wallet`);
+    } catch (error) {
+      log.error("Wallet Payment Error:", error);
+       Swal.fire({
+         icon: "error",
+         title: "Payment Failed",
+         text: error.response?.data?.error || "Insufficient balance or invalid transaction."
+       });
     }
-
-    const orderTotal = parseFloat(order.total || 0);
-    if (walletBalance < orderTotal) {
-      Swal.fire({
-        icon: "error",
-        title: "Insufficient Wallet Balance",
-        text: `Your wallet balance (₹${walletBalance.toFixed(2)}) is less than the order total (₹${orderTotal.toFixed(2)})`,
-      });
-      return;
-    }
-
-    Swal.fire({
-      title: "Confirm Wallet Payment",
-      html: `
-        <p>Order Total: <strong>₹${orderTotal.toFixed(2)}</strong></p>
-        <p>Wallet Balance: <strong>₹${walletBalance.toFixed(2)}</strong></p>
-        <p>Balance after payment: <strong>₹${(walletBalance - orderTotal).toFixed(2)}</strong></p>
-      `,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Pay with Wallet",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#8B5CF6",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        const formdata = new FormData();
-        formdata.append("order_oid", order_id);
-        formdata.append("user_id", user.user_id);
-        try {
-          const response = await apiInstance.post("wallet-payment/", formdata);
-          Swal.fire({
-            icon: response.data.icon || "success",
-            title: response.data.message,
-            text: `New wallet balance: ₹${response.data.new_balance}`,
-          });
-          navigate(`/payments-success/${order_id}`);
-        } catch (err) {
-          Swal.fire({
-            icon: "error",
-            title: err.response?.data?.message || "Failed to process wallet payment",
-          });
-        }
-      }
-    });
   };
-
-  // Coupon detection logic
-  const isCouponApplied = (() => {
-    if (parseFloat(order.coupon_saved || 0) > 0) return true;
-    if (order.orderitem?.some((item) => parseFloat(item.coupon_saved || 0) > 0))
-      return true;
-    if (
-      order.orderitem?.some(
-        (item) =>
-          item.coupon && Array.isArray(item.coupon) && item.coupon.length > 0,
-      )
-    )
-      return true;
-    return false;
-  })();
-
-  // Calculate original subtotal
-  const originalSubTotal =
-    order.orderitem?.reduce((acc, item) => acc + item.price * item.qty, 0) || 0;
 
   if (isInitialLoading) {
     return (
-      <div className="container mx-auto mt-10 px-4">
-        <div className="flex justify-center items-center h-64">
-          <p className="text-lg">Loading order details...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+        <p className="text-gray-500 font-medium">Loading checkout details...</p>
       </div>
     );
   }
 
+  // --- Display Prep ---
+  // Ensure we treat fields as numbers
+  const subTotal = Number(order.initial_total) || 0; 
+  // If `initial_total` is the raw subtotal before ANY discounts.
+  // If backend sets initial_total same as sub_total, we use that.
+  
+  const discountAmount = Number(order.offer_saved || 0) + Number(order.coupon_saved || 0);
+  const tax = Number(order.tax_fee) || 0;
+  const shipping = Number(order.shipping_amount) || 0;
+  // If "saved" includes offer_saved, we might need logic. assuming structure from CartSummary view is similar.
+  // Actually, usually `total` is grand total.
+  const grandTotal = Number(order.total) || 0;
+
   return (
-    <div className="container mx-auto mt-10 px-4">
-      <div className="flex flex-col lg:flex-row gap-6 my-10">
-        {/* Left side */}
-        <div className="w-full lg:w-2/3 bg-white rounded-lg shadow-md px-6 py-8 sm:px-10 sm:py-10">
-          <div className="flex justify-between border-b pb-6 mb-6">
-            <h1 className="font-semibold text-2xl">Checkout</h1>
-            <span className="text-sm text-gray-600">Order: {order_id}</span>
-          </div>
-          {/* Shipping */}
-          <div className="mb-8">
-            <h2 className="font-semibold text-xl mb-4 flex items-center">
-              <span className="mr-2">📦</span> Shipping Information
-            </h2>
-            <div className="bg-gray-50 p-5 rounded-lg space-y-2 border">
-              <p>
-                <span className="font-medium">Name:</span>{" "}
-                {order.full_name || "N/A"}
-              </p>
-              <p>
-                <span className="font-medium">Email:</span>{" "}
-                {order.email || "N/A"}
-              </p>
-              <p>
-                <span className="font-medium">Phone:</span>{" "}
-                {order.mobile || "N/A"}
-              </p>
-              <p>
-                <span className="font-medium">Address:</span>{" "}
-                {order.address || "N/A"}
-              </p>
-              <p>
-                <span className="font-medium">City:</span> {order.city || "N/A"}
-                , {order.state || "N/A"} {order.postal_code || ""}
-              </p>
-              <p>
-                <span className="font-medium">Country:</span>{" "}
-                {order.country || "N/A"}
-              </p>
-            </div>
-          </div>
-          {/* Items */}
-          <div>
-            <h2 className="font-semibold text-xl mb-4 flex items-center">
-              <span className="mr-2">🛍️</span> Order Items
-            </h2>
-            <div className="space-y-4">
-              {order.orderitem?.length ? (
-                order.orderitem.map((item, index) => (
-                  <div
-                    key={index}
-                    className="border border-gray-200 p-5 rounded-lg bg-white"
-                  >
-                    <div className="flex justify-between">
-                      <p className="font-medium text-lg">
-                        {item.product?.title}
-                      </p>
-                      <span className="text-sm text-gray-500">#{item.oid}</span>
+    <div className="bg-gray-50 min-h-screen py-10 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Secure Checkout</h1>
+
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          {/* Left Column: Details & Payment */}
+          <div className="w-full lg:w-2/3 space-y-8">
+             
+             {/* 1. Review Address (Read Only) */}
+             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <MapPin className="text-blue-600 w-5 h-5" />
+                    Shipping Address
+                 </h2>
+                 <div className="pl-7 text-sm text-gray-600 space-y-1">
+                    <p className="font-semibold text-gray-900 text-base">{order.full_name}</p>
+                    <p>{order.address}, {order.city}</p>
+                    <p>{order.state}, {order.country} - {order.postal_code}</p>
+                    <div className="flex gap-4 mt-2 text-xs">
+                        <span className="flex items-center gap-1"><Mail className="w-3 h-3"/> {order.email}</span>
+                        <span className="flex items-center gap-1"><Phone className="w-3 h-3"/> {order.mobile}</span>
                     </div>
-                    <div className="mt-4 pt-4 border-t space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Price</span>
-                        <span>₹{parseFloat(item.price).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Quantity</span>
-                        <span>{item.qty}</span>
-                      </div>
-                      {item.offer_saved && parseFloat(item.offer_saved) > 0 && (
-                        <div className="flex justify-between text-sm bg-green-50 p-2 rounded mt-2">
-                          <span className="text-green-700 font-medium">
-                            🎉 Offer Discount
-                          </span>
-                          <span className="font-semibold text-green-700">
-                            -₹{parseFloat(item.offer_saved).toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                      {item.coupon_saved &&
-                        parseFloat(item.coupon_saved) > 0 && (
-                          <div className="flex justify-between text-sm bg-blue-50 p-2 rounded">
-                            <span className="text-blue-700 font-medium">
-                              🎟️ Coupon Discount
-                            </span>
-                            <span className="font-semibold text-blue-700">
-                              -₹{parseFloat(item.coupon_saved).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      <div className="flex justify-between font-semibold text-base pt-3 border-t mt-3">
-                        <span>Total for this item</span>
-                        <span>
-                          ₹
-                          {(
-                            parseFloat(item.price) * item.qty -
-                            parseFloat(item.offer_saved || 0) -
-                            parseFloat(item.coupon_saved || 0)
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-8">No items found</p>
-              )}
-            </div>
-          </div>
-        </div>
+                 </div>
+             </div>
 
-        {/* Right side */}
-        <div className="w-full lg:w-1/3 bg-white rounded-lg shadow-md px-6 py-8 sm:px-8 sm:py-10 h-fit sticky top-4">
-          <h2 className="font-semibold text-xl mb-4">Order Summary</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span>Original Subtotal</span>
-              <span>₹{originalSubTotal.toFixed(2)}</span>
-            </div>
-            {order.offer_saved > 0 && (
-              <div className="flex justify-between text-green-700">
-                <span>Offers Saved</span>
-                <span>-₹{parseFloat(order.offer_saved).toFixed(2)}</span>
-              </div>
-            )}
-            {order.coupon_saved > 0 && (
-              <div className="flex justify-between text-blue-700">
-                <span>Coupon Saved</span>
-                <span>-₹{parseFloat(order.coupon_saved).toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span>Subtotal (after discounts)</span>
-              <span>₹{parseFloat(order.sub_total || 0).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Shipping</span>
-              <span>
-                {order.shipping_amount && order.shipping_amount > 0
-                  ? `₹${parseFloat(order.shipping_amount).toFixed(2)}`
-                  : "Free"}
-              </span>
-            </div>
-            <hr />
-            <div className="flex justify-between font-bold text-lg">
-              <span>Grand Total</span>
-              <span>₹{parseFloat(order.total || 0).toFixed(2)}</span>
-            </div>
-          </div>
+             {/* 2. Payment Method */}
+             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <CheckCircle2 className="text-blue-600 w-5 h-5" />
+                    Payment Method
+                </h2>
 
-          {/* Coupon Section */}
-          <div className="mt-6 bg-gray-50 p-5 rounded-lg border border-gray-200">
-            <label className="font-semibold block mb-3 text-sm uppercase text-gray-700">
-              Promo Code
-            </label>
-            {!isCouponApplied ? (
-              <>
-                <input
-                  type="text"
-                  placeholder="Enter coupon code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  className="p-3 text-sm w-full border rounded-md mb-3"
-                />
-                <button
-                  onClick={applyCoupon}
-                  className="w-full bg-blue-600 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-blue-700"
-                >
-                  Apply Coupon
-                </button>
-              </>
-            ) : (
-              <div className="text-center">
-                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 mb-3">
-                  <p className="text-green-800 font-bold text-lg">
-                    ✓ Coupon Applied!
-                  </p>
-                  <p className="text-green-700 text-sm mt-1">
-                    You saved ₹{parseFloat(order.coupon_saved || 0).toFixed(2)}
-                  </p>
-                </div>
-                <button
-                  onClick={removeCoupon}
-                  className="w-full bg-red-500 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-red-600"
-                >
-                  Remove Coupon
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Payment Options */}
-          <div className="mt-6 space-y-4">
-            <RazorpayButton order={order} order_id={order_id} />
-            <PaypalButton order={order} order_id={order_id} />
-
-            {/* Wallet Payment Option */}
-            {user?.user_id && (
-              <>
-                <div className="border-t border-gray-300 my-4"></div>
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-medium text-purple-800">💰 Wallet Balance</span>
-                    <span className="font-bold text-purple-900">
-                      {walletLoading ? "Loading..." : `₹${walletBalance.toFixed(2)}`}
-                    </span>
-                  </div>
-                  {walletBalance >= parseFloat(order.total || 0) ? (
-                    <button
-                      onClick={handleWalletPayment}
-                      disabled={walletLoading}
-                      className="w-full bg-purple-600 text-white py-4 rounded-md font-bold uppercase hover:bg-purple-700 transition disabled:opacity-50"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Method: Razorpay */}
+                    <div 
+                      onClick={() => setPaymentMethod("razorpay")}
+                      className={`cursor-pointer border-2 rounded-xl p-4 flex items-center gap-4 transition-all ${
+                         paymentMethod === "razorpay" ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+                      }`}
                     >
-                      Pay with Wallet
-                    </button>
-                  ) : (
-                    <p className="text-center text-sm text-purple-600">
-                      Insufficient balance. Add ₹{(parseFloat(order.total || 0) - walletBalance).toFixed(2)} more to use wallet.
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
+                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "razorpay" ? "border-blue-600" : "border-gray-400"}`}>
+                          {paymentMethod === "razorpay" && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                       </div>
+                       <CreditCard className="w-6 h-6 text-gray-700" />
+                       <span className="font-medium text-gray-900">Debit / Credit Card</span>
+                    </div>
 
-            {parseFloat(order.total || 0) < 1000 && (
-              <>
-                <div className="border-t border-gray-300 my-4"></div>
-                <button
-                  onClick={handleCOD}
-                  className="w-full bg-green-600 text-white py-4 rounded-md font-bold uppercase hover:bg-green-700 transition"
-                >
-                  Place Order - Cash on Delivery
-                </button>
-                <p className="text-center text-xs text-gray-500">
-                  Pay when you receive your order (Available only for orders
-                  below ₹1000)
-                </p>
-              </>
-            )}
+                    {/* Method: PayPal */}
+                    <div 
+                      onClick={() => setPaymentMethod("paypal")}
+                      className={`cursor-pointer border-2 rounded-xl p-4 flex items-center gap-4 transition-all ${
+                         paymentMethod === "paypal" ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+                      }`}
+                    >
+                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "paypal" ? "border-blue-600" : "border-gray-400"}`}>
+                          {paymentMethod === "paypal" && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                       </div>
+                       <Wallet className="w-6 h-6 text-blue-800" />
+                       <span className="font-medium text-gray-900">PayPal</span>
+                    </div>
+
+                    {/* Method: Wallet */}
+                    <div 
+                       onClick={() => setPaymentMethod("wallet")}
+                       className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col gap-2 transition-all relative overflow-hidden ${
+                         paymentMethod === "wallet" ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+                       }`}
+                    >
+                       <div className="flex items-center gap-4">
+                           <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "wallet" ? "border-blue-600" : "border-gray-400"}`}>
+                              {paymentMethod === "wallet" && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                           </div>
+                           <Wallet className="w-6 h-6 text-purple-600" />
+                           <span className="font-medium text-gray-900">My Wallet</span>
+                       </div>
+                       <p className="pl-9 text-xs text-gray-500">
+                          Balance: {walletLoading ? "..." : `₹${walletBalance.toFixed(2)}`}
+                       </p>
+                    </div>
+
+                    {/* Method: COD */}
+                    <div 
+                      onClick={() => setPaymentMethod("cod")}
+                      className={`cursor-pointer border-2 rounded-xl p-4 flex items-center gap-4 transition-all ${
+                         paymentMethod === "cod" ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+                      }`}
+                    >
+                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "cod" ? "border-blue-600" : "border-gray-400"}`}>
+                          {paymentMethod === "cod" && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                       </div>
+                       <Truck className="w-6 h-6 text-green-600" />
+                       <span className="font-medium text-gray-900">Cash on Delivery</span>
+                    </div>
+                </div>
+
+                {/* Info Box for Selection */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm md:text-base">
+                    {paymentMethod === "razorpay" && (
+                       <p className="text-gray-600">You will be redirected to Razorpay securely to complete your purchase using Credit/Debit card, UPI, or Netbanking.</p>
+                    )}
+                    {paymentMethod === "paypal" && (
+                       <p className="text-gray-600">Pay easily and securely with your PayPal account. You will be redirected to PayPal.</p>
+                    )}
+                    {paymentMethod === "wallet" && (
+                       <div className="flex justify-between items-center">
+                          <p className={`font-medium ${walletBalance >= grandTotal ? "text-green-700" : "text-red-600"}`}>
+                             {walletBalance >= grandTotal 
+                                ? "Sufficient balance. Pay instantly." 
+                                : `Insufficient balance. You need ₹${(grandTotal - walletBalance).toFixed(2)} more.`}
+                          </p>
+                       </div>
+                    )}
+                    {paymentMethod === "cod" && (
+                       <p className="text-gray-600">Pay in cash when your order arrives at your doorstep.</p>
+                    )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="mt-6">
+                   {paymentMethod === "razorpay" && <RazorpayButton order={order} />}
+                   {paymentMethod === "paypal" && <PaypalButton order={order} />}
+                   {paymentMethod === "cod" && (
+                      <button 
+                         onClick={payWithCashOnDelivery}
+                         className="w-full bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 shadow-md transition-all"
+                      >
+                         Confirm Order (COD)
+                      </button>
+                   )}
+                   {paymentMethod === "wallet" && (
+                      <button 
+                         onClick={payWithWallet}
+                         disabled={walletBalance < grandTotal}
+                         className={`w-full py-4 rounded-xl font-bold text-lg shadow-md transition-all ${
+                            walletBalance >= grandTotal
+                            ? "bg-purple-600 text-white hover:bg-purple-700" 
+                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                         }`}
+                      >
+                         {walletBalance >= grandTotal ? "Pay from Wallet" : "Insufficient Balance"}
+                      </button>
+                   )}
+                </div>
+             </div>
+
           </div>
+
+          {/* Right Column: Order Summary */}
+          <div className="w-full lg:w-1/3">
+             <div className="sticky top-24 space-y-6">
+                
+                {/* Coupon Code */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                   <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                       <Tag className="w-4 h-4 text-blue-600" />
+                       Have a Coupon?
+                   </h3>
+                   <div className="flex gap-2">
+                      <input 
+                         type="text" 
+                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none uppercase placeholder:normal-case"
+                         placeholder="Enter code"
+                         value={couponCode}
+                         onChange={(e) => setCouponCode(e.target.value)}
+                      />
+                      <button 
+                         onClick={applyCoupon}
+                         className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors"
+                      >
+                         Apply
+                      </button>
+                   </div>
+                   {order.applied_coupon && (
+                      <div className="mt-3 flex justify-between items-center bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm">
+                         <span className="font-medium flex items-center gap-1">
+                            <CheckCircle2 className="w-4 h-4"/> Coupon Applied
+                         </span>
+                         <button onClick={removeCoupon} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase underline">Remove</button>
+                      </div>
+                   )}
+                </div>
+
+                {/* Summary Card */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                  <h2 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
+                  
+                  <div className="space-y-4 text-sm">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Subtotal</span>
+                      <span className="font-medium text-gray-900">₹{subTotal.toFixed(2)}</span>
+                    </div>
+
+                    <div className="flex justify-between text-gray-600">
+                      <span>Shipping</span>
+                       <span className="font-medium text-gray-900">{shipping > 0 ? `₹${shipping.toFixed(2)}` : "Free"}</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-gray-600">
+                      <span>Tax / VAT</span>
+                       <span className="font-medium text-gray-900">₹{tax.toFixed(2)}</span>
+                    </div>
+
+                    {discountAmount > 0 && (
+                        <div className="flex justify-between text-green-600 font-medium">
+                            <span>Discount</span>
+                            <span>-₹{discountAmount.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    <div className="border-t border-dashed border-gray-200 pt-4 mt-4">
+                       <div className="flex justify-between items-end">
+                          <span className="text-base font-bold text-gray-900">Total to Pay</span>
+                          <span className="text-2xl font-bold text-blue-600">₹{grandTotal.toFixed(2)}</span>
+                       </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-400">
+                     <ShieldCheck className="w-4 h-4" />
+                     SSL Encrypted Payment
+                  </div>
+                </div>
+
+             </div>
+          </div>
+
         </div>
       </div>
     </div>

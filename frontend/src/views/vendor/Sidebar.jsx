@@ -1,176 +1,76 @@
-// Sidebar.jsx (modified, add offers link after coupon)
-import {
-  Gauge,
-  Grid,
-  ShoppingCart,
-  IndianRupee,
-  Star,
-  PlusCircle,
-  Tag,
-  Bell,
-  Settings,
-  LogOut,
-  Wallet,
-} from "lucide-react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { 
+  LayoutDashboard, 
+  Package, 
+  ShoppingCart, 
+  IndianRupee, 
+  Wallet, 
+  Star, 
+  Settings, 
+  LogOut,
+  Bell,
+  Tag
+} from "lucide-react";
+
 export default function VendorSidebar() {
   const location = useLocation();
-  const nonActiveLink =
-    "flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors";
-  const activeLink =
-    "flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors";
-  const isActiveLink = (currentPath, LinkPath) => {
-    return currentPath.includes(LinkPath);
+
+  const isActive = (path) => location.pathname.includes(path);
+
+  const NavItem = ({ to, icon: Icon, label }) => {
+     const active = isActive(to);
+     return (
+        <li>
+           <Link
+              to={to}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                 active 
+                 ? "bg-blue-600 text-white shadow-lg shadow-blue-900/50" 
+                 : "text-gray-400 hover:bg-gray-800 hover:text-white"
+              }`}
+           >
+              <Icon size={20} className={active ? "text-white" : "text-gray-500 group-hover:text-white"} />
+              <span className="font-medium tracking-wide text-sm">{label}</span>
+           </Link>
+        </li>
+     );
   };
+
   return (
-    <div
-      id="sidebar"
-      role="navigation"
-      className="w-64 bg-gray-900 text-white min-h-screen p-4"
-    >
-      <ul className="space-y-3">
-        <li>
-          <Link
-            to="/vendor/dashboard/"
-            className={
-              isActiveLink(location.pathname, "/vendor/dashboard/")
-                ? activeLink
-                : nonActiveLink
-            }
+    <div className="w-64 bg-gray-900 min-h-screen p-4 flex flex-col text-white fixed h-full overflow-y-auto custom-scrollbar border-r border-gray-800">
+       
+       {/* Brand Area */}
+       <div className="mb-8 px-4 py-2">
+          <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
+             <span className="text-blue-500">V</span>endor
+          </h1>
+          <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest ">Panel</p>
+       </div>
+
+       {/* Navigation */}
+       <ul className="space-y-1.5 flex-1">
+          <NavItem to="/vendor/dashboard/" icon={LayoutDashboard} label="Dashboard" />
+          <NavItem to="/vendor/products/" icon={Package} label="Products" />
+          <NavItem to="/vendor/orders/" icon={ShoppingCart} label="Orders" />
+          <NavItem to="/vendor/earning/" icon={IndianRupee} label="Earnings" />
+          <NavItem to="/vendor/wallet-transactions/" icon={Wallet} label="Wallet" />
+          <NavItem to="/vendor/coupon/" icon={Tag} label="Coupons" />
+          <NavItem to="/vendor/reviews/" icon={Star} label="Reviews" />
+          <NavItem to="/vendor/notifications/" icon={Bell} label="Notifications" />
+          <NavItem to="/vendor/settings/" icon={Settings} label="Settings" />
+       </ul>
+
+       {/* Bottom Actions */}
+       <div className="mt-8 pt-4 border-t border-gray-800">
+          <Link 
+             to="/logout" 
+             className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
           >
-            <Gauge size={18} /> <span>Dashboard</span>
+             <LogOut size={20} />
+             <span className="font-medium text-sm">Logout</span>
           </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/products/"
-            className={
-              isActiveLink(location.pathname, "/vendor/products/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <Grid size={18} /> <span>Products</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/orders/"
-            className={
-              isActiveLink(location.pathname, "/vendor/orders/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <ShoppingCart size={18} /> <span>Orders</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/earning/"
-            className={
-              isActiveLink(location.pathname, "/vendor/earning/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <IndianRupee size={18} /> <span>Earning</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/wallet-transactions/"
-            className={
-              isActiveLink(location.pathname, "/vendor/wallet-transactions/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <Wallet size={18} /> <span>Wallet Transactions</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/reviews/"
-            className={
-              isActiveLink(location.pathname, "/vendor/reviews/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <Star size={18} /> <span>Reviews</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/product/new/"
-            className={
-              isActiveLink(location.pathname, "/vendor/product/new/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <PlusCircle size={18} /> <span>Add Product</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/coupon/"
-            className={
-              isActiveLink(location.pathname, "/vendor/coupon/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <Tag size={18} /> <span>Coupon & Discount</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/offers/"
-            className={
-              isActiveLink(location.pathname, "/vendor/offers/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <Tag size={18} /> <span>Offers</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/notifications/"
-            className={
-              isActiveLink(location.pathname, "/vendor/notifications/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <Bell size={18} /> <span>Notifications</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/vendor/settings/"
-            className={
-              isActiveLink(location.pathname, "/vendor/settings/")
-                ? activeLink
-                : nonActiveLink
-            }
-          >
-            <Settings size={18} /> <span>Settings</span>
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/logout"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-600 transition-colors"
-          >
-            <LogOut size={18} /> <span>Logout</span>
-          </Link>
-        </li>
-      </ul>
-      <hr className="border-gray-700 mt-4" />
+       </div>
     </div>
   );
 }

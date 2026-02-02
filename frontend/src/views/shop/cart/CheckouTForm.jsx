@@ -1,10 +1,10 @@
-// src/components/checkout/CheckoutForm.jsx (or wherever your checkout form is located)
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
 import cartID from "../ProductDetail/cartId";
+import { MapPin, User, Mail, Phone, Locate } from "lucide-react";
 
 function CheckoutForm() {
   const [formData, setFormData] = useState({
@@ -22,12 +22,12 @@ function CheckoutForm() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
 
-  // Fetch saved addresses
   useEffect(() => {
     if (user?.user_id) {
       const fetchAddresses = async () => {
@@ -36,11 +36,6 @@ function CheckoutForm() {
           setSavedAddresses(res.data);
         } catch (err) {
           console.error("Error fetching addresses:", err);
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: "Failed to load saved addresses.",
-          });
         } finally {
           setLoadingAddresses(false);
         }
@@ -60,7 +55,6 @@ function CheckoutForm() {
     setFormData((prev) => ({ ...prev, [name]: processedValue }));
   };
 
-  // Select saved address → autofill
   const selectAddress = (addr) => {
     setSelectedAddress(addr.id);
     setFormData({
@@ -73,15 +67,8 @@ function CheckoutForm() {
       country: addr.country || "",
       pincode: addr.zip || "",
     });
-    Swal.fire({
-      icon: "success",
-      title: "Address Selected",
-      text: "Form autofilled with selected address.",
-      timer: 1500,
-    });
   };
 
-  // Clear selection
   const clearSelection = () => {
     setSelectedAddress(null);
     setFormData({
@@ -96,18 +83,12 @@ function CheckoutForm() {
     });
   };
 
-  // Email & Mobile validation
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const isValidMobile = (mobile) => /^[0-9]{10}$/.test(mobile);
 
-  // Geolocation autofill
   const autofillAddress = () => {
     if (!navigator.geolocation) {
-      Swal.fire({
-        icon: "error",
-        title: "Geolocation not supported",
-        text: "Your browser does not support location access.",
-      });
+      Swal.fire({ icon: "error", title: "Geolocation not supported" });
       return;
     }
 
@@ -131,26 +112,21 @@ function CheckoutForm() {
           }));
 
           Swal.fire({
-            icon: "success",
-            title: "Address Autofilled",
-            text: "Location-based details filled.",
+             toast: true,
+             position: 'top-end',
+             icon: 'success',
+             title: 'Address Autofilled',
+             showConfirmButton: false,
+             timer: 1500
           });
         } catch (error) {
-          Swal.fire({
-            icon: "error",
-            title: "Location Error",
-            text: "Unable to fetch address.",
-          });
+          Swal.fire({ icon: "error", title: "Location Error", text: "Unable to fetch details." });
         } finally {
           setLoadingLocation(false);
         }
       },
       () => {
-        Swal.fire({
-          icon: "error",
-          title: "Access Denied",
-          text: "Please allow location access.",
-        });
+        Swal.fire({ icon: "error", title: "Access Denied", text: "Allow location access" });
         setLoadingLocation(false);
       }
     );
@@ -158,34 +134,22 @@ function CheckoutForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (Object.values(formData).some((val) => !val.trim())) {
-      Swal.fire({
-        icon: "error",
-        title: "Missing Fields",
-        text: "All fields are required.",
-      });
+      Swal.fire({ icon: "error", title: "Missing Fields", text: "All fields are required." });
       return;
     }
-
     if (!isValidEmail(formData.email)) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid Email",
-        text: "Please enter a valid email.",
-      });
+      Swal.fire({ icon: "error", title: "Invalid Email", text: "Please check your email." });
       return;
     }
-
     if (!isValidMobile(formData.mobile)) {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid Mobile",
-        text: "Mobile must be 10 digits.",
-      });
+      Swal.fire({ icon: "error", title: "Invalid Mobile", text: "Mobile must be 10 digits." });
       return;
     }
 
+    setIsSubmitting(true);
     const data = new FormData();
     data.append("full_name", formData.fullName);
     data.append("email", formData.email);
@@ -202,141 +166,124 @@ function CheckoutForm() {
       const response = await apiInstance.post("/create-order/", data);
       navigate(`/checkout/${response.data.order_oid}`);
     } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to create order.",
-      });
-      console.error("Order error:", error);
+      Swal.fire({ icon: "error", title: "Error", text: "Failed to create order." });
+      log.error("Order error:", error);
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="mt-8">
-      {/* Saved Addresses (Amazon-style) */}
-      {user?.user_id && (
-        <div className="mb-8">
-          <h2 className="font-semibold text-xl mb-4">Select Saved Address</h2>
-          {loadingAddresses ? (
-            <p className="text-gray-600">Loading addresses...</p>
-          ) : savedAddresses.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {savedAddresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  onClick={() => selectAddress(addr)}
-                  className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
-                    selectedAddress === addr.id
-                      ? "border-blue-600 bg-blue-50 shadow-xl"
-                      : "border-gray-300 hover:border-gray-400"
-                  }`}
-                >
-                  {addr.status && (
-                    <span className="inline-block mb-3 px-4 py-1 text-sm font-semibold text-white bg-green-600 rounded-full">
-                      Default Address
-                    </span>
-                  )}
-                  <p className="font-bold text-lg">{addr.full_name}</p>
-                  <p className="mt-2">{addr.address}</p>
-                  <p>
-                    {addr.town_city}
-                    {addr.state ? `, ${addr.state}` : ""} - {addr.zip}
-                  </p>
-                  <p>{addr.country}</p>
-                  <p className="mt-3">
-                    <strong>Mobile:</strong> {addr.mobile}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {addr.email}
-                  </p>
-                  <p className="mt-4 text-blue-600 font-semibold">
-                    Use this address →
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-600">
-              No saved addresses. Please enter details below.
-            </p>
+  const InputField = ({ label, name, type = "text", icon: Icon, placeholder }) => (
+    <div className="relative">
+       <label className="block text-sm font-medium text-gray-700 mb-1">{label} <span className="text-red-500">*</span></label>
+       <div className="relative">
+          {Icon && (
+             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Icon className="h-5 w-5 text-gray-400" />
+             </div>
           )}
+          <input
+             type={type}
+             name={name}
+             value={formData[name]}
+             onChange={handleChange}
+             placeholder={placeholder}
+             className={`block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm py-2.5 ${Icon ? 'pl-10' : 'pl-3'}`}
+             required
+          />
+       </div>
+    </div>
+  );
 
-          {selectedAddress && (
-            <button
-              onClick={clearSelection}
-              className="mt-6 text-blue-600 underline hover:no-underline"
-            >
-              ← Use a different address
-            </button>
-          )}
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      
+      {/* Saved Addresses Section */}
+      {user?.user_id && !loadingAddresses && savedAddresses.length > 0 && (
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+           <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Saved Addresses</h3>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {savedAddresses.map((addr) => (
+                 <div
+                    key={addr.id}
+                    onClick={() => selectAddress(addr)}
+                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                       selectedAddress === addr.id 
+                       ? "border-blue-600 bg-white shadow-md" 
+                       : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                 >
+                    <div className="flex justify-between items-start mb-2">
+                       <span className="font-bold text-gray-900">{addr.full_name}</span>
+                       {addr.status && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">DEFAULT</span>}
+                    </div>
+                    <p className="text-xs text-gray-600 line-clamp-2">{addr.address}, {addr.town_city}</p>
+                    <p className="text-xs text-gray-500 mt-1">{addr.mobile}</p>
+                    
+                    {selectedAddress === addr.id && (
+                       <div className="absolute top-2 right-2 text-blue-600">
+                          <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                       </div>
+                    )}
+                 </div>
+              ))}
+           </div>
+           {selectedAddress && (
+              <button 
+                type="button" 
+                onClick={clearSelection}
+                className="text-xs text-blue-600 font-medium hover:underline mt-3"
+              >
+                 Enter a new address instead
+              </button>
+           )}
         </div>
       )}
 
-      <h1 className="font-semibold text-2xl border-b pb-4">
-        Contact Information
-      </h1>
+      {/* Form Fields */}
+      <div className="space-y-6">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InputField label="Full Name" name="fullName" icon={User} placeholder="John Doe" />
+            <InputField label="Email Address" name="email" type="email" icon={Mail} placeholder="john@example.com" />
+         </div>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InputField label="Mobile Number" name="mobile" type="tel" icon={Phone} placeholder="9876543210" />
+            <InputField label="Pincode" name="pincode" type="tel" icon={MapPin} placeholder="123456" />
+         </div>
 
-      {["fullName", "email", "mobile"].map((field) => (
-        <div className="mt-4" key={field}>
-          <label className="font-medium block mb-1 text-sm uppercase text-gray-700">
-            {field === "fullName"
-              ? "Full Name"
-              : field.charAt(0).toUpperCase() + field.slice(1)}
-          </label>
-          <input
-            type={
-              field === "email" ? "email" : field === "mobile" ? "tel" : "text"
-            }
-            name={field}
-            value={formData[field]}
-            onChange={handleChange}
-            placeholder={`Enter your ${field}`}
-            className="p-2 text-sm w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
-        </div>
-      ))}
-
-      <h1 className="font-semibold text-2xl border-b pb-4 mt-6">
-        Shipping Details
-      </h1>
-
-      <div className="flex justify-end mb-4">
-        <button
-          type="button"
-          onClick={autofillAddress}
-          disabled={loadingLocation}
-          className="bg-green-500 text-white text-xs px-4 py-2 rounded-md hover:bg-green-600 transition"
-        >
-          {loadingLocation ? "Fetching..." : "Autofill Address"}
-        </button>
+         <div className="border-t border-gray-100 pt-6 mt-6">
+             <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Address Details</h3>
+                <button
+                    type="button"
+                    onClick={autofillAddress}
+                    disabled={loadingLocation}
+                    className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                >
+                    <Locate className={`w-4 h-4 ${loadingLocation ? "animate-spin" : ""}`} />
+                    {loadingLocation ? "Locating..." : "Use My Current Location"}
+                </button>
+             </div>
+             
+             <div className="space-y-6">
+                <InputField label="Flat, House no., Building, Company, Apartment" name="address" placeholder="" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <InputField label="City / Town" name="city" placeholder="" />
+                    <InputField label="State" name="state" placeholder="" />
+                    <InputField label="Country" name="country" placeholder="" />
+                </div>
+             </div>
+         </div>
       </div>
 
-      {["address", "city", "state", "country", "pincode"].map((field) => (
-        <div className="mt-4" key={field}>
-          <label className="font-medium block mb-1 text-sm uppercase text-gray-700">
-            {field.charAt(0).toUpperCase() + field.slice(1)}
-          </label>
-          <input
-            type="text"
-            name={field}
-            value={formData[field]}
-            onChange={handleChange}
-            placeholder={`Enter your ${field}`}
-            className="p-2 text-sm w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
-        </div>
-      ))}
-
       <button
-        onClick={handleSubmit}
-        className="w-full mt-8 bg-blue-600 text-white py-3 rounded-md text-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
-        disabled={Object.values(formData).some((val) => !val.trim())}
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 shadow-md transform hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        Proceed to Payment
+        {isSubmitting ? "Processing..." : "Proceed to Payment"}
       </button>
-    </div>
+    </form>
   );
 }
 
