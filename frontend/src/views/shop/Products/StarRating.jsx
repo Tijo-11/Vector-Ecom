@@ -12,7 +12,7 @@ const StarRating = ({ rating }) => {
       ))}
       {hasHalfStar && <StarHalf size={16} fill="currentColor" />}
       {[...Array(emptyStars)].map((_, index) => (
-        <StarOff key={`empty-${index}`} size={16} />
+        <Star key={`empty-${index}`} size={16} className="text-gray-300" />
       ))}
       {rating ? (
         <span className="ml-1">{rating.toFixed(1)}</span>

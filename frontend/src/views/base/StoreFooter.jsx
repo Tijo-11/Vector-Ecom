@@ -1,242 +1,156 @@
-import { useState, useEffect } from "react";
-import {
-  FaFacebookF,
-  FaPinterestP,
-  FaYoutube,
-  FaInstagram,
-} from "react-icons/fa";
+import React, { useState, useEffect } from "react";
 import apiInstance from "../../utils/axios";
 import { Link } from "react-router-dom";
-import { FaXTwitter } from "react-icons/fa6"; // Twitter → X logo
-import Categories from "../shop/category/Categories";
+import { 
+  Facebook, Twitter, Youtube, Instagram, 
+  MapPin, Mail, Phone, ChevronRight, Heart
+} from "lucide-react";
 
 function StoreFooter() {
   const [categories, setCategories] = useState([]);
+  
   useEffect(() => {
+    // Ideally limit categories to top 5-6 for footer to avoid massive lists
     apiInstance.get(`category/`).then((response) => {
-      setCategories(response.data);
+      setCategories(response.data.slice(0, 6)); 
     });
   }, []);
+
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-gray-100 text-gray-800">
-      {/* Top Section */}
-      {/*Categories*/}
-      {categories && categories.length > 0 ? (
-        <Categories categories={categories} />
-      ) : null}
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Social Row */}
-        <div className="flex flex-col md:flex-row items-center justify-between border-b border-gray-300 pb-6 mb-6">
-          <p className="font-semibold text-center md:text-left mb-4 md:mb-0">
-            Get connected with us on social networks
-          </p>
-          <div className="flex space-x-3">
-            {/* Facebook */}
-            <a
-              href="#!"
-              className="w-9 h-9 flex items-center justify-center rounded-full text-white"
-              style={{ backgroundColor: "#3b5998" }}
-            >
-              <FaFacebookF />
-            </a>
-            {/* X (Twitter) */}
-            <a
-              href="#!"
-              className="w-9 h-9 flex items-center justify-center rounded-full text-white"
-              style={{ backgroundColor: "#000000" }}
-            >
-              <FaXTwitter />
-            </a>
-            {/* Pinterest */}
-            <a
-              href="#!"
-              className="w-9 h-9 flex items-center justify-center rounded-full text-white"
-              style={{ backgroundColor: "#c61118" }}
-            >
-              <FaPinterestP />
-            </a>
-            {/* YouTube */}
-            <a
-              href="#!"
-              className="w-9 h-9 flex items-center justify-center rounded-full text-white"
-              style={{ backgroundColor: "#ed302f" }}
-            >
-              <FaYoutube />
-            </a>
-            {/* Instagram */}
-            <a
-              href="#!"
-              className="w-9 h-9 flex items-center justify-center rounded-full text-white"
-              style={{ backgroundColor: "#ac2bac" }}
-            >
-              <FaInstagram />
-            </a>
-          </div>
-        </div>
-
-        {/* Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* About Us */}
-          <div>
-            <h3 className="font-semibold mb-3">About us</h3>
-            <p className="text-sm leading-relaxed text-gray-600">
-              Lorem ipsum dolor sit amet consectetur, adipisicing elit. Iste
-              atque ea quis molestias. Fugiat pariatur maxime quis culpa
-              corporis vitae repudiandae aliquam voluptatem veniam, est atque
-              cumque eum delectus sint!
+    <footer className="bg-gray-900 border-t border-gray-800 text-gray-400 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
+          
+          {/* Brand & About */}
+          <div className="space-y-6">
+            <Link to="/" className="inline-block">
+              <span className="text-2xl font-black bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
+                RetroRelics
+              </span>
+            </Link>
+            <p className="text-sm leading-relaxed text-gray-400">
+              Discover unique vintage treasures and timeless relics. We curate stories, not just stuff. Join our community of collectors today.
             </p>
+            <div className="flex space-x-4 pt-2">
+              <a href="#" className="p-2 bg-gray-800 hover:bg-blue-600 hover:text-white rounded-full transition-colors">
+                <Facebook className="h-4 w-4" />
+              </a>
+              <a href="#" className="p-2 bg-gray-800 hover:bg-sky-500 hover:text-white rounded-full transition-colors">
+                <Twitter className="h-4 w-4" />
+              </a>
+              <a href="#" className="p-2 bg-gray-800 hover:bg-pink-600 hover:text-white rounded-full transition-colors">
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a href="#" className="p-2 bg-gray-800 hover:bg-red-600 hover:text-white rounded-full transition-colors">
+                <Youtube className="h-4 w-4" />
+              </a>
+            </div>
           </div>
 
-          {/* Useful Links */}
+          {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-3">Useful links</h3>
-            <ul className="space-y-2 text-sm">
+            <h3 className="text-white font-semibold mb-6">Company</h3>
+            <ul className="space-y-3 text-sm">
               <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Privacy policy
-                </a>
+                <Link to="/about" className="hover:text-blue-500 transition-colors flex items-center gap-2">
+                  <ChevronRight className="h-3 w-3" /> About Us
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Media
-                </a>
+                <Link to="/contact" className="hover:text-blue-500 transition-colors flex items-center gap-2">
+                  <ChevronRight className="h-3 w-3" /> Contact
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Job offers
-                </a>
+                <Link to="/careers" className="hover:text-blue-500 transition-colors flex items-center gap-2">
+                  <ChevronRight className="h-3 w-3" /> Careers
+                </Link>
               </li>
               <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Cooperation
-                </a>
+                <Link to="/privacy" className="hover:text-blue-500 transition-colors flex items-center gap-2">
+                  <ChevronRight className="h-3 w-3" /> Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="hover:text-blue-500 transition-colors flex items-center gap-2">
+                  <ChevronRight className="h-3 w-3" /> Terms of Service
+                </Link>
               </li>
             </ul>
           </div>
 
           {/* Categories */}
           <div>
-            <h3 className="font-semibold mb-3">Categories</h3>
-            <ul className="space-y-2 text-sm">
+            <h3 className="text-white font-semibold mb-6">Top Categories</h3>
+            <ul className="space-y-3 text-sm">
+              {categories.map((cat, index) => (
+                <li key={index}>
+                  <Link 
+                    to={`/category/${cat.slug}`} 
+                    className="hover:text-blue-500 transition-colors flex items-center gap-2 truncate"
+                  >
+                    <ChevronRight className="h-3 w-3" /> {cat.title}
+                  </Link>
+                </li>
+              ))}
               <li>
-                <Link
-                  to="/category/retro-cameras-photography-gear-ca8c"
-                  className="hover:text-blue-600"
-                >
-                  Retro Cameras & Photography
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/vinyl-records-music-mviv"
-                  className="hover:text-blue-600"
-                >
-                  Vinyl Records & Music
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/electronics-ftot"
-                  className="hover:text-blue-600"
-                >
-                  Electronics
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/books-magazines-comics-egdf"
-                  className="hover:text-blue-600"
-                >
-                  Books, Magazines & Comics
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/vintage-toys-games-scvj"
-                  className="hover:text-blue-600"
-                >
-                  Vintage Toys & Games
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/kitchenware-appliances"
-                  className="hover:text-blue-600"
-                >
-                  Kitchenware & Appliances
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/military-wartime-collectibles-4fab"
-                  className="hover:text-blue-600"
-                >
-                  Military & Wartime Collectibles
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/antique-vintage-home-decor-vfb4"
-                  className="hover:text-blue-600"
-                >
-                  Antique & Vintage Home Decor
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/automobilia-transportation-memorabilia-bdud"
-                  className="hover:text-blue-600"
-                >
-                  Automobilia & Transportation Memorabilia
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/category/vintage-fashion-accessories-v3gb"
-                  className="hover:text-blue-600"
-                >
-                  Vintage Fashion & Accessories
+                <Link to="/category" className="text-blue-500 hover:text-blue-400 text-xs font-semibold uppercase tracking-wider mt-2 inline-block">
+                  View All Categories
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Contact & Newsletter */}
           <div>
-            <h3 className="font-semibold mb-3">Support</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Complaints
-                </a>
-              </li>
-              <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Help center
-                </a>
-              </li>
-              <li>
-                <a href="#!" className="hover:text-blue-600">
-                  Community
-                </a>
-              </li>
-              <li>
-                <a href="#!" className="hover:text-blue-600">
-                  FAQ
-                </a>
-              </li>
-            </ul>
+             <h3 className="text-white font-semibold mb-6">Stay Connected</h3>
+             <ul className="space-y-4 text-sm mb-6">
+               <li className="flex items-start gap-3">
+                 <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
+                 <span>123 Vintage Lane, Retro City,<br/>RC 56789</span>
+               </li>
+               <li className="flex items-center gap-3">
+                 <Phone className="h-5 w-5 text-gray-500" />
+                 <span>+1 (555) 123-4567</span>
+               </li>
+               <li className="flex items-center gap-3">
+                 <Mail className="h-5 w-5 text-gray-500" />
+                 <span>support@retrorelics.com</span>
+               </li>
+             </ul>
+             
+             {/* Simple input field for aesthetics */}
+             <div className="relative">
+               <input 
+                 type="email" 
+                 placeholder="Enter your email" 
+                 className="w-full bg-gray-800 text-white text-sm rounded-lg pl-3 pr-10 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-500 border border-gray-700 placeholder-gray-500"
+               />
+               <button className="absolute right-1.5 top-1.5 p-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors">
+                 <ChevronRight className="h-4 w-4" />
+               </button>
+             </div>
           </div>
+
         </div>
       </div>
 
-      {/* Copyright */}
-      <div className="bg-gray-200 text-center py-4 text-sm text-gray-700">
-        © 2025 Copyright:{" "}
-        <a href="#" className="font-medium hover:text-blue-600">
-          Tijo Thomas
-        </a>
+      {/* Bottom Bar */}
+      <div className="border-t border-gray-800 bg-gray-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-gray-500">
+            © {currentYear} RetroRelics. All rights reserved. Built by <span className="text-gray-300">Tijo Thomas</span>.
+          </p>
+          <div className="flex items-center gap-4 text-sm font-medium text-gray-500">
+             <span className="flex items-center gap-1">Made with <Heart className="h-3 w-3 text-red-500 fill-current" /></span>
+             {/* Payment Icons Placeholder - can replace with images later if needed */}
+             <div className="flex gap-2 opacity-50 grayscale hover:grayscale-0 transition-all">
+                {/* SVG Placeholders or Pay icons could go here */}
+             </div>
+          </div>
+        </div>
       </div>
     </footer>
   );

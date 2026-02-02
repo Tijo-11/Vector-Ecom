@@ -1,12 +1,9 @@
 import { useState, useEffect, useContext } from "react";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, Plus, Minus, Check } from "lucide-react";
 import apiInstance from "../../../utils/axios";
 import Swal from "sweetalert2";
 import { CartContext } from "../../../plugin/Context";
-import CartId from "../ProductDetail/cartId.jsx";
-import UserData from "../../../plugin/UserData.js";
 import { addToWishlist } from "../../../plugin/addToWishlist";
-import { useAuthStore } from "../../../store/auth";
 import log from "loglevel";
 
 export default function ProductOptions({
@@ -16,6 +13,9 @@ export default function ProductOptions({
   user,
   cartId,
   isOutOfStock,
+  wishlist,
+  onWishlistUpdate,
+  isLoggedIn
 }) {
   const Toast = Swal.mixin({
     toast: true,
@@ -27,48 +27,19 @@ export default function ProductOptions({
 
   const [color, setColor] = useState([]);
   const [size, setSize] = useState([]);
-  const [specification, setSpecification] = useState([]);
-  const [colorValue, setColorValue] = useState("No Color");
-  const [sizeValue, setSizeValue] = useState("No Size");
+  const [colorValue, setColorValue] = useState("");
+  const [sizeValue, setSizeValue] = useState("");
   const [qtyValue, setQtyValue] = useState(1);
   const [cartCount, setCartCount] = useContext(CartContext);
-  const [wishlist, setWishlist] = useState([]);
-  const cart_id = CartId();
-  const userData = UserData();
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
-
-  // Fetch wishlist
-  const fetchWishlist = async () => {
-    if (!userData?.user_id) return;
-    try {
-      const response = await apiInstance.get(
-        `customer/wishlist/${userData?.user_id}/`,
-      );
-
-      // Robust handling: support both direct array and paginated { results: [...] }
-      const data = response.data;
-      const wishlistItems = Array.isArray(data) ? data : data?.results || [];
-
-      setWishlist(wishlistItems);
-    } catch (error) {
-      log.error("Error fetching wishlist:", error);
-      setWishlist([]); // Ensure it's always an array even on error
-    }
-  };
 
   useEffect(() => {
     if (product && product.id) {
       setColor(product.color || []);
       setSize(product.size || []);
-      setSpecification(product.specification || []);
+      if(product.color?.length > 0) setColorValue(product.color[0].name);
+      if(product.size?.length > 0) setSizeValue(product.size[0].name);
     }
   }, [product]);
-
-  useEffect(() => {
-    if (userData?.user_id) {
-      fetchWishlist();
-    }
-  }, [userData?.user_id]);
 
   const handleColorButtonClick = (colorName, colorImage) => {
     setColorValue(colorName);
@@ -80,224 +51,211 @@ export default function ProductOptions({
     if (sizeImage) setMainImage(sizeImage);
   };
 
-  const handleQuantityChange = (event) => {
-    setQtyValue(event.target.value);
+  const handleQtyIncrement = () => {
+      setQtyValue(prev => prev + 1);
+  };
+  
+  const handleQtyDecrement = () => {
+      setQtyValue(prev => Math.max(1, prev - 1));
   };
 
-  // ✅ Updated Add to Cart with stock check
   const handleAddToCart = async () => {
-    if (isOutOfStock) {
-      Swal.fire({
-        icon: "info",
-        title: "Out of Stock",
-        text: "This product is currently unavailable.",
-        confirmButtonColor: "#2563eb",
-      });
+    if (isOutOfStock) return;
+
+    if (qtyValue <= 0) {
+      Toast.fire({ icon: "info", title: "Invalid Quantity" });
       return;
     }
-
-    const qty = Number(qtyValue || 0);
-    if (qty <= 0) {
-      Swal.fire({
-        icon: "info",
-        title: "Select Quantity",
-        text: "Please enter a valid quantity before adding to cart.",
-        confirmButtonColor: "#2563eb",
-      });
-      return;
+    
+    // Check selections
+    if (color.length > 0 && !colorValue) {
+        Toast.fire({ icon: "info", title: "Please select a color" });
+        return;
+    }
+    if (size.length > 0 && !sizeValue) {
+        Toast.fire({ icon: "info", title: "Please select a size" });
+        return;
     }
 
     try {
-      // 1️ Fetch product stock info
       const productRes = await apiInstance.get(`/products/${product.slug}/`);
       const stock_qty = productRes.data.stock_qty;
 
-      // 2️ Get existing cart items
-      const url = userData?.user_id
-        ? `/cart-list/${cart_id}/${userData.user_id}/`
-        : `/cart-list/${cart_id}/`;
+      const url = user
+        ? `/cart-list/${cartId}/${user}/`
+        : `/cart-list/${cartId}/`;
 
       const cartRes = await apiInstance.get(url);
-      const existingItem = cartRes.data.find(
-        (item) => item.product.id === product.id,
-      );
+      const items = Array.isArray(cartRes.data) ? cartRes.data : cartRes.data.results || [];
+      const existingItem = items.find(item => item.product.id === product.id);
       const existingQty = existingItem ? existingItem.qty : 0;
 
-      // 3️ Stock validation
-      if (existingQty + qty > stock_qty) {
+      if (existingQty + qtyValue > stock_qty) {
         Swal.fire({
           icon: "warning",
           title: "Insufficient Stock",
-          text: `Only ${stock_qty} unit(s) of "${product.title}" available. You already have ${existingQty} in your cart.`,
-          confirmButtonColor: "#2563eb",
+          text: `Only ${stock_qty} unit(s) available. You have ${existingQty} in cart.`,
         });
         return;
       }
 
-      // 4️ Proceed to add to cart
       const formData = new FormData();
       formData.append("product", product.id);
       formData.append("user", user || "");
-      formData.append("qty", qty);
+      formData.append("qty", qtyValue);
       formData.append("price", product.price);
       formData.append("shipping_amount", product.shipping_amount);
       formData.append("country", country || "Unknown");
-      formData.append("size", sizeValue);
-      formData.append("color", colorValue);
+      formData.append("size", sizeValue || "No Size");
+      formData.append("color", colorValue || "No Color");
       formData.append("cart_id", cartId || "");
 
-      setCartCount((prev) => prev + qty); // optimistic update
-
       const response = await apiInstance.post("cart/", formData);
+      setCartCount((prev) => prev + qtyValue); 
+      Toast.fire({ icon: "success", title: response.data.message || "Added to cart" });
 
-      Toast.fire({
-        icon: "success",
-        title: response.data.message || "Added to cart",
-      });
-
-      // 5️ Sync updated cart count
+      // Sync
       const res = await apiInstance.get(url);
-      const totalQty = res.data.reduce((sum, item) => sum + item.qty, 0);
+      const itemsNew = Array.isArray(res.data) ? res.data : res.data.results || [];
+      const totalQty = itemsNew.reduce((sum, item) => sum + item.qty, 0);
       setCartCount(totalQty);
     } catch (error) {
       log.error("Error adding to cart:", error);
-      setCartCount((prev) => Math.max(prev - qty, 0));
-      Toast.fire({
-        icon: "error",
-        title: "Failed to add to cart",
-      });
+      Toast.fire({ icon: "error", title: "Failed to add to cart" });
     }
   };
 
-  const handleAddToWishlist = async (product_id) => {
+  const handleAddToWishlist = async () => {
     try {
-      await addToWishlist(product_id, userData?.user_id);
-      fetchWishlist();
+      await addToWishlist(product.id, user); // User ID passed as 'user' prop
+      if (onWishlistUpdate) onWishlistUpdate();
     } catch (error) {
       console.log("Error updating wishlist:", error);
     }
   };
 
-  // Safe check for wishlist membership (prevents crash if structure is unexpected)
-  const isInWishlist =
-    Array.isArray(wishlist) &&
-    wishlist.some((item) => item?.product?.id === product.id);
+  const isInWishlist = Array.isArray(wishlist) && wishlist.some((item) => item?.product?.id === product.id);
 
   return (
-    <div>
-      {/* Features */}
-      <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
-      <ul className="list-disc list-inside text-gray-700">
-        {specification.length > 0 ? (
-          specification.map((s, index) => (
-            <li key={index}>
-              {s.title}: {s.content}
-            </li>
-          ))
-        ) : (
-          <li>No specifications available.</li>
-        )}
-      </ul>
-
-      {/* Color */}
+    <div className="mt-8 space-y-6">
+      
+      {/* Color Selection */}
       {color.length > 0 && (
-        <>
-          <h6 className="text-lg font-semibold mb-2">
-            Color: <span>{colorValue}</span>
-          </h6>
-          <div className="flex gap-2 mb-4">
-            {color.map((c, index) => (
-              <button
-                key={index}
-                type="button"
-                className="px-4 py-2 rounded-md hover:opacity-80 transition"
-                style={{ backgroundColor: c.color_code }}
-                onClick={() => handleColorButtonClick(c.name, c.image)}
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
-        </>
+        <div>
+           <div className="flex justify-between mb-2">
+              <span className="font-semibold text-gray-900">Color</span>
+              <span className="text-gray-500 text-sm">{colorValue}</span>
+           </div>
+           <div className="flex flex-wrap gap-3">
+              {color.map((c, index) => (
+                <button
+                   key={index}
+                   type="button"
+                   onClick={() => handleColorButtonClick(c.name, c.image)}
+                   className={`h-10 w-10 rounded-full border-2 focus:outline-none transition-all flex items-center justify-center ${
+                      colorValue === c.name ? "border-blue-600 ring-2 ring-blue-100" : "border-gray-200 hover:border-gray-400"
+                   }`}
+                   style={{ backgroundColor: c.color_code }}
+                   title={c.name}
+                >
+                   {colorValue === c.name && <Check className="h-4 w-4 text-white drop-shadow-md" />}
+                </button>
+              ))}
+           </div>
+        </div>
       )}
 
-      {/* Size */}
+      {/* Size Selection */}
       {size.length > 0 && (
-        <>
-          <h6 className="text-lg font-semibold mb-2">
-            Size: <span>{sizeValue}</span>
-          </h6>
-          <div className="flex gap-2 mb-4">
-            {size.map((s, index) => (
-              <button
-                key={index}
-                type="button"
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 transition"
-                onClick={() => handleSizeButtonClick(s.name, s.image)}
-              >
-                {s.name}
-              </button>
-            ))}
-          </div>
-        </>
+        <div>
+           <div className="flex justify-between mb-2">
+              <span className="font-semibold text-gray-900">Size</span>
+              <span className="text-gray-500 text-sm">{sizeValue}</span>
+           </div>
+           <div className="flex flex-wrap gap-2">
+              {size.map((s, index) => (
+                 <button
+                    key={index}
+                    onClick={() => handleSizeButtonClick(s.name, s.image)}
+                    className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                       sizeValue === s.name 
+                         ? "border-blue-600 bg-blue-50 text-blue-700" 
+                         : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                 >
+                    {s.name}
+                 </button>
+              ))}
+           </div>
+        </div>
       )}
 
-      {/* Quantity */}
-      <div className="mb-4">
-        <label className="text-lg font-semibold mb-2">Quantity:</label>
-        <input
-          type="number"
-          min="1"
-          value={qtyValue}
-          onChange={handleQuantityChange}
-          disabled={isOutOfStock}
-          className={`w-20 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            isOutOfStock ? "bg-gray-100 cursor-not-allowed" : ""
-          }`}
-        />
-      </div>
+      {/* Quantity & Actions */}
+      <div className="pt-6 border-t border-gray-100">
+         <div className="flex items-center gap-4 mb-4">
+             <span className="font-semibold text-gray-900">Quantity</span>
+             <div className="flex items-center border border-gray-200 rounded-lg">
+                <button 
+                  onClick={handleQtyDecrement}
+                  disabled={isOutOfStock} 
+                  className="p-2 hover:bg-gray-50 text-gray-600 disabled:opacity-50"
+                >
+                    <Minus className="h-4 w-4" />
+                </button>
+                <input 
+                  type="number" 
+                  value={qtyValue} 
+                  onChange={(e) => setQtyValue(parseInt(e.target.value) || 1)}
+                  className="w-12 text-center text-gray-900 font-medium focus:outline-none"
+                  min="1"
+                  disabled={isOutOfStock}
+                />
+                 <button 
+                  onClick={handleQtyIncrement}
+                  disabled={isOutOfStock} 
+                  className="p-2 hover:bg-gray-50 text-gray-600 disabled:opacity-50"
+                >
+                    <Plus className="h-4 w-4" />
+                </button>
+             </div>
+             
+             <div className="text-sm text-gray-500">
+                {product.stock_qty > 0 ? (
+                    product.stock_qty < 10 ? 
+                    <span className="text-orange-600 font-medium">Only {product.stock_qty} left!</span> : 
+                    <span>In Stock</span>
+                ) : <span>Out of Stock</span>}
+             </div>
+         </div>
 
-      {/* Buttons */}
-      <div className="mt-4 flex flex-col gap-2">
-        <button
-          className={`flex items-center justify-center gap-2 w-2/5 rounded-lg py-1.5 transition ${
-            isOutOfStock
-              ? "bg-gray-400 text-white cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
-          }`}
-          onClick={handleAddToCart}
-          disabled={isOutOfStock}
-        >
-          <ShoppingCart size={16} />
-          {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-        </button>
-
-        {isLoggedIn && (
-          <button
-            onClick={() => handleAddToWishlist(product.id)}
-            disabled={isOutOfStock}
-            className={`flex items-center justify-center gap-2 w-2/5 rounded-lg py-1.5 transition ${
-              isInWishlist
-                ? "bg-gray-400 text-white hover:bg-gray-500"
-                : "bg-red-600 text-white hover:bg-red-700"
-            } ${isOutOfStock ? "opacity-60 cursor-not-allowed" : ""}`}
-          >
-            <Heart size={16} />
-            {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-          </button>
-        )}
-      </div>
-
-      {/* Description */}
-      <h3 className="text-lg font-semibold mb-2 mt-4">Description:</h3>
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 max-w-full overflow-auto">
-        {product.description ? (
-          <p className="text-gray-700 whitespace-pre-line">
-            {product.description}
-          </p>
-        ) : (
-          <p className="text-gray-500">No description available.</p>
-        )}
+         <div className="flex gap-4">
+            <button
+               onClick={handleAddToCart}
+               disabled={isOutOfStock}
+               className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-lg shadow-lg transition-all transform active:scale-95 ${
+                  isOutOfStock
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                    : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/30"
+               }`}
+            >
+               <ShoppingCart className="h-5 w-5" />
+               {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+            </button>
+            
+            {isLoggedIn && (
+               <button
+                  onClick={handleAddToWishlist}
+                  className={`p-3.5 rounded-xl border-2 transition-colors ${
+                     isInWishlist
+                       ? "border-red-100 bg-red-50 text-red-600"
+                       : "border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"
+                  }`}
+                  title="Add to Wishlist"
+               >
+                  <Heart className={`h-6 w-6 ${isInWishlist ? "fill-current" : ""}`} />
+               </button>
+            )}
+         </div>
       </div>
     </div>
   );

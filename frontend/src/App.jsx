@@ -19,6 +19,7 @@ import ProtectedRoute from "./layouts/ProtectedRoute.jsx";
 import PublicLayout from "./layouts/PublicLayout.jsx"; // ← NEW IMPORT
 
 // Lazy load all page-level components
+const Home = lazy(() => import("./views/shop/Home"));
 const Products = lazy(() => import("./views/shop/Products/Products"));
 const ProductDetail = lazy(
   () => import("./views/shop/ProductDetail/ProductDetail"),
@@ -107,8 +108,16 @@ export default function App() {
           <Routes>
             {/* Public Shop Routes + Vendor Register - All under PublicLayout for centralized admin redirect */}
             <Route element={<PublicLayout />}>
-              <Route
+                <Route
                 path="/"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Home />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/products"
                 element={
                   <Suspense fallback={<LoadingSpinner />}>
                     <Products />
