@@ -190,10 +190,16 @@ export default function Home() {
 
                     <div className="mt-auto flex items-center justify-between">
                       <div className="flex flex-col">
-                         {product.old_price && (
-                           <span className="text-xs text-gray-400 line-through">₹{product.old_price}</span>
+                         {product.offer_discount > 0 ? (
+                           <>
+                             <span className="text-xs text-gray-400 line-through">₹{product.price}</span>
+                             <span className="text-lg font-bold text-blue-600">
+                               ₹{(product.price * (1 - product.offer_discount / 100)).toFixed(2)}
+                             </span>
+                           </>
+                         ) : (
+                           <span className="text-lg font-bold text-blue-600">₹{product.price}</span>
                          )}
-                         <span className="text-lg font-bold text-blue-600">₹{product.price}</span>
                       </div>
                       <Link 
                         to={`/product/${product.slug}`}

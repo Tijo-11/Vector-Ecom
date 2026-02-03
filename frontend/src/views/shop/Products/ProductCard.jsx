@@ -153,8 +153,8 @@ export default function ProductCard({ product, wishlist, onWishlistUpdate, isLog
 
         <div className="flex items-end gap-2 mb-3">
              <span className="text-lg font-bold text-gray-900">₹{discountPrice}</span>
-             {product.old_price && (
-                <span className="text-sm text-gray-400 line-through mb-1">₹{product.old_price}</span>
+             {product.offer_discount > 0 && (
+                <span className="text-sm text-gray-400 line-through mb-0.5">₹{product.price}</span>
              )}
         </div>
 

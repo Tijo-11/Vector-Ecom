@@ -251,9 +251,25 @@ function Wishlist() {
                                       </p>
                                     )}
 
-                                    <h6 className="text-lg font-bold mb-4">
-                                      ₹{w.product.price || "0.00"}
-                                    </h6>
+                                    <div className="flex items-baseline gap-2 mb-4">
+                                      {w.product.offer_discount > 0 ? (
+                                        <>
+                                          <h6 className="text-lg font-bold text-blue-600">
+                                            ₹{(w.product.price * (1 - w.product.offer_discount / 100)).toFixed(2)}
+                                          </h6>
+                                          <span className="text-sm text-gray-400 line-through">
+                                            ₹{w.product.price}
+                                          </span>
+                                          <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
+                                            -{w.product.offer_discount}%
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <h6 className="text-lg font-bold">
+                                          ₹{w.product.price || "0.00"}
+                                        </h6>
+                                      )}
+                                    </div>
 
                                     {/* Action Buttons */}
                                     <div className="flex gap-3">

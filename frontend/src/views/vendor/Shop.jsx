@@ -173,9 +173,21 @@ function Shop() {
                   <p className="text-sm text-gray-500">
                     {product?.brand?.title}
                   </p>
-                  <h6 className="text-lg font-semibold mt-2">
-                    ₹{product.price}
-                  </h6>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    {product.offer_discount > 0 ? (
+                      <>
+                        <h6 className="text-lg font-semibold text-blue-600">
+                          ₹{(product.price * (1 - product.offer_discount / 100)).toFixed(2)}
+                        </h6>
+                        <span className="text-sm text-gray-400 line-through">₹{product.price}</span>
+                        <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
+                          -{product.offer_discount}%
+                        </span>
+                      </>
+                    ) : (
+                      <h6 className="text-lg font-semibold">₹{product.price}</h6>
+                    )}
+                  </div>
 
                   {/* Variations */}
                   {(product.color?.length > 0 || product.size?.length > 0) && (
