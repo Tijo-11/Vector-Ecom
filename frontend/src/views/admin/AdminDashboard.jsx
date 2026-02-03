@@ -10,6 +10,9 @@ import {
   BarChart2,
   ShieldAlert,
   Ban,
+  TrendingUp,
+  Package,
+  Tag,
 } from "lucide-react";
 import AdminSidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
@@ -23,25 +26,38 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [revenueChartData, setRevenueChartData] = useState([]);
   const [ordersChartData, setOrdersChartData] = useState([]);
-  const [activeTab, setActiveTab] = useState("vendors");
+  const [bestProducts, setBestProducts] = useState([]);
+  const [bestCategories, setBestCategories] = useState([]);
+  const [period, setPeriod] = useState("monthly");
 
-  // Fetch top-level stats (placeholder)
+  // Fetch top-level stats
   useEffect(() => {
     apiInstance.get(`/admin/stats/`).then((res) => {
       setStats(res.data[0]);
     });
   }, []);
 
-  // Fetch chart data (placeholder)
-  const fetchChartData = async () => {
-    const revenueRes = await apiInstance.get(`/admin/revenue-chart/`);
-    const orderRes = await apiInstance.get(`/admin/orders-chart/`);
-    setRevenueChartData(revenueRes?.data || []);
-    setOrdersChartData(orderRes?.data || []);
+  // Fetch chart data and best selling data based on period
+  const fetchChartData = async (selectedPeriod) => {
+    try {
+      const [revenueRes, orderRes, productsRes, categoriesRes] = await Promise.all([
+        apiInstance.get(`/admin/revenue-chart/?period=${selectedPeriod}`),
+        apiInstance.get(`/admin/orders-chart/?period=${selectedPeriod}`),
+        apiInstance.get(`/admin/best-selling-products/?period=${selectedPeriod}`),
+        apiInstance.get(`/admin/best-selling-categories/?period=${selectedPeriod}`),
+      ]);
+      setRevenueChartData(revenueRes?.data || []);
+      setOrdersChartData(orderRes?.data || []);
+      setBestProducts(productsRes?.data || []);
+      setBestCategories(categoriesRes?.data || []);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    }
   };
+
   useEffect(() => {
-    fetchChartData();
-  }, []);
+    fetchChartData(period);
+  }, [period]);
 
   // Prepare Chart.js data
   const revenueMonths = revenueChartData.map((item) => item.month);
@@ -106,6 +122,13 @@ export default function AdminDashboard() {
     ],
   };
 
+  const periodLabels = {
+    daily: "Last 30 Days",
+    weekly: "Last 12 Weeks",
+    monthly: "Last 12 Months",
+    yearly: "Last 3 Years",
+  };
+
   return (
     <div className="w-full px-4" id="main">
       <div className="flex flex-row h-full">
@@ -164,18 +187,147 @@ export default function AdminDashboard() {
 
               <hr className="my-6" />
 
+              {/* === PERIOD FILTER === */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <TrendingUp className="text-indigo-600" />
+                  Admin Analytics
+                </h2>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-gray-600">
+                    Time Period:
+                  </label>
+                  <select
+                    value={period}
+                    onChange={(e) => setPeriod(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="daily">Daily (Last 30 Days)</option>
+                    <option value="weekly">Weekly (Last 12 Weeks)</option>
+                    <option value="monthly">Monthly (Last 12 Months)</option>
+                    <option value="yearly">Yearly (Last 3 Years)</option>
+                  </select>
+                </div>
+              </div>
+
               {/* === CHARTS === */}
-              <div className="mb-6">
-                <div className="flex justify-center items-center mb-3">
-                  <h2 className="text-lg font-semibold">Admin Analytics</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div className="bg-white rounded-xl shadow p-4 h-[350px]">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Revenue - {periodLabels[period]}</h3>
+                  <div className="h-[300px]">
+                    <Bar data={revenueData} options={chartOptions} />
+                  </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow p-4 h-[350px] w-[75%] mx-auto my-4">
-                  <Bar data={revenueData} options={chartOptions} />
+                <div className="bg-white rounded-xl shadow p-4 h-[350px]">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Orders - {periodLabels[period]}</h3>
+                  <div className="h-[300px]">
+                    <Bar data={ordersData} options={chartOptions} />
+                  </div>
+                </div>
+              </div>
+
+              <hr className="my-6" />
+
+              {/* === BEST SELLING SECTION === */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Best Selling Products */}
+                <div className="bg-white rounded-xl shadow p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Package className="text-blue-600" size={24} />
+                    <h3 className="text-lg font-semibold">Best Selling Products (Top 10)</h3>
+                  </div>
+                  {bestProducts.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50">
+                            <th className="text-left py-3 px-2 font-medium text-gray-600">#</th>
+                            <th className="text-left py-3 px-2 font-medium text-gray-600">Image</th>
+                            <th className="text-left py-3 px-2 font-medium text-gray-600">Product</th>
+                            <th className="text-left py-3 px-2 font-medium text-gray-600">Vendor</th>
+                            <th className="text-right py-3 px-2 font-medium text-gray-600">Sold</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bestProducts.map((product, index) => (
+                            <tr key={product.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-2 text-gray-500">{index + 1}</td>
+                              <td className="py-3 px-2">
+                                <img
+                                  src={product.image || "https://via.placeholder.com/40"}
+                                  alt={product.title}
+                                  className="w-10 h-10 object-cover rounded"
+                                />
+                              </td>
+                              <td className="py-3 px-2">
+                                <div className="font-medium text-gray-900 line-clamp-1">{product.title}</div>
+                                <div className="text-xs text-gray-500">{product.category_name}</div>
+                              </td>
+                              <td className="py-3 px-2 text-gray-600">{product.vendor_name}</td>
+                              <td className="py-3 px-2 text-right">
+                                <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold">
+                                  {product.sell_count}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Package className="mx-auto mb-2 opacity-50" size={40} />
+                      <p>No sales data available for this period</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="bg-white rounded-xl shadow p-4 h-[350px] w-[75%] mx-auto my-4">
-                  <Bar data={ordersData} options={chartOptions} />
+                {/* Best Selling Categories */}
+                <div className="bg-white rounded-xl shadow p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Tag className="text-purple-600" size={24} />
+                    <h3 className="text-lg font-semibold">Best Selling Categories (Top 10)</h3>
+                  </div>
+                  {bestCategories.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50">
+                            <th className="text-left py-3 px-2 font-medium text-gray-600">#</th>
+                            <th className="text-left py-3 px-2 font-medium text-gray-600">Image</th>
+                            <th className="text-left py-3 px-2 font-medium text-gray-600">Category</th>
+                            <th className="text-right py-3 px-2 font-medium text-gray-600">Items Sold</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bestCategories.map((category, index) => (
+                            <tr key={category.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-2 text-gray-500">{index + 1}</td>
+                              <td className="py-3 px-2">
+                                <img
+                                  src={category.image || "https://via.placeholder.com/40"}
+                                  alt={category.title}
+                                  className="w-10 h-10 object-cover rounded"
+                                />
+                              </td>
+                              <td className="py-3 px-2 font-medium text-gray-900">{category.title}</td>
+                              <td className="py-3 px-2 text-right">
+                                <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold">
+                                  {category.sell_count}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Tag className="mx-auto mb-2 opacity-50" size={40} />
+                      <p>No sales data available for this period</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

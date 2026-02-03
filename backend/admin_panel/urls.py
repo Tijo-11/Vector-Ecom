@@ -6,6 +6,8 @@ urlpatterns = [
     path('stats/', views.AdminStatsAPIView.as_view(), name='admin-stats'),
     path('revenue-chart/', views.AdminRevenueChartAPIView.as_view(), name='admin-revenue-chart'),
     path('orders-chart/', views.AdminOrdersChartAPIView.as_view(), name='admin-orders-chart'),
+    path('best-selling-products/', views.BestSellingProductsAPIView.as_view(), name='admin-best-selling-products'),
+    path('best-selling-categories/', views.BestSellingCategoriesAPIView.as_view(), name='admin-best-selling-categories'),
 
     # Vendor Management
     path('vendors/', views.AdminVendorListAPIView.as_view(), name='admin-vendors-list'),
@@ -33,3 +35,4 @@ urlpatterns = [
     # Settings
     path('settings/', views.AdminSettingsAPIView.as_view(), name='admin-settings'),
 ]
+

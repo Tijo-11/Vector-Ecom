@@ -126,3 +126,23 @@ class ProductReportSerializer(serializers.Serializer):
     vendor_name = serializers.CharField()
     total_orders = serializers.IntegerField()
     total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class BestSellingProductSerializer(serializers.Serializer):
+    """Serializer for best selling products"""
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    image = serializers.CharField(allow_null=True)
+    vendor_name = serializers.CharField()
+    category_name = serializers.CharField()
+    price = serializers.DecimalField(max_digits=12, decimal_places=2)
+    sell_count = serializers.IntegerField()
+
+
+class BestSellingCategorySerializer(serializers.Serializer):
+    """Serializer for best selling categories"""
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    image = serializers.CharField(allow_null=True)
+    sell_count = serializers.IntegerField()
+

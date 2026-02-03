@@ -16,7 +16,8 @@ from .serializers import (
     AdminStatsSerializer, MonthlyRevenueSerializer, MonthlyOrdersSerializer,
     AdminVendorSerializer, AdminProductSerializer, AdminOrderSerializer,
     AdminCategoryOfferSerializer, SalesReportSerializer,
-    VendorPerformanceSerializer, ProductReportSerializer
+    VendorPerformanceSerializer, ProductReportSerializer,
+    BestSellingProductSerializer, BestSellingCategorySerializer
 )
 from .permissions import IsAdminUser
 
@@ -61,17 +62,32 @@ class AdminStatsAPIView(APIView):
 
 class AdminRevenueChartAPIView(APIView):
     """
-    GET: Returns monthly revenue data for the past 12 months
+    GET: Returns revenue data based on period filter
+    Query params: ?period=daily|weekly|monthly|yearly (default: monthly)
     """
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        # Get data from the past 12 months
-        twelve_months_ago = timezone.now() - timedelta(days=365)
+        period = request.query_params.get('period', 'monthly')
+        
+        # Calculate date range based on period
+        now = timezone.now()
+        if period == 'daily':
+            start_date = now - timedelta(days=30)
+            trunc_func = TruncMonth  # We'll use TruncDate for daily
+        elif period == 'weekly':
+            start_date = now - timedelta(weeks=12)
+            trunc_func = TruncMonth
+        elif period == 'yearly':
+            start_date = now - timedelta(days=365*3)
+            trunc_func = TruncMonth
+        else:  # monthly (default)
+            start_date = now - timedelta(days=365)
+            trunc_func = TruncMonth
 
         monthly_revenue = CartOrder.objects.filter(
             payment_status='paid',
-            date__gte=twelve_months_ago
+            date__gte=start_date
         ).annotate(
             month=TruncMonth('date')
         ).values('month').annotate(
@@ -92,17 +108,28 @@ class AdminRevenueChartAPIView(APIView):
 
 class AdminOrdersChartAPIView(APIView):
     """
-    GET: Returns monthly order counts for the past 12 months
+    GET: Returns order counts based on period filter
+    Query params: ?period=daily|weekly|monthly|yearly (default: monthly)
     """
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        # Get data from the past 12 months
-        twelve_months_ago = timezone.now() - timedelta(days=365)
+        period = request.query_params.get('period', 'monthly')
+        
+        # Calculate date range based on period
+        now = timezone.now()
+        if period == 'daily':
+            start_date = now - timedelta(days=30)
+        elif period == 'weekly':
+            start_date = now - timedelta(weeks=12)
+        elif period == 'yearly':
+            start_date = now - timedelta(days=365*3)
+        else:  # monthly (default)
+            start_date = now - timedelta(days=365)
 
         monthly_orders = CartOrder.objects.filter(
             payment_status='paid',
-            date__gte=twelve_months_ago
+            date__gte=start_date
         ).annotate(
             month=TruncMonth('date')
         ).values('month').annotate(
@@ -402,3 +429,107 @@ class AdminSettingsAPIView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class BestSellingProductsAPIView(APIView):
+    """
+    GET: Returns top 10 best selling products by quantity sold
+    Query params: ?period=daily|weekly|monthly|yearly (default: monthly)
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'monthly')
+        
+        # Calculate date range based on period
+        now = timezone.now()
+        if period == 'daily':
+            start_date = now - timedelta(days=30)
+        elif period == 'weekly':
+            start_date = now - timedelta(weeks=12)
+        elif period == 'yearly':
+            start_date = now - timedelta(days=365*3)
+        else:  # monthly (default)
+            start_date = now - timedelta(days=365)
+
+        # Get products with their sell count
+        best_products = CartOrderItem.objects.filter(
+            order__payment_status='paid',
+            order__date__gte=start_date
+        ).values(
+            'product__id', 'product__title', 'product__image',
+            'product__vendor__name', 'product__category__title', 'product__price'
+        ).annotate(
+            sell_count=Sum('qty')
+        ).order_by('-sell_count')[:10]
+
+        data = []
+        for item in best_products:
+            # Build absolute image URL
+            image_url = None
+            if item['product__image']:
+                image_url = request.build_absolute_uri('/media/' + str(item['product__image']))
+            
+            data.append({
+                'id': item['product__id'],
+                'title': item['product__title'],
+                'image': image_url,
+                'vendor_name': item['product__vendor__name'] or 'N/A',
+                'category_name': item['product__category__title'] or 'N/A',
+                'price': item['product__price'] or 0,
+                'sell_count': item['sell_count'] or 0
+            })
+
+        serializer = BestSellingProductSerializer(data, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class BestSellingCategoriesAPIView(APIView):
+    """
+    GET: Returns top 10 best selling categories by quantity sold
+    Query params: ?period=daily|weekly|monthly|yearly (default: monthly)
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        period = request.query_params.get('period', 'monthly')
+        
+        # Calculate date range based on period
+        now = timezone.now()
+        if period == 'daily':
+            start_date = now - timedelta(days=30)
+        elif period == 'weekly':
+            start_date = now - timedelta(weeks=12)
+        elif period == 'yearly':
+            start_date = now - timedelta(days=365*3)
+        else:  # monthly (default)
+            start_date = now - timedelta(days=365)
+
+        # Get categories with their sell count
+        best_categories = CartOrderItem.objects.filter(
+            order__payment_status='paid',
+            order__date__gte=start_date,
+            product__category__isnull=False
+        ).values(
+            'product__category__id', 'product__category__title', 'product__category__image'
+        ).annotate(
+            sell_count=Sum('qty')
+        ).order_by('-sell_count')[:10]
+
+        data = []
+        for item in best_categories:
+            # Build absolute image URL
+            image_url = None
+            if item['product__category__image']:
+                image_url = request.build_absolute_uri('/media/' + str(item['product__category__image']))
+            
+            data.append({
+                'id': item['product__category__id'],
+                'title': item['product__category__title'],
+                'image': image_url,
+                'sell_count': item['sell_count'] or 0
+            })
+
+        serializer = BestSellingCategorySerializer(data, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
