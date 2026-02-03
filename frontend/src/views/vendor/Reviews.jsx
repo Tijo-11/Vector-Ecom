@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Star, Eye } from "lucide-react";
+import { Star, Eye, MessageSquare, ChevronLeft, ChevronRight, User } from "lucide-react";
 
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
@@ -24,22 +24,18 @@ function Reviews() {
 
   const vendorId = userData?.vendor_id;
 
-  // Construct full URL with optional page param
   const getFullUrl = (page) => {
     const baseUrl = `vendor-reviews/${vendorId}/`;
     if (page <= 1) return baseUrl;
     return `${baseUrl}?page=${page}`;
   };
 
-  // Load reviews with pagination support
   const loadReviews = async (page = currentPage) => {
     if (!vendorId) return;
     setLoading(true);
     try {
       const fullUrl = getFullUrl(page);
       const response = await axios.get(fullUrl);
-
-      // Handle paginated response safely
       const data = response.data;
       const reviewList = Array.isArray(data) ? data : data.results || [];
       const count = data.count ?? reviewList.length;
@@ -70,120 +66,138 @@ function Reviews() {
     loadReviews(currentPage);
   }, [currentPage]);
 
+  const renderStars = (rating) => {
+    return Array.from({ length: 5 }, (_, idx) => (
+      <Star
+        key={idx}
+        size={16}
+        className={idx < rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}
+      />
+    ));
+  };
+
   return (
-    <div className="flex h-full">
+    <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
-      <div className="flex-1 p-6 overflow-y-auto">
-        <h4 className="flex items-center text-xl font-semibold mb-6">
-          <Star className="w-6 h-6 mr-2 text-yellow-500" /> Reviews and Rating
-        </h4>
+
+      <div className="flex-1 p-8 lg:p-12 overflow-x-hidden">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <Star className="w-7 h-7 text-yellow-500" />
+            Reviews & Ratings
+          </h1>
+          <p className="text-gray-500 mt-1">View and respond to customer reviews.</p>
+        </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-            <p className="text-lg text-gray-600">Loading reviews...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-yellow-500 mb-4"></div>
+            <p className="text-gray-500">Loading reviews...</p>
           </div>
         ) : (
-          <section className="p-6 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 shadow-md">
-            <div className="flex flex-col items-center">
-              <div className="w-full max-w-5xl">
-                {reviews.length > 0 ? (
-                  <>
-                    {reviews.map((review) => (
-                      <div
-                        key={review.id}
-                        className="bg-white shadow-md rounded-xl p-6 mb-4"
-                      >
-                        <div className="flex flex-col md:flex-row items-center md:items-start">
-                          <img
-                            src={
-                              review.profile.image ||
-                              "https://via.placeholder.com/160?text=No+Image"
-                            }
-                            className="rounded-full shadow-md w-40 h-40 object-cover mb-4 md:mb-0"
-                            alt={`${review.profile.full_name}'s avatar`}
-                          />
-                          <div className="md:ml-6 flex-1">
-                            <p className="text-gray-800 mb-2">
-                              <b>Review:</b> {review.review}
-                            </p>
-                            <p className="text-gray-800 mb-2">
-                              <b>Reply:</b>{" "}
-                              {review.reply === null || review.reply === "" ? (
-                                <span className="ml-2 text-gray-500">
-                                  No Response
-                                </span>
-                              ) : (
-                                <span className="ml-2">{review.reply}</span>
-                              )}
-                            </p>
-                            <p className="text-gray-800 mb-2">
-                              <strong>Name:</strong> {review.profile.full_name}
-                            </p>
-                            <p className="text-gray-800 mb-2">
-                              <b>Product:</b> {review?.product?.title || "N/A"}
-                            </p>
-                            <p className="text-gray-800 mb-2 flex items-center">
-                              Rating:
-                              <span className="ml-2 mr-2">{review.rating}</span>
-                              {Array.from(
-                                { length: review.rating },
-                                (_, idx) => (
-                                  <Star
-                                    key={idx}
-                                    className="w-5 h-5 text-yellow-500 fill-yellow-500"
-                                  />
-                                ),
-                              )}
-                            </p>
-                            <div className="mt-3">
-                              <Link
-                                to={`/vendor/reviews/${review.id}/`}
-                                className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg shadow transition"
-                              >
-                                <Eye className="w-5 h-5 mr-2" /> View Review
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Pagination Controls */}
-                    {totalCount > reviews.length && (
-                      <div className="flex justify-center items-center mt-8 gap-6">
-                        <button
-                          onClick={() =>
-                            setCurrentPage((prev) => Math.max(prev - 1, 1))
-                          }
-                          disabled={!hasPrev || loading}
-                          className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
-                        >
-                          Previous
-                        </button>
-
-                        <span className="text-lg font-medium">
-                          Page {currentPage} ({totalCount} total reviews)
-                        </span>
-
-                        <button
-                          onClick={() => setCurrentPage((prev) => prev + 1)}
-                          disabled={!hasNext || loading}
-                          className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <h5 className="mt-4 p-3 text-center text-gray-600 text-lg">
-                    No reviews yet
-                  </h5>
-                )}
+          <>
+            {/* Stats Card */}
+            <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl shadow-lg p-6 text-white mb-8 max-w-md relative overflow-hidden">
+              <div className="absolute right-0 top-0 opacity-10">
+                <Star className="w-32 h-32 -mr-8 -mt-8" />
+              </div>
+              <div className="relative z-10">
+                <p className="text-yellow-100 font-medium uppercase tracking-wider text-sm">Total Reviews</p>
+                <h2 className="text-4xl font-bold mt-2">{totalCount}</h2>
               </div>
             </div>
-          </section>
+
+            {/* Reviews Grid */}
+            <div className="space-y-4">
+              {reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition"
+                  >
+                    <div className="flex flex-col md:flex-row gap-6">
+                      {/* User Avatar */}
+                      <div className="flex-shrink-0">
+                        <img
+                          src={review.profile.image || "https://via.placeholder.com/80?text=User"}
+                          className="w-16 h-16 rounded-full object-cover border-2 border-gray-100"
+                          alt={`${review.profile.full_name}'s avatar`}
+                        />
+                      </div>
+                      
+                      {/* Review Content */}
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-3 mb-3">
+                          <span className="font-semibold text-gray-900">{review.profile.full_name}</span>
+                          <div className="flex items-center gap-1">
+                            {renderStars(review.rating)}
+                            <span className="ml-2 text-sm text-gray-500">({review.rating}/5)</span>
+                          </div>
+                        </div>
+                        
+                        <p className="text-gray-700 mb-3">{review.review}</p>
+                        
+                        {review.reply && (
+                          <div className="bg-gray-50 rounded-xl p-4 mt-3 border-l-4 border-blue-500">
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium text-blue-600">Your reply:</span> {review.reply}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+                          <span className="text-sm text-gray-500">
+                            Product: <span className="font-medium text-gray-700">{review?.product?.title || "N/A"}</span>
+                          </span>
+                          <Link
+                            to={`/vendor/reviews/${review.id}/`}
+                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium text-sm hover:underline ml-auto"
+                          >
+                            <Eye size={16} />
+                            View & Reply
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-16 text-center">
+                  <MessageSquare size={48} className="text-gray-200 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium">No reviews yet</p>
+                  <p className="text-gray-400 text-sm mt-1">Customer reviews will appear here.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {totalCount > 0 && (
+              <div className="flex flex-col sm:flex-row justify-between items-center py-6 mt-6">
+                <p className="text-sm text-gray-600 mb-3 sm:mb-0">
+                  Page {currentPage} of {Math.ceil(totalCount / 10) || 1} ({totalCount} reviews)
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={!hasPrev || loading}
+                    className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    <ChevronLeft size={16} />
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={!hasNext || loading}
+                    className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Next
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -191,3 +205,4 @@ function Reviews() {
 }
 
 export default Reviews;
+

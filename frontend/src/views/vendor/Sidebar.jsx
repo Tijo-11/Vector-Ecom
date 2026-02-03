@@ -38,10 +38,10 @@ export default function VendorSidebar() {
   };
 
   return (
-    <div className="w-64 bg-gray-900 min-h-screen p-4 flex flex-col text-white fixed h-full overflow-y-auto custom-scrollbar border-r border-gray-800">
+    <div className="w-64 bg-gray-900 p-4 flex flex-col text-white sticky top-0 h-screen border-r border-gray-800 shrink-0">
        
        {/* Brand Area */}
-       <div className="mb-8 px-4 py-2">
+       <div className="mb-8 px-4 py-2 shrink-0">
           <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
              <span className="text-blue-500">V</span>endor
           </h1>
@@ -49,7 +49,7 @@ export default function VendorSidebar() {
        </div>
 
        {/* Navigation */}
-       <ul className="space-y-1.5 flex-1">
+       <ul className="space-y-1.5 flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <NavItem to="/vendor/dashboard/" icon={LayoutDashboard} label="Dashboard" />
           <NavItem to="/vendor/products/" icon={Package} label="Products" />
           <NavItem to="/vendor/orders/" icon={ShoppingCart} label="Orders" />
@@ -61,8 +61,8 @@ export default function VendorSidebar() {
           <NavItem to="/vendor/settings/" icon={Settings} label="Settings" />
        </ul>
 
-       {/* Bottom Actions */}
-       <div className="mt-8 pt-4 border-t border-gray-800">
+       {/* Logout - part of sidebar */}
+       <div className="pt-4 border-t border-gray-800 shrink-0">
           <Link 
              to="/logout" 
              className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
@@ -74,3 +74,5 @@ export default function VendorSidebar() {
     </div>
   );
 }
+
+

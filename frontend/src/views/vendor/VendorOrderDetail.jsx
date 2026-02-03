@@ -182,164 +182,145 @@ function OrderDetail() {
   };
 
   return (
-    <div className="container mx-auto px-4" id="main">
-      <div className="flex flex-col md:flex-row h-full">
-        <Sidebar />
-        <div className="md:w-3/4 lg:w-5/6 mt-4">
-          <main className="mb-10">
-            {/* Summary Section */}
-            <section className="mb-8">
-              <h3 className="flex items-center text-xl font-semibold mb-5">
-                <ShoppingCart className="text-blue-600 mr-2" /> #{order.oid}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-teal-100 rounded-lg shadow p-4">
-                  <p className="text-gray-600">Total</p>
-                  <h2 className="text-xl font-bold">₹{order?.total}</h2>
-                </div>
-                <div className="bg-purple-100 rounded-lg shadow p-4">
-                  <p className="text-gray-600">Payment Status</p>
-                  <h2 className="text-xl font-bold">
-                    {order?.payment_status?.toUpperCase()}
-                  </h2>
-                </div>
-                <div className="bg-blue-100 rounded-lg shadow p-4">
-                  <p className="text-gray-600">Order Status</p>
-                  <h2 className="text-xl font-bold">{order.order_status}</h2>
-                </div>
-                <div className="bg-green-100 rounded-lg shadow p-4">
-                  <p className="text-gray-600">Shipping Amount</p>
-                  <h2 className="text-xl font-bold">
-                    ₹{order.shipping_amount}
-                  </h2>
-                </div>
-                <div className="bg-cyan-100 rounded-lg shadow p-4">
-                  <p className="text-gray-600">Tax Fee</p>
-                  <h2 className="text-xl font-bold">₹{order.tax_fee}</h2>
-                </div>
-                <div className="bg-pink-100 rounded-lg shadow p-4">
-                  <p className="text-gray-600">Service Fee</p>
-                  <h2 className="text-xl font-bold">₹{order.service_fee}</h2>
-                </div>
-                <div className="bg-indigo-100 rounded-lg shadow p-4">
-                  <p className="text-gray-600">Discount</p>
-                  <h2 className="text-xl font-bold">₹{order.saved}</h2>
-                </div>
-              </div>
-            </section>
+    <div className="flex bg-gray-50 min-h-screen">
+      <Sidebar />
 
-            {/* Order Items Section */}
-            <section>
-              <div className="rounded-lg shadow p-6 bg-white">
-                <table className="w-full border-collapse">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="py-3 px-4 text-left">Product</th>
-                      <th className="py-3 px-4 text-left">Price</th>
-                      <th className="py-3 px-4 text-left">Qty</th>
-                      <th className="py-3 px-4 text-left">Total</th>
-                      <th className="py-3 px-4 text-left text-red-600">
-                        Discount
-                      </th>
-                      <th className="py-3 px-4 text-left">Status</th>
-                      <th className="py-3 px-4 text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orderItems?.map((item, index) => (
-                      <tr
-                        key={index}
-                        className="border-b hover:bg-gray-50 transition"
-                      >
-                        <td className="py-3 px-4">
-                          <div className="flex items-center">
-                            <img
-                              src={item?.product?.image}
-                              alt={item?.product?.title}
-                              className="w-20 h-20 object-cover rounded-lg"
-                            />
-                            <Link
-                              to={`/detail/${item.product.slug}`}
-                              className="fw-bold text-dark ms-2 mb-0"
-                            >
-                              {item?.product?.title}
-                            </Link>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">₹{item.product.price}</td>
-                        <td className="py-3 px-4">{item.qty}</td>
-                        <td className="py-3 px-4">₹{item.sub_total}</td>
-                        <td className="py-3 px-4 text-red-600">
-                          -₹{item.saved}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex flex-col gap-1">
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}
-                            >
-                              {item.delivery_status}
-                            </span>
-                            {item.return_request &&
-                              getReturnStatusBadge(item.return_request)}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex flex-col gap-2">
-                            {/* Update Status */}
-                            {!item.product_delivered &&
-                              item.delivery_status !== "Cancelled" &&
-                              (!item.return_request ||
-                                item.return_request.status !== "pending") && (
-                                <button
-                                  onClick={() => handleStatusChange(item)}
-                                  className="flex items-center bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 text-sm"
-                                >
-                                  <Truck className="w-4 h-4 mr-1" /> Update
-                                  Status
-                                </button>
-                              )}
+      <div className="flex-1 p-8 lg:p-12 overflow-x-hidden">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <ShoppingCart className="w-7 h-7 text-blue-600" />
+            Order #{order.oid}
+          </h1>
+          <p className="text-gray-500 mt-1">View and manage order details.</p>
+        </div>
 
-                            {/* Return Request Actions */}
-                            {item.return_request &&
-                              item.return_request.status === "pending" && (
-                                <div className="flex gap-1">
-                                  <button
-                                    onClick={() =>
-                                      handleReturnRequest(item, "approve")
-                                    }
-                                    className="flex items-center bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 text-xs"
-                                  >
-                                    Accept
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleReturnRequest(item, "reject")
-                                    }
-                                    className="flex items-center bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 text-xs"
-                                  >
-                                    Reject
-                                  </button>
-                                </div>
-                              )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {orderItems.length < 1 && (
-                      <tr>
-                        <td
-                          colSpan="7"
-                          className="text-center py-6 text-gray-600"
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl shadow-lg p-5 text-white">
+            <p className="text-teal-100 font-medium text-sm uppercase tracking-wider">Total</p>
+            <h2 className="text-2xl font-bold mt-1">₹{order?.total}</h2>
+          </div>
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-5 text-white">
+            <p className="text-purple-100 font-medium text-sm uppercase tracking-wider">Payment</p>
+            <h2 className="text-2xl font-bold mt-1">{order?.payment_status?.toUpperCase()}</h2>
+          </div>
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-5 text-white">
+            <p className="text-blue-100 font-medium text-sm uppercase tracking-wider">Status</p>
+            <h2 className="text-2xl font-bold mt-1">{order.order_status}</h2>
+          </div>
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-5 text-white">
+            <p className="text-green-100 font-medium text-sm uppercase tracking-wider">Shipping</p>
+            <h2 className="text-2xl font-bold mt-1">₹{order.shipping_amount}</h2>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p className="text-gray-500 text-sm">Tax Fee</p>
+            <h2 className="text-xl font-bold text-gray-900">₹{order.tax_fee}</h2>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p className="text-gray-500 text-sm">Service Fee</p>
+            <h2 className="text-xl font-bold text-gray-900">₹{order.service_fee}</h2>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p className="text-gray-500 text-sm">Discount</p>
+            <h2 className="text-xl font-bold text-red-600">-₹{order.saved}</h2>
+          </div>
+        </div>
+
+        {/* Order Items Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-5 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900">Order Items</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Qty</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-red-500 uppercase tracking-wider">Discount</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {orderItems?.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={item?.product?.image}
+                          alt={item?.product?.title}
+                          className="w-16 h-16 object-cover rounded-lg border border-gray-100"
+                        />
+                        <Link
+                          to={`/detail/${item.product.slug}`}
+                          className="font-medium text-gray-900 hover:text-blue-600 transition"
                         >
-                          No Order Item
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </main>
+                          {item?.product?.title}
+                        </Link>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-900">₹{item.product.price}</td>
+                    <td className="px-6 py-4 text-gray-600">{item.qty}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900">₹{item.sub_total}</td>
+                    <td className="px-6 py-4 font-medium text-red-600">-₹{item.saved}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}>
+                          {item.delivery_status}
+                        </span>
+                        {item.return_request && getReturnStatusBadge(item.return_request)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-2">
+                        {!item.product_delivered &&
+                          item.delivery_status !== "Cancelled" &&
+                          (!item.return_request || item.return_request.status !== "pending") && (
+                            <button
+                              onClick={() => handleStatusChange(item)}
+                              className="flex items-center bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 text-sm transition"
+                            >
+                              <Truck className="w-4 h-4 mr-1" /> Update Status
+                            </button>
+                          )}
+
+                        {item.return_request && item.return_request.status === "pending" && (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleReturnRequest(item, "approve")}
+                              className="flex items-center bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 text-xs transition"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleReturnRequest(item, "reject")}
+                              className="flex items-center bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 text-xs transition"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {orderItems.length < 1 && (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-16 text-center">
+                      <p className="text-gray-500 font-medium">No Order Items</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

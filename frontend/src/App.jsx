@@ -1,6 +1,6 @@
 // src/App.jsx (Full Corrected File - Fixed LoadingSpinner typo and syntax)
 import { useState } from "react";
-import { Routes, Route, BrowserRouter } from "react-router-dom";
+import { Routes, Route, BrowserRouter, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
 import Login from "./views/auth/login";
@@ -17,6 +17,17 @@ import NotFund from "./layouts/NotFound.jsx";
 import AdminRoute from "./layouts/AdminRoute.jsx";
 import ProtectedRoute from "./layouts/ProtectedRoute.jsx";
 import PublicLayout from "./layouts/PublicLayout.jsx"; // ← NEW IMPORT
+
+// Conditional Footer - hides only on admin pages
+function ConditionalFooter() {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith("/admin/");
+  
+  if (isAdminPage) {
+    return null;
+  }
+  return <StoreFooter />;
+}
 
 // Lazy load all page-level components
 const Home = lazy(() => import("./views/shop/Home"));
@@ -601,7 +612,7 @@ export default function App() {
             <Route path="*" element={<NotFund />} />
           </Routes>
         </MainWrapper>
-        <StoreFooter />
+        <ConditionalFooter />
       </BrowserRouter>
     </CartContext.Provider>
   );

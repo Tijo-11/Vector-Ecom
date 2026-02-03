@@ -3,8 +3,6 @@ import {
   Package,
   ShoppingCart,
   IndianRupee,
-  TrendingUp,
-  TrendingDown,
   Calendar,
   Filter
 } from "lucide-react";
@@ -109,7 +107,7 @@ export default function Dashboard() {
   const product_data = {
     labels: chartLabels,
     datasets: [{
-        label: "Products Added",
+        label: "Total Products",
         data: productValues,
         borderColor: "rgb(16, 185, 129)",
         backgroundColor: "rgba(16, 185, 129, 0.1)",
@@ -120,15 +118,11 @@ export default function Dashboard() {
     }],
   };
 
-  const StatCard = ({ title, value, icon: Icon, color, trend }) => (
+  const StatCard = ({ title, value, icon: Icon, color }) => (
      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start justify-between hover:shadow-md transition-shadow">
         <div>
            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
            <h3 className="text-2xl font-bold text-gray-900 mt-2">{value}</h3>
-           <div className={`flex items-center gap-1 mt-2 text-xs font-semibold ${trend === 'up' ? 'text-green-600' : 'text-gray-400'}`}>
-               {trend === 'up' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-               <span>{trend === 'up' ? '+2.5% vs last month' : 'No change'}</span> {/* Mock Trend */}
-           </div>
         </div>
         <div className={`p-3 rounded-xl ${color}`}>
            <Icon size={24} className="text-white" />
@@ -138,8 +132,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex bg-gray-50 min-h-screen">
-       {/* Sidebar Spacer - Adjust width to match sidebar */}
-       <div className="w-64 hidden lg:block shrink-0" />
        <VendorSidebar /> 
        
        <div className="flex-1 p-8 lg:p-12 overflow-x-hidden">
@@ -161,21 +153,18 @@ export default function Dashboard() {
                  value={stats?.products || 0} 
                  icon={Package} 
                  color="bg-blue-500" 
-                 trend="up" 
              />
              <StatCard 
                  title="Total Orders" 
                  value={stats?.orders || 0} 
                  icon={ShoppingCart} 
                  color="bg-orange-500" 
-                 trend="up" 
              />
              <StatCard 
                  title="Total Revenue" 
                  value={`₹${stats?.revenue || 0}`} 
                  icon={IndianRupee} 
                  color="bg-green-500" 
-                 trend="up" 
              />
           </div>
 

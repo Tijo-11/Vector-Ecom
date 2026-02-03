@@ -56,14 +56,36 @@ def MonthlyOrderChartAPIFBV(request, vendor_id):
     orders_by_month = orders.annotate(month=ExtractMonth("date")).values(
         "month").annotate(orders=models.Count("id")).order_by("month")
     return Response(orders_by_month)
-######-----Monthly Product
+######-----Monthly Product (Cumulative Total)
 @api_view(('GET',))
 def MonthlyProductsChartAPIFBV(request, vendor_id):
+    """
+    Returns cumulative total products for each month.
+    Shows growth of total products over time.
+    """
     vendor = get_object_or_404(Vendor, id=vendor_id)
-    products = Product.objects.filter(vendor=vendor)
-    products_by_month = products.annotate(month=ExtractMonth("date")).values(
-        "month").annotate(orders=models.Count("id")).order_by("month")
-    return Response(products_by_month)
+    
+    # Get products with their creation dates
+    products = Product.objects.filter(vendor=vendor).annotate(
+        year=ExtractYear("date"),
+        month=ExtractMonth("date")
+    ).values("year", "month").annotate(
+        count=models.Count("id")
+    ).order_by("year", "month")
+    
+    # Convert to cumulative totals
+    cumulative_data = []
+    running_total = 0
+    
+    for item in products:
+        running_total += item['count']
+        cumulative_data.append({
+            'month': item['month'],
+            'year': item['year'],
+            'orders': running_total  # Keep 'orders' key for frontend compatibility
+        })
+    
+    return Response(cumulative_data)
 
 #Products
 class ProductsAPIView(generics.ListAPIView):

@@ -1,27 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Settings2, Store, User, Upload, Loader2 } from "lucide-react";
+import Swal from "sweetalert2";
+
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
-import Swal from "sweetalert2";
-import { CheckCircle, Store } from "lucide-react";
 import log from "loglevel";
 
 function Settings() {
   const [profileData, setProfileData] = useState({
+    image: null,
     full_name: "",
-    mobile: "",
-    email: "",
+    phone: "",
     about: "",
-    country: "",
-    city: "",
-    state: "",
-    address: "",
-    p_image: "",
   });
-  const [vendorData, setVendorData] = useState([]);
+
+  const [vendorData, setVendorData] = useState({
+    name: "",
+    description: "",
+    image: null,
+  });
+
+  const [profileImage, setProfileImage] = useState("");
   const [vendorImage, setVendorImage] = useState("");
-  const [profileImage, setprofileImage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const axios = apiInstance;
   const userData = UserData();
@@ -30,42 +33,28 @@ function Settings() {
     window.location.href = "/vendor/register/";
   }
 
-  const fetchProfileData = async () => {
-    try {
-      axios.get(`vendor-settings/${userData?.user_id}/`).then((res) => {
-        setProfileData({
-          full_name: res.data?.full_name,
-          email: res.data.user.email,
-          phone: res.data.user.phone,
-          about: res.data.about,
-          country: res.data.country,
-          city: res.data.city,
-          state: res.data.state,
-          address: res.data.address,
-          p_image: res.data.image,
-        });
-        setprofileImage(res.data.image);
-      });
-    } catch (error) {
-      log.error("Error fetching profile data:", error);
-    }
-  };
+  const vendorId = userData?.vendor_id;
 
-  const fetchVendorData = async () => {
+  const fetchData = async () => {
+    if (!vendorId) return;
+    setLoading(true);
     try {
-      axios.get(`vendor-shop-settings/${userData?.vendor_id}/`).then((res) => {
-        setVendorData(res.data);
-        setVendorImage(res.data.image);
-      });
+      const res = await axios.get(`vendor-settings/${vendorId}/`);
+      const data = res.data;
+      setProfileData(data?.profile || {});
+      setVendorData(data || {});
+      setProfileImage(data?.profile?.image || "");
+      setVendorImage(data?.image || "");
     } catch (error) {
-      log.error("Error fetching vendor data:", error);
+      log.error("Error fetching settings:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProfileData();
-    fetchVendorData();
-  }, []);
+    fetchData();
+  }, [vendorId]);
 
   const handleInputChange = (event) => {
     setProfileData({
@@ -75,172 +64,246 @@ function Settings() {
   };
 
   const handleFileChange = (event) => {
-    setProfileData({
-      ...profileData,
-      [event.target.name]: event.target.files[0],
-    });
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileData({
+          ...profileData,
+          [event.target.name]: file,
+        });
+        if (event.target.name === "image") {
+          setProfileImage(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleShopInputChange = (event) => {
+  const handleVendorInputChange = (event) => {
     setVendorData({
       ...vendorData,
       [event.target.name]: event.target.value,
     });
   };
 
-  const handleShopFileChange = (event) => {
-    setVendorData({
-      ...vendorData,
-      [event.target.name]: event.target.files[0],
-    });
+  const handleVendorFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVendorData({
+          ...vendorData,
+          [event.target.name]: file,
+        });
+        if (event.target.name === "image") {
+          setVendorImage(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    const res = await axios.get(`user/profile/${userData?.user_id}/`);
-    const formData = new FormData();
+    setSaving(true);
 
-    if (profileData.p_image && profileData.p_image !== res.data.image) {
-      formData.append("image", profileData.p_image);
+    const formdata = new FormData();
+    formdata.append("name", vendorData.name);
+    formdata.append("description", vendorData.description);
+    if (vendorData.image instanceof File) {
+      formdata.append("image", vendorData.image);
     }
-    formData.append("full_name", profileData.full_name);
-    formData.append("about", profileData.about);
-    formData.append("country", profileData.country);
-    formData.append("city", profileData.city);
-    formData.append("state", profileData.state);
-    formData.append("address", profileData.address);
+    formdata.append("full_name", profileData.full_name);
+    formdata.append("phone", profileData.phone);
+    formdata.append("about", profileData.about);
+    if (profileData.image instanceof File) {
+      formdata.append("p_image", profileData.image);
+    }
 
     try {
-      await apiInstance.patch(
-        `vendor-settings/${userData?.user_id}/`,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-      fetchProfileData();
-      Swal.fire({ icon: "success", title: "Profile updated successfully" });
+      await axios.patch(`vendor-settings/${vendorId}/`, formdata, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      Swal.fire({
+        icon: "success",
+        title: "Settings Updated",
+        text: "Your settings have been saved successfully.",
+        timer: 2000,
+      });
     } catch (error) {
-      log.error("Error updating profile:", error);
-    }
-  };
-
-  const handleShopFormSubmit = async (e) => {
-    e.preventDefault();
-    const res = await axios.get(`vendor-shop-settings/${userData?.vendor_id}/`);
-    const formData = new FormData();
-
-    if (vendorData.image && vendorData.image !== res.data.image) {
-      formData.append("image", vendorData.image);
-    }
-    formData.append("name", vendorData.name);
-    formData.append("description", vendorData.description);
-    formData.append("mobile", vendorData.mobile);
-
-    try {
-      await apiInstance.patch(
-        `vendor-shop-settings/${userData?.vendor_id}/`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      Swal.fire({ icon: "success", title: "Shop updated successfully" });
-      await fetchVendorData();
-    } catch (error) {
-      log.error("Error updating shop:", error);
+      log.error("Error updating settings:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Update Failed",
+        text: error?.response?.data?.message || "Failed to update settings.",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
-      <div className="flex-1 p-6">
-        {/* Tabs */}
-        <div className="flex space-x-4 border-b mb-6">
-          <button className="px-4 py-2 border-b-2 border-blue-600 text-blue-600">
-            Shop Settings
-          </button>
-          {/* <button className="px-4 py-2 text-gray-600 hover:text-blue-600">
-            Profile
-          </button> */}
+
+      <div className="flex-1 p-8 lg:p-12 overflow-x-hidden">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <Settings2 className="w-7 h-7 text-gray-700" />
+            Settings
+          </h1>
+          <p className="text-gray-500 mt-1">Manage your shop and profile settings.</p>
         </div>
 
-        {/* Shop Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white shadow rounded-2xl p-6 flex flex-col items-center">
-            <img
-              src={vendorImage}
-              alt="Shop Avatar"
-              className="w-40 h-40 rounded-full object-cover"
-            />
-            <h4 className="mt-4 text-lg font-semibold">{vendorData.name}</h4>
-            <p className="text-sm text-gray-500">{vendorData.description}</p>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-gray-600 mb-4"></div>
+            <p className="text-gray-500">Loading settings...</p>
           </div>
-          <div className="md:col-span-2 bg-white shadow rounded-2xl p-6">
-            <form
-              onSubmit={handleShopFormSubmit}
-              className="space-y-4"
-              encType="multipart/form-data"
-            >
-              <div>
-                <label className="block text-sm font-medium">Shop Avatar</label>
-                <input
-                  type="file"
-                  name="image"
-                  onChange={handleShopFileChange}
-                  className="mt-1 block w-full border rounded-lg px-3 py-2"
-                />
+        ) : (
+          <form onSubmit={handleFormSubmit} className="space-y-8">
+            {/* Shop Settings */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-5 border-b border-gray-100 flex items-center gap-3">
+                <Store size={20} className="text-emerald-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Shop Settings</h3>
               </div>
-              <div>
-                <label className="block text-sm font-medium">Shop Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={vendorData?.name || ""}
-                  onChange={handleShopInputChange}
-                  className="mt-1 block w-full border rounded-lg px-3 py-2"
-                />
+              <div className="p-6 space-y-6">
+                {/* Shop Image */}
+                <div className="flex flex-col sm:flex-row items-start gap-6">
+                  <div className="relative group">
+                    <img
+                      src={vendorImage || "https://via.placeholder.com/120?text=Shop"}
+                      alt="Shop"
+                      className="w-28 h-28 rounded-xl object-cover border-2 border-gray-100"
+                    />
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl opacity-0 group-hover:opacity-100 transition cursor-pointer">
+                      <Upload size={24} className="text-white" />
+                      <input
+                        type="file"
+                        name="image"
+                        accept="image/*"
+                        onChange={handleVendorFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex-1 space-y-4 w-full">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Shop Name</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={vendorData.name || ""}
+                        onChange={handleVendorInputChange}
+                        placeholder="Enter your shop name"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Shop Description</label>
+                      <textarea
+                        name="description"
+                        value={vendorData.description || ""}
+                        onChange={handleVendorInputChange}
+                        placeholder="Describe your shop"
+                        rows={3}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium">
-                  Shop Description
-                </label>
-                <input
-                  type="text"
-                  name="description"
-                  value={vendorData?.description || ""}
-                  onChange={handleShopInputChange}
-                  className="mt-1 block w-full border rounded-lg px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Mobile</label>
-                <input
-                  type="text"
-                  name="mobile"
-                  value={vendorData?.mobile || ""}
-                  onChange={handleShopInputChange}
-                  className="mt-1 block w-full border rounded-lg px-3 py-2"
-                />
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-                >
-                  Update Shop <CheckCircle size={18} />
-                </button>
-                <Link
-                  to={`/vendor/${vendorData.slug}/`}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                >
-                  View Shop <Store size={18} />
-                </Link>
-              </div>
-            </form>
-          </div>
-        </div>
+            </div>
 
-        {/* TODO: Profile section - same conversion with Tailwind */}
+            {/* Profile Settings */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-5 border-b border-gray-100 flex items-center gap-3">
+                <User size={20} className="text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Profile Settings</h3>
+              </div>
+              <div className="p-6 space-y-6">
+                {/* Profile Image */}
+                <div className="flex flex-col sm:flex-row items-start gap-6">
+                  <div className="relative group">
+                    <img
+                      src={profileImage || "https://via.placeholder.com/120?text=Profile"}
+                      alt="Profile"
+                      className="w-28 h-28 rounded-full object-cover border-2 border-gray-100"
+                    />
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition cursor-pointer">
+                      <Upload size={24} className="text-white" />
+                      <input
+                        type="file"
+                        name="image"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex-1 space-y-4 w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                        <input
+                          type="text"
+                          name="full_name"
+                          value={profileData.full_name || ""}
+                          onChange={handleInputChange}
+                          placeholder="Your full name"
+                          className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                        <input
+                          type="text"
+                          name="phone"
+                          value={profileData.phone || ""}
+                          onChange={handleInputChange}
+                          placeholder="Your phone number"
+                          className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">About</label>
+                      <textarea
+                        name="about"
+                        value={profileData.about || ""}
+                        onChange={handleInputChange}
+                        placeholder="Tell us about yourself"
+                        rows={3}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 bg-gray-900 text-white px-8 py-3 rounded-xl font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

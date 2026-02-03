@@ -213,7 +213,7 @@ function Wishlist() {
                                   {/* Clickable Image Area - Navigates to Product Detail */}
                                   <Link
                                     to={`/detail/${w.product.slug || ""}`}
-                                    className="block w-full h-64 flex items-center justify-center bg-gray-100 group"
+                                    className="block w-full h-64 items-center justify-center bg-gray-100 group"
                                   >
                                     <img
                                       src={w.product.image || placeholderImage}

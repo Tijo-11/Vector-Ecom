@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Eye, EyeOff, Bell, CheckCircle, X } from "lucide-react";
+import { Eye, EyeOff, Bell, CheckCircle, X, ChevronLeft, ChevronRight, Package } from "lucide-react";
 import moment from "moment";
 
 import apiInstance from "../../utils/axios";
@@ -31,7 +31,6 @@ function Notifications() {
     window.location.href = "/vendor/register/";
   }
 
-  // URL constructors
   const getUnseenUrl = (page) => {
     const base = `vendor-notifications-unseen/${vendorId}/`;
     return page <= 1 ? base : `${base}?page=${page}`;
@@ -52,22 +51,16 @@ function Notifications() {
         axios.get(`vendor-notifications-summary/${vendorId}/`),
       ]);
 
-      // Unseen notifications (paginated)
       const unseenData = unseenRes.data;
-      const unseenList = Array.isArray(unseenData)
-        ? unseenData
-        : unseenData.results || [];
+      const unseenList = Array.isArray(unseenData) ? unseenData : unseenData.results || [];
       setUnseenNotifications(unseenList);
       setUnseenTotalCount(unseenData.count ?? unseenList.length);
       setUnseenHasNext(!!unseenData.next);
       setUnseenHasPrev(!!unseenData.previous);
       setUnseenCurrentPage(page);
 
-      // Stats
       const statsData = statsRes.data;
-      const statsObj = Array.isArray(statsData)
-        ? statsData[0] || {}
-        : statsData.results?.[0] || statsData[0] || {};
+      const statsObj = Array.isArray(statsData) ? statsData[0] || {} : statsData.results?.[0] || statsData[0] || {};
       setNotificationStats(statsObj);
     } catch (error) {
       log.error("Error fetching unseen notifications/stats:", error);
@@ -84,11 +77,8 @@ function Notifications() {
     try {
       const seenUrl = getSeenUrl(page);
       const seenRes = await axios.get(seenUrl);
-
       const seenData = seenRes.data;
-      const seenList = Array.isArray(seenData)
-        ? seenData
-        : seenData.results || [];
+      const seenList = Array.isArray(seenData) ? seenData : seenData.results || [];
       setSeenNotifications(seenList);
       setSeenTotalCount(seenData.count ?? seenList.length);
       setSeenHasNext(!!seenData.next);
@@ -102,24 +92,20 @@ function Notifications() {
     }
   };
 
-  // Initial load: unseen + stats
   useEffect(() => {
     fetchUnseenAndStats(1);
   }, [vendorId]);
 
-  // Load unseen when page changes
   useEffect(() => {
     fetchUnseenAndStats(unseenCurrentPage);
   }, [unseenCurrentPage]);
 
-  // Load seen when modal opens
   useEffect(() => {
     if (showSeenModal) {
       fetchSeenNotifications(1);
     }
   }, [showSeenModal]);
 
-  // Load seen when page changes in modal
   useEffect(() => {
     if (showSeenModal) {
       fetchSeenNotifications(seenCurrentPage);
@@ -128,10 +114,7 @@ function Notifications() {
 
   const handleNotificationSeenStatus = async (notiId) => {
     try {
-      await axios.get(
-        `vendor-notifications-mark-as-seen/${vendorId}/${notiId}/`,
-      );
-      // Refresh unseen list and stats
+      await axios.get(`vendor-notifications-mark-as-seen/${vendorId}/${notiId}/`);
       await fetchUnseenAndStats(unseenCurrentPage);
     } catch (error) {
       log.error("Error marking notification as seen:", error);
@@ -139,257 +122,258 @@ function Notifications() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
-      <div className="flex-1 p-6 overflow-y-auto">
-        <h4 className="flex items-center text-xl font-semibold mb-6">
-          <Bell className="w-6 h-6 mr-2 text-blue-600" /> Notifications
-        </h4>
+
+      <div className="flex-1 p-8 lg:p-12 overflow-x-hidden">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <Bell className="w-7 h-7 text-blue-600" />
+            Notifications
+          </h1>
+          <p className="text-gray-500 mt-1">Stay updated with your latest orders and activities.</p>
+        </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-            <p className="text-lg text-gray-600">Loading notifications...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+            <p className="text-gray-500">Loading notifications...</p>
           </div>
         ) : (
           <>
-            {/* Stats Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-red-500 text-white rounded-xl shadow p-6">
-                <EyeOff className="w-10 h-10 opacity-30 mb-2" />
-                <h6 className="uppercase tracking-wide text-sm">
-                  Unread Notifications
-                </h6>
-                <h1 className="text-3xl font-bold">
-                  {notificationStats?.un_read_noti || 0}
-                </h1>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+                <div className="absolute right-0 top-0 opacity-10">
+                  <EyeOff className="w-32 h-32 -mr-8 -mt-8" />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-red-100 font-medium uppercase tracking-wider text-sm flex items-center gap-2">
+                    <EyeOff size={16} /> Unread
+                  </p>
+                  <h2 className="text-4xl font-bold mt-2">{notificationStats?.un_read_noti || 0}</h2>
+                </div>
               </div>
-              <div className="bg-green-500 text-white rounded-xl shadow p-6">
-                <Eye className="w-10 h-10 opacity-30 mb-2" />
-                <h6 className="uppercase tracking-wide text-sm">
-                  Read Notifications
-                </h6>
-                <h1 className="text-3xl font-bold">
-                  {notificationStats?.read_noti || 0}
-                </h1>
+              
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+                <div className="absolute right-0 top-0 opacity-10">
+                  <Eye className="w-32 h-32 -mr-8 -mt-8" />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-green-100 font-medium uppercase tracking-wider text-sm flex items-center gap-2">
+                    <Eye size={16} /> Read
+                  </p>
+                  <h2 className="text-4xl font-bold mt-2">{notificationStats?.read_noti || 0}</h2>
+                </div>
               </div>
-              <div className="bg-blue-500 text-white rounded-xl shadow p-6">
-                <Bell className="w-10 h-10 opacity-30 mb-2" />
-                <h6 className="uppercase tracking-wide text-sm">
-                  All Notifications
-                </h6>
-                <h1 className="text-3xl font-bold">
-                  {notificationStats?.all_noti || 0}
-                </h1>
+              
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+                <div className="absolute right-0 top-0 opacity-10">
+                  <Bell className="w-32 h-32 -mr-8 -mt-8" />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-blue-100 font-medium uppercase tracking-wider text-sm flex items-center gap-2">
+                    <Bell size={16} /> Total
+                  </p>
+                  <h2 className="text-4xl font-bold mt-2">{notificationStats?.all_noti || 0}</h2>
+                </div>
               </div>
             </div>
 
-            {/* Unseen Notifications Table */}
-            <div className="bg-white shadow rounded-xl overflow-hidden mb-6">
-              <h5 className="text-lg font-semibold p-4 border-b bg-gray-50">
-                Unread Notifications ({unseenTotalCount})
-              </h5>
+            {/* Unread Notifications */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <EyeOff size={20} className="text-red-500" />
+                  Unread Notifications
+                  <span className="ml-2 px-2.5 py-0.5 bg-red-100 text-red-700 rounded-full text-sm">{unseenTotalCount}</span>
+                </h3>
+              </div>
+              
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead className="bg-gray-800 text-white">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-4 py-3 text-left">Type</th>
-                      <th className="px-4 py-3 text-left">Message</th>
-                      <th className="px-4 py-3 text-left">Status</th>
-                      <th className="px-4 py-3 text-left">Date</th>
-                      <th className="px-4 py-3 text-left">Action</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Message</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-gray-100">
                     {unseenNotifications.length > 0 ? (
                       unseenNotifications.map((noti) => (
-                        <tr key={noti.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3">
-                            {noti.order && <p>New Order {noti?.order?.oid}</p>}
+                        <tr key={noti.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-50 rounded-lg">
+                                <Package size={18} className="text-blue-600" />
+                              </div>
+                              <span className="font-medium text-gray-900">
+                                {noti.order && `Order ${noti?.order?.oid}`}
+                              </span>
+                            </div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4 text-gray-600">
                             {noti.order_item && (
-                              <p>
-                                You've got a new order for{" "}
-                                <b>{noti?.order_item?.product?.title}</b>
-                              </p>
+                              <span>New order for <b>{noti?.order_item?.product?.title}</b></span>
                             )}
                           </td>
-                          <td className="px-4 py-3">
-                            <span className="flex items-center text-red-600 font-medium">
-                              <EyeOff className="w-4 h-4 mr-1" /> Unread
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {moment(noti.date).format("MMM DD, YYYY")}
-                          </td>
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4 text-gray-500">{moment(noti.date).format("MMM DD, YYYY")}</td>
+                          <td className="px-6 py-4 text-center">
                             <button
-                              onClick={() =>
-                                handleNotificationSeenStatus(noti.id)
-                              }
-                              className="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded transition"
+                              onClick={() => handleNotificationSeenStatus(noti.id)}
+                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                              title="Mark as read"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye size={18} />
                             </button>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td
-                          colSpan="5"
-                          className="text-center py-8 text-gray-500"
-                        >
-                          No unread notifications
+                        <td colSpan="4" className="px-6 py-16 text-center">
+                          <CheckCircle size={48} className="text-green-200 mx-auto mb-3" />
+                          <p className="text-gray-500 font-medium">All caught up!</p>
+                          <p className="text-gray-400 text-sm">No unread notifications.</p>
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
+              </div>
 
-                {/* Pagination for Unseen */}
-                {unseenTotalCount > unseenNotifications.length && (
-                  <div className="flex justify-center items-center py-4 border-t bg-gray-50 gap-6">
+              {unseenTotalCount > 0 && (
+                <div className="flex flex-col sm:flex-row justify-between items-center py-4 px-6 border-t border-gray-100 bg-gray-50">
+                  <p className="text-sm text-gray-600 mb-3 sm:mb-0">
+                    Page {unseenCurrentPage} of {Math.ceil(unseenTotalCount / 10) || 1}
+                  </p>
+                  <div className="flex gap-2">
                     <button
-                      onClick={() =>
-                        setUnseenCurrentPage((prev) => Math.max(prev - 1, 1))
-                      }
+                      onClick={() => setUnseenCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={!unseenHasPrev || loading}
-                      className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                      className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
+                      <ChevronLeft size={16} />
                       Previous
                     </button>
-
-                    <span className="text-lg font-medium">
-                      Page {unseenCurrentPage} ({unseenTotalCount} total unread)
-                    </span>
-
                     <button
                       onClick={() => setUnseenCurrentPage((prev) => prev + 1)}
                       disabled={!unseenHasNext || loading}
-                      className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                      className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
                       Next
+                      <ChevronRight size={16} />
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
-            {/* Button to View All Read Notifications */}
-            <div className="mb-6">
-              <button
-                onClick={() => setShowSeenModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow transition"
-              >
-                View All Read Notifications ({notificationStats?.read_noti || 0}
-                )
-              </button>
-            </div>
+            {/* View Read Notifications Button */}
+            <button
+              onClick={() => setShowSeenModal(true)}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition shadow-sm"
+            >
+              <Eye size={18} />
+              View Read Notifications ({notificationStats?.read_noti || 0})
+            </button>
           </>
         )}
 
-        {/* Modal for Read Notifications */}
+        {/* Read Notifications Modal */}
         {showSeenModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[80vh] overflow-y-auto p-6">
-              <div className="flex justify-between items-center mb-4 sticky top-0 bg-white pb-4 border-b">
-                <h5 className="text-lg font-semibold">
-                  All Read Notifications ({seenTotalCount})
-                </h5>
-                <button onClick={() => setShowSeenModal(false)}>
-                  <X className="w-6 h-6 text-gray-600 hover:text-gray-800" />
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Eye size={20} className="text-green-500" />
+                  Read Notifications
+                  <span className="ml-2 px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full text-sm">{seenTotalCount}</span>
+                </h3>
+                <button
+                  onClick={() => setShowSeenModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition"
+                >
+                  <X size={20} className="text-gray-500" />
                 </button>
               </div>
 
-              {modalLoading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                  <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-                  <p className="text-lg text-gray-600">
-                    Loading read notifications...
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead className="bg-gray-800 text-white">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Type</th>
-                          <th className="px-4 py-3 text-left">Message</th>
-                          <th className="px-4 py-3 text-left">Status</th>
-                          <th className="px-4 py-3 text-left">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {seenNotifications.length > 0 ? (
-                          seenNotifications.map((noti) => (
-                            <tr key={noti.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3">
-                                {noti.order && (
-                                  <p>New Order {noti?.order?.oid}</p>
-                                )}
-                              </td>
-                              <td className="px-4 py-3">
-                                {noti.order_item && (
-                                  <p>
-                                    You've got a new order for{" "}
-                                    <b>{noti?.order_item?.product?.title}</b>
-                                  </p>
-                                )}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="flex items-center text-green-600 font-medium">
-                                  <Eye className="w-4 h-4 mr-1" /> Read
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                {moment(noti.date).format("MMM DD, YYYY")}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan="4"
-                              className="text-center py-8 text-gray-500"
-                            >
-                              No read notifications yet
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+              <div className="overflow-y-auto max-h-[60vh]">
+                {modalLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+                    <p className="text-gray-500">Loading...</p>
                   </div>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Message</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {seenNotifications.length > 0 ? (
+                        seenNotifications.map((noti) => (
+                          <tr key={noti.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-green-50 rounded-lg">
+                                  <Package size={18} className="text-green-600" />
+                                </div>
+                                <span className="font-medium text-gray-900">
+                                  {noti.order && `Order ${noti?.order?.oid}`}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-gray-600">
+                              {noti.order_item && (
+                                <span>New order for <b>{noti?.order_item?.product?.title}</b></span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-gray-500">{moment(noti.date).format("MMM DD, YYYY")}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="3" className="px-6 py-16 text-center text-gray-500">
+                            No read notifications yet
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
 
-                  {/* Pagination for Seen in Modal */}
-                  {seenTotalCount > seenNotifications.length && (
-                    <div className="flex justify-center items-center mt-6 py-4 border-t bg-gray-50 gap-6">
-                      <button
-                        onClick={() =>
-                          setSeenCurrentPage((prev) => Math.max(prev - 1, 1))
-                        }
-                        disabled={!seenHasPrev || modalLoading}
-                        className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
-                      >
-                        Previous
-                      </button>
-
-                      <span className="text-lg font-medium">
-                        Page {seenCurrentPage} ({seenTotalCount} total read)
-                      </span>
-
-                      <button
-                        onClick={() => setSeenCurrentPage((prev) => prev + 1)}
-                        disabled={!seenHasNext || modalLoading}
-                        className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  )}
-                </>
+              {seenTotalCount > 0 && (
+                <div className="flex flex-col sm:flex-row justify-between items-center py-4 px-6 border-t border-gray-100 bg-gray-50">
+                  <p className="text-sm text-gray-600 mb-3 sm:mb-0">
+                    Page {seenCurrentPage} of {Math.ceil(seenTotalCount / 10) || 1}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSeenCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={!seenHasPrev || modalLoading}
+                      className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      <ChevronLeft size={16} />
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setSeenCurrentPage((prev) => prev + 1)}
+                      disabled={!seenHasNext || modalLoading}
+                      className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      Next
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -400,3 +384,4 @@ function Notifications() {
 }
 
 export default Notifications;
+

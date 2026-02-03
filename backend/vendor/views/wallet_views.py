@@ -287,7 +287,17 @@ class VendorWalletStatsView(APIView):
             total=Sum('amount')
         )
         
+        # Calculate balance: total paid minus refunds issued
+        total_refunds = refund_stats['total'] or Decimal('0.00')
+        balance = total_paid - total_refunds
+        
         stats = {
+            # Fields expected by frontend
+            'balance': float(balance),
+            'total_earned': float(total_paid),
+            'pending_payouts': float(total_pending),
+            'total_refunded': float(total_refunds),
+            # Additional legacy fields for backward compatibility
             'total_transactions': paid_orders.count() + pending_orders.count() + (refund_stats['count'] or 0),
             'total_paid': {
                 'count': paid_orders.count(),
@@ -299,7 +309,7 @@ class VendorWalletStatsView(APIView):
             },
             'total_refunds': {
                 'count': refund_stats['count'] or 0,
-                'total': str(refund_stats['total'] or Decimal('0.00')),
+                'total': str(total_refunds),
             },
         }
         

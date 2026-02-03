@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Tag, Plus, Edit, Trash2, CheckCircle, X } from "lucide-react";
+import { Tag, Plus, Edit, Trash2, CheckCircle, X, Ticket, ChevronLeft, ChevronRight, ToggleLeft, ToggleRight } from "lucide-react";
 import Swal from "sweetalert2";
 
 import apiInstance from "../../utils/axios";
@@ -31,7 +31,6 @@ function Coupon() {
   const userData = UserData();
   const vendorId = userData?.vendor_id;
 
-  // Construct URL with page param
   const getCouponUrl = (page) => {
     const base = `vendor-coupon-list/${vendorId}/`;
     return page <= 1 ? base : `${base}?page=${page}`;
@@ -47,7 +46,6 @@ function Coupon() {
         axios.get(`vendor-coupon-stats/${vendorId}/`),
       ]);
 
-      // Handle paginated coupons
       const couponData = couponRes.data;
       const couponList = Array.isArray(couponData)
         ? couponData
@@ -61,8 +59,6 @@ function Coupon() {
       setHasNext(!!next);
       setHasPrev(!!prev);
       setCurrentPage(page);
-
-      // Stats (array with one object)
       setStats(statsRes.data[0] || {});
     } catch (error) {
       log.error("Error fetching data:", error);
@@ -95,7 +91,7 @@ function Coupon() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         await axios.delete(`vendor-coupon-detail/${vendorId}/${couponId}/`);
-        await fetchData(currentPage); // Refetch current page
+        await fetchData(currentPage);
         Swal.fire("Deleted!", "Coupon has been deleted.", "success");
       }
     });
@@ -154,7 +150,7 @@ function Coupon() {
       });
       setShowModal(false);
       setCreateCoupons({ code: "", discount: "", active: true });
-      await fetchData(1); // Refresh to page 1 after create
+      await fetchData(1);
     } catch (error) {
       log.error("Error creating coupon:", error);
       Swal.fire({
@@ -166,201 +162,239 @@ function Coupon() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
-      <div className="flex-1 p-6 overflow-y-auto">
+
+      <div className="flex-1 p-8 lg:p-12 overflow-x-hidden">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h4 className="flex items-center text-xl font-semibold">
-            <Tag className="w-6 h-6 mr-2 text-blue-600" /> Coupons
-          </h4>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <Ticket className="w-7 h-7 text-purple-600" />
+              Coupons
+            </h1>
+            <p className="text-gray-500 mt-1">Create and manage discount coupons for your customers.</p>
+          </div>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition"
+            className="inline-flex items-center gap-2 bg-purple-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-purple-700 transition shadow-sm"
           >
-            <Plus className="w-5 h-5 mr-2" /> Create New Coupon
+            <Plus size={18} />
+            Create Coupon
           </button>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-            <p className="text-lg text-gray-600">Loading coupons...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-600 mb-4"></div>
+            <p className="text-gray-500">Loading coupons...</p>
           </div>
         ) : (
           <>
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-green-500 text-white rounded-xl shadow p-6">
-                <CheckCircle className="w-12 h-12 opacity-20 mb-2" />
-                <h6 className="uppercase tracking-wide text-sm">
-                  Total Coupons
-                </h6>
-                <h1 className="text-4xl font-bold">
-                  {stats?.total_coupons || 0}
-                </h1>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+                <div className="absolute right-0 top-0 opacity-10">
+                  <Ticket className="w-32 h-32 -mr-8 -mt-8" />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-purple-100 font-medium uppercase tracking-wider text-sm flex items-center gap-2">
+                    <Tag size={16} /> Total Coupons
+                  </p>
+                  <h2 className="text-4xl font-bold mt-3 tracking-tight">
+                    {stats?.total_coupons || 0}
+                  </h2>
+                  <p className="text-purple-100 text-sm mt-2">All time created</p>
+                </div>
               </div>
-              <div className="bg-red-500 text-white rounded-xl shadow p-6">
-                <CheckCircle className="w-12 h-12 opacity-20 mb-2" />
-                <h6 className="uppercase tracking-wide text-sm">
-                  Active Coupons
-                </h6>
-                <h1 className="text-4xl font-bold">
-                  {stats?.active_coupons || 0}
-                </h1>
+              
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+                <div className="absolute right-0 top-0 opacity-10">
+                  <CheckCircle className="w-32 h-32 -mr-8 -mt-8" />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-green-100 font-medium uppercase tracking-wider text-sm flex items-center gap-2">
+                    <CheckCircle size={16} /> Active Coupons
+                  </p>
+                  <h2 className="text-4xl font-bold mt-3 tracking-tight">
+                    {stats?.active_coupons || 0}
+                  </h2>
+                  <p className="text-green-100 text-sm mt-2">Currently active</p>
+                </div>
               </div>
             </div>
 
             {/* Coupons Table */}
-            <div className="bg-white shadow rounded-xl overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead className="bg-gray-800 text-white">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-4 py-3 text-left">Code</th>
-                      <th className="px-4 py-3 text-left">Type</th>
-                      <th className="px-4 py-3 text-left">Discount</th>
-                      <th className="px-4 py-3 text-left">Status</th>
-                      <th className="px-4 py-3 text-left">Action</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Code</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Discount</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-gray-100">
                     {coupons.length > 0 ? (
                       coupons.map((coupon) => (
-                        <tr key={coupon.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-medium">
-                            {coupon.code}
+                        <tr key={coupon.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-purple-50 rounded-lg">
+                                <Tag size={18} className="text-purple-600" />
+                              </div>
+                              <span className="font-semibold text-gray-900 tracking-wide">{coupon.code}</span>
+                            </div>
                           </td>
-                          <td className="px-4 py-3">Percentage</td>
-                          <td className="px-4 py-3">{coupon.discount}%</td>
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4 text-gray-600">Percentage</td>
+                          <td className="px-6 py-4">
+                            <span className="font-semibold text-purple-600">{coupon.discount}%</span>
+                          </td>
+                          <td className="px-6 py-4">
                             {coupon.active ? (
-                              <span className="text-green-600 font-medium">
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                <ToggleRight size={14} />
                                 Active
                               </span>
                             ) : (
-                              <span className="text-red-600 font-medium">
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                                <ToggleLeft size={14} />
                                 Inactive
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 flex space-x-2">
-                            <Link
-                              to={`/vendor/coupon/${coupon.id}/`}
-                              className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteCoupon(coupon.id)}
-                              className="bg-red-500 hover:bg-red-600 text-white p-2 rounded transition"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <Link
+                                to={`/vendor/coupon/${coupon.id}/`}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                title="Edit"
+                              >
+                                <Edit size={18} />
+                              </Link>
+                              <button
+                                onClick={() => handleDeleteCoupon(coupon.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                title="Delete"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td
-                          colSpan="5"
-                          className="text-center py-8 text-gray-500"
-                        >
-                          No coupons yet
+                        <td colSpan="5" className="px-6 py-16 text-center">
+                          <div className="flex flex-col items-center">
+                            <Ticket size={48} className="text-gray-200 mb-3" />
+                            <p className="text-gray-500 font-medium">No coupons yet</p>
+                            <p className="text-gray-400 text-sm mt-1">Create your first coupon to offer discounts.</p>
+                            <button
+                              onClick={() => setShowModal(true)}
+                              className="mt-4 inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium"
+                            >
+                              <Plus size={16} />
+                              Create Coupon
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
-
-                {/* Pagination Controls */}
-                {totalCount > coupons.length && (
-                  <div className="flex flex-col sm:flex-row justify-between items-center py-4 px-6 border-t bg-gray-50">
-                    <p className="text-sm text-gray-700 mb-2 sm:mb-0">
-                      Showing page {currentPage} ({totalCount} total coupons)
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() =>
-                          setCurrentPage((prev) => Math.max(prev - 1, 1))
-                        }
-                        disabled={!hasPrev || loading}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
-                      >
-                        Previous
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage((prev) => prev + 1)}
-                        disabled={!hasNext || loading}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {/* Pagination */}
+              {totalCount > 0 && (
+                <div className="flex flex-col sm:flex-row justify-between items-center py-4 px-6 border-t border-gray-100 bg-gray-50">
+                  <p className="text-sm text-gray-600 mb-3 sm:mb-0">
+                    Page {currentPage} of {Math.ceil(totalCount / 10) || 1}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={!hasPrev || loading}
+                      className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      <ChevronLeft size={16} />
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((prev) => prev + 1)}
+                      disabled={!hasNext || loading}
+                      className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      Next
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
 
         {/* Create Coupon Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h5 className="text-lg font-semibold">Create New Coupon</h5>
-                <button onClick={() => setShowModal(false)}>
-                  <X className="w-6 h-6 text-gray-600 hover:text-gray-800" />
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-900">Create New Coupon</h3>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition"
+                >
+                  <X size={20} className="text-gray-500" />
                 </button>
               </div>
-              <form onSubmit={handleCreateCoupon}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Code</label>
+              <form onSubmit={handleCreateCoupon} className="p-6 space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Coupon Code</label>
                   <input
                     type="text"
                     name="code"
-                    placeholder="Enter Coupon Code"
+                    placeholder="e.g. SUMMER2024"
                     onChange={handleCreateCouponChange}
                     value={createCoupons.code}
                     required
-                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
                   />
-                  <p className="text-xs text-gray-500 mt-1">E.g. DESTINY2024</p>
+                  <p className="text-xs text-gray-500 mt-1.5">Use uppercase letters and numbers</p>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">
-                    Discount (%)
-                  </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount Percentage</label>
                   <input
                     type="number"
                     name="discount"
-                    placeholder="Enter Discount"
+                    placeholder="e.g. 20"
                     onChange={handleCreateCouponChange}
                     value={createCoupons.discount}
                     min="1"
                     max="99"
                     step="1"
                     required
-                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    NOTE: Discount must be between <b>1%</b> and <b>99%</b>
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1.5">Must be between 1% and 99%</p>
                 </div>
-                <div className="flex items-center mb-6">
+                <div className="flex items-center gap-3 py-2">
                   <input
                     checked={createCoupons.active}
                     onChange={handleCreateCouponChange}
                     name="active"
                     type="checkbox"
-                    className="mr-2 h-5 w-5 text-blue-600"
+                    id="active-checkbox"
+                    className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                   />
-                  <label className="text-sm">Activate Coupon</label>
+                  <label htmlFor="active-checkbox" className="text-sm text-gray-700">Activate coupon immediately</label>
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg shadow transition"
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-medium shadow-sm transition"
                 >
                   Create Coupon
                 </button>
@@ -374,3 +408,4 @@ function Coupon() {
 }
 
 export default Coupon;
+
