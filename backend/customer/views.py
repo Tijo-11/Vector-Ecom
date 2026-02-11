@@ -277,8 +277,7 @@ class WalletView(APIView):
     def get(self, request, user_id):
         if request.user.id != user_id:
             return Response({"error": "Unauthorized"},status=status.HTTP_403_FORBIDDEN)
-        wallet = get_object_or_404(Wallet, user__id= user_id)#user is the related model
-        #Find a Wallet where the related User’s id equals user_id
+        wallet, created = Wallet.objects.get_or_create(user_id=user_id)
         return Response({'balance':str(wallet.balance),
                         "currency": wallet.currency})
         
