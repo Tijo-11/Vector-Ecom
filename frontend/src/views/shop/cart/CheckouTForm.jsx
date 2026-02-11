@@ -68,7 +68,8 @@ function CheckoutForm() {
       const fetchAddresses = async () => {
         try {
           const res = await apiInstance.get("user/addresses/");
-          setSavedAddresses(res.data);
+          const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+          setSavedAddresses(data);
         } catch (err) {
           console.error("Error fetching addresses:", err);
         } finally {
@@ -235,55 +236,71 @@ function CheckoutForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Saved Addresses Section */}
-      {user?.user_id && !loadingAddresses && savedAddresses.length > 0 && (
+      {user?.user_id && (
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
           <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">
             Saved Addresses
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {savedAddresses.map((addr) => (
-              <div
-                key={addr.id}
-                onClick={() => selectAddress(addr)}
-                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  selectedAddress === addr.id
-                    ? "border-blue-600 bg-white shadow-md"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="font-bold text-gray-900">
-                    {addr.full_name}
-                  </span>
-                  {addr.status && (
-                    <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">
-                      DEFAULT
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-600 line-clamp-2">
-                  {addr.address}, {addr.town_city}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">{addr.mobile}</p>
+          {loadingAddresses ? (
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-600 mr-2"></div>
+              <span className="text-sm text-gray-500">Loading addresses...</span>
+            </div>
+          ) : savedAddresses.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">
+              No saved addresses found. You can add addresses from your{" "}
+              <a href="/customer/addresses/" className="text-blue-600 hover:underline font-medium">
+                account settings
+              </a>.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedAddresses.map((addr) => (
+                  <div
+                    key={addr.id}
+                    onClick={() => selectAddress(addr)}
+                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      selectedAddress === addr.id
+                        ? "border-blue-600 bg-white shadow-md"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-bold text-gray-900">
+                        {addr.full_name}
+                      </span>
+                      {addr.status && (
+                        <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">
+                          DEFAULT
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600 line-clamp-2">
+                      {addr.address}, {addr.town_city}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{addr.mobile}</p>
 
-                {selectedAddress === addr.id && (
-                  <div className="absolute top-2 right-2 text-blue-600">
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                      <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
-                    </svg>
+                    {selectedAddress === addr.id && (
+                      <div className="absolute top-2 right-2 text-blue-600">
+                        <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                          <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
-          {selectedAddress && (
-            <button
-              type="button"
-              onClick={clearSelection}
-              className="text-xs text-blue-600 font-medium hover:underline mt-3"
-            >
-              Enter a new address instead
-            </button>
+              {selectedAddress && (
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="text-xs text-blue-600 font-medium hover:underline mt-3"
+                >
+                  Enter a new address instead
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

@@ -181,13 +181,48 @@ class CreateOrderView(generics.CreateAPIView):
         )
 
 
-class CheckoutView(generics.RetrieveAPIView):
+class CheckoutView(generics.RetrieveUpdateAPIView):
     serializer_class = CartOrderSerializer
     lookup_field = 'oid'
+
+    ALLOWED_ADDRESS_FIELDS = {
+        'full_name', 'email', 'mobile',
+        'address', 'city', 'state', 'country', 'postal_code',
+    }
+
     def get_object(self):
         order_oid = self.kwargs['order_oid']
         order = CartOrder.objects.get(oid=order_oid)
         return order
+
+    def partial_update(self, request, *args, **kwargs):
+        order = self.get_object()
+
+        # Only allow address changes on unpaid orders
+        if order.payment_status != "initiated":
+            return Response(
+                {"error": "Cannot update address after payment has been processed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Filter to only allowed address fields
+        update_data = {
+            k: v for k, v in request.data.items()
+            if k in self.ALLOWED_ADDRESS_FIELDS
+        }
+
+        if not update_data:
+            return Response(
+                {"error": "No valid address fields provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        for field, value in update_data.items():
+            setattr(order, field, value)
+        order.save()
+
+        serializer = self.get_serializer(order)
+        return Response(serializer.data)
 
 
 class CouponAPIView(generics.CreateAPIView):

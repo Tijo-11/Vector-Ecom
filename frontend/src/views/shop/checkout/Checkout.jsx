@@ -16,6 +16,8 @@ import {
   MapPin,
   Mail,
   Phone,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 function Checkout() {
@@ -27,6 +29,12 @@ function Checkout() {
   const { order_id } = useParams();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+
+  // Saved address states
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [showAddressSelector, setShowAddressSelector] = useState(false);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [updatingAddress, setUpdatingAddress] = useState(false);
 
   // States for selected payment method
   const [paymentMethod, setPaymentMethod] = useState("razorpay"); // Default
@@ -62,6 +70,63 @@ function Checkout() {
     } finally {
       setWalletLoading(false);
     }
+  };
+
+  const fetchSavedAddresses = async () => {
+    if (!user?.user_id) return;
+    try {
+      setLoadingAddresses(true);
+      const res = await apiInstance.get("user/addresses/");
+      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+      setSavedAddresses(data);
+    } catch (error) {
+      log.error("Error fetching saved addresses:", error);
+      setSavedAddresses([]);
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  const selectSavedAddress = async (addr) => {
+    try {
+      setUpdatingAddress(true);
+      await apiInstance.patch(`/checkout/${order_id}/`, {
+        full_name: addr.full_name || "",
+        email: addr.email || "",
+        mobile: addr.mobile || "",
+        address: addr.address || "",
+        city: addr.town_city || "",
+        state: addr.state || "",
+        country: addr.country || "",
+        postal_code: addr.zip || "",
+      });
+      await refreshOrderData();
+      setShowAddressSelector(false);
+      Swal.fire({
+        icon: "success",
+        title: "Address Updated",
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    } catch (error) {
+      log.error("Error updating address:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Failed to update address",
+        text: error.response?.data?.error || "Please try again.",
+      });
+    } finally {
+      setUpdatingAddress(false);
+    }
+  };
+
+  const toggleAddressSelector = () => {
+    if (!showAddressSelector && savedAddresses.length === 0) {
+      fetchSavedAddresses();
+    }
+    setShowAddressSelector(!showAddressSelector);
   };
 
   const refreshOrderData = async () => {
@@ -185,12 +250,30 @@ function Checkout() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Column: Details & Payment */}
           <div className="w-full lg:w-2/3 space-y-8">
-            {/* 1. Review Address (Read Only) */}
+            {/* 1. Shipping Address with Change Option */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <MapPin className="text-blue-600 w-5 h-5" />
-                Shipping Address
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <MapPin className="text-blue-600 w-5 h-5" />
+                  Shipping Address
+                </h2>
+                {user?.user_id && (
+                  <button
+                    type="button"
+                    onClick={toggleAddressSelector}
+                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    {showAddressSelector ? "Cancel" : "Change"}
+                    {showAddressSelector ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Current address display */}
               <div className="pl-7 text-sm text-gray-600 space-y-1">
                 <p className="font-semibold text-gray-900 text-base">
                   {order.full_name}
@@ -210,6 +293,58 @@ function Checkout() {
                   </span>
                 </div>
               </div>
+
+              {/* Saved Address Selector */}
+              {showAddressSelector && (
+                <div className="mt-5 pt-5 border-t border-gray-100">
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">
+                    Select a Saved Address
+                  </h3>
+
+                  {loadingAddresses ? (
+                    <div className="flex items-center justify-center py-6">
+                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-600 mr-2"></div>
+                      <span className="text-sm text-gray-500">Loading addresses...</span>
+                    </div>
+                  ) : savedAddresses.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No saved addresses found. You can add addresses from your account settings.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {savedAddresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          onClick={() => !updatingAddress && selectSavedAddress(addr)}
+                          className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            updatingAddress
+                              ? "opacity-50 cursor-wait"
+                              : "border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="font-bold text-gray-900 text-sm">
+                              {addr.full_name}
+                            </span>
+                            {addr.status && (
+                              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">
+                                DEFAULT
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-600 line-clamp-2">
+                            {addr.address}, {addr.town_city}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {addr.state}, {addr.country} - {addr.zip}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">{addr.mobile}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 2. Payment Method */}
@@ -354,7 +489,7 @@ function Checkout() {
                 )}
               </div>
 
-              {/* Action Buttons - CHANGED: Always mount the components, only hide/show them */}
+              {/* Action Buttons - Always mount the components, only hide/show them */}
               <div className="mt-6">
                 <div
                   className={paymentMethod === "razorpay" ? "block" : "hidden"}

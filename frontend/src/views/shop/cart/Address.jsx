@@ -10,6 +10,7 @@ import { MapPin, ArrowLeft } from "lucide-react";
 
 function Address() {
   const [cart, setCart] = useState([]);
+  const [loadingCart, setLoadingCart] = useState(true);
   const user = useAuthStore((state) => state.user);
   const cart_id = cartID();
   const [cartTotal, setCartTotal] = useState({});
@@ -26,11 +27,15 @@ function Address() {
         setCart(data);
       } catch (error) {
         log.error("Error fetching cart items:", error);
+      } finally {
+        setLoadingCart(false);
       }
     };
 
     if (cart_id && cart_id !== "undefined") {
         fetchCartData(cart_id, user?.user_id);
+    } else {
+        setLoadingCart(false);
     }
   }, [cart_id, user]);
 
@@ -46,7 +51,12 @@ function Address() {
            <h1 className="text-3xl font-extrabold text-gray-900">Shipping Information</h1>
         </div>
 
-        {cart.length < 1 ? (
+        {loadingCart ? (
+           <div className="flex flex-col items-center justify-center min-h-[40vh]">
+             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+             <p className="text-gray-500 font-medium">Loading your cart...</p>
+           </div>
+        ) : cart.length < 1 ? (
            <div className="bg-white rounded-2xl shadow-sm p-16 text-center max-w-2xl mx-auto">
              <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
              <Link to="/products" className="text-blue-600 hover:underline">Start Shopping</Link>
@@ -89,3 +99,4 @@ function Address() {
 }
 
 export default Address;
+
