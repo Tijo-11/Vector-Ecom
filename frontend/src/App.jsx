@@ -22,7 +22,7 @@ import PublicLayout from "./layouts/PublicLayout.jsx"; // ← NEW IMPORT
 function ConditionalFooter() {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith("/admin/");
-  
+
   if (isAdminPage) {
     return null;
   }
@@ -35,6 +35,7 @@ const Products = lazy(() => import("./views/shop/Products/Products"));
 const ProductDetail = lazy(
   () => import("./views/shop/ProductDetail/ProductDetail"),
 );
+const Category = lazy(() => import("./views/shop/Category/Category"));
 const CategoryProducts = lazy(
   () => import("./views/shop/Category/CategoryProducts"),
 );
@@ -119,11 +120,19 @@ export default function App() {
           <Routes>
             {/* Public Shop Routes + Vendor Register - All under PublicLayout for centralized admin redirect */}
             <Route element={<PublicLayout />}>
-                <Route
+              <Route
                 path="/"
                 element={
                   <Suspense fallback={<LoadingSpinner />}>
                     <Home />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/category"
+                element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Category />
                   </Suspense>
                 }
               />
