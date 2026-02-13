@@ -1,5 +1,4 @@
-// src/App.jsx (Full Corrected File - Fixed LoadingSpinner typo and syntax)
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route, BrowserRouter, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
@@ -16,7 +15,18 @@ import { CartContext } from "./plugin/Context.jsx";
 import NotFund from "./layouts/NotFound.jsx";
 import AdminRoute from "./layouts/AdminRoute.jsx";
 import ProtectedRoute from "./layouts/ProtectedRoute.jsx";
-import PublicLayout from "./layouts/PublicLayout.jsx"; // ← NEW IMPORT
+import PublicLayout from "./layouts/PublicLayout.jsx";
+
+// Scroll to top on every route change
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
 
 // Conditional Footer - hides only on admin pages
 function ConditionalFooter() {
@@ -114,11 +124,12 @@ export default function App() {
   return (
     <CartContext.Provider value={[cartCount, setCartCount]}>
       <BrowserRouter>
+        <ScrollToTop />
         <CartInitializer />
         <StoreHeader />
         <MainWrapper>
           <Routes>
-            {/* Public Shop Routes + Vendor Register - All under PublicLayout for centralized admin redirect */}
+            {/* Public Shop Routes + Vendor Register - All under PublicLayout */}
             <Route element={<PublicLayout />}>
               <Route
                 path="/"
