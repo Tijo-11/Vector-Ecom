@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Count, Sum, Q
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, TruncDay, TruncWeek, TruncYear
 from datetime import datetime, timedelta
 from django.utils import timezone
 from rest_framework.pagination import PageNumberPagination
@@ -13,7 +13,7 @@ from store.serializers import NotificationSerializer
 from addon.models import ConfigSettings
 from addon.serializers import ConfigSettingsSerializer
 from .serializers import (
-    AdminStatsSerializer, MonthlyRevenueSerializer, MonthlyOrdersSerializer,
+    AdminStatsSerializer, ChartRevenueSerializer, ChartOrdersSerializer,
     AdminVendorSerializer, AdminProductSerializer, AdminOrderSerializer,
     AdminCategoryOfferSerializer, SalesReportSerializer,
     VendorPerformanceSerializer, ProductReportSerializer,
@@ -70,39 +70,39 @@ class AdminRevenueChartAPIView(APIView):
     def get(self, request):
         period = request.query_params.get('period', 'monthly')
         
-        # Calculate date range based on period
+        # Calculate date range and truncation based on period
         now = timezone.now()
         if period == 'daily':
             start_date = now - timedelta(days=30)
-            trunc_func = TruncMonth  # We'll use TruncDate for daily
+            trunc_func = TruncDay
         elif period == 'weekly':
             start_date = now - timedelta(weeks=12)
-            trunc_func = TruncMonth
+            trunc_func = TruncWeek
         elif period == 'yearly':
             start_date = now - timedelta(days=365*3)
-            trunc_func = TruncMonth
+            trunc_func = TruncYear
         else:  # monthly (default)
             start_date = now - timedelta(days=365)
             trunc_func = TruncMonth
 
-        monthly_revenue = CartOrder.objects.filter(
+        revenue_data = CartOrder.objects.filter(
             payment_status='paid',
             date__gte=start_date
         ).annotate(
-            month=TruncMonth('date')
-        ).values('month').annotate(
+            period_date=trunc_func('date')
+        ).values('period_date').annotate(
             revenue=Sum('total')
-        ).order_by('month')
+        ).order_by('period_date')
 
         # Format the data
         chart_data = []
-        for item in monthly_revenue:
+        for item in revenue_data:
             chart_data.append({
-                'month': item['month'].strftime('%Y-%m-%d'),
+                'date': item['period_date'].strftime('%Y-%m-%d'),
                 'revenue': float(item['revenue'])
             })
 
-        serializer = MonthlyRevenueSerializer(chart_data, many=True)
+        serializer = ChartRevenueSerializer(chart_data, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -116,35 +116,39 @@ class AdminOrdersChartAPIView(APIView):
     def get(self, request):
         period = request.query_params.get('period', 'monthly')
         
-        # Calculate date range based on period
+        # Calculate date range and truncation based on period
         now = timezone.now()
         if period == 'daily':
             start_date = now - timedelta(days=30)
+            trunc_func = TruncDay
         elif period == 'weekly':
             start_date = now - timedelta(weeks=12)
+            trunc_func = TruncWeek
         elif period == 'yearly':
             start_date = now - timedelta(days=365*3)
+            trunc_func = TruncYear
         else:  # monthly (default)
             start_date = now - timedelta(days=365)
+            trunc_func = TruncMonth
 
-        monthly_orders = CartOrder.objects.filter(
+        orders_data = CartOrder.objects.filter(
             payment_status='paid',
             date__gte=start_date
         ).annotate(
-            month=TruncMonth('date')
-        ).values('month').annotate(
+            period_date=trunc_func('date')
+        ).values('period_date').annotate(
             orders=Count('id')
-        ).order_by('month')
+        ).order_by('period_date')
 
         # Format the data
         chart_data = []
-        for item in monthly_orders:
+        for item in orders_data:
             chart_data.append({
-                'month': item['month'].strftime('%Y-%m-%d'),
+                'date': item['period_date'].strftime('%Y-%m-%d'),
                 'orders': item['orders']
             })
 
-        serializer = MonthlyOrdersSerializer(chart_data, many=True)
+        serializer = ChartOrdersSerializer(chart_data, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

@@ -60,11 +60,19 @@ export default function AdminDashboard() {
   }, [period]);
 
   // Prepare Chart.js data
-  const revenueMonths = revenueChartData.map((item) => item.month);
+  const revenueDates = revenueChartData.map((item) => item.date);
   const revenueValues = revenueChartData.map((item) => item.revenue);
 
-  const orderMonths = ordersChartData.map((item) => item.month);
+  const orderDates = ordersChartData.map((item) => item.date);
   const orderCounts = ordersChartData.map((item) => item.orders);
+
+  // Map period to Chart.js time unit
+  const timeUnitMap = {
+    daily: "day",
+    weekly: "week",
+    monthly: "month",
+    yearly: "year",
+  };
 
   const chartOptions = {
     responsive: true,
@@ -73,7 +81,7 @@ export default function AdminDashboard() {
       x: {
         type: "time",
         time: {
-          unit: "month",
+          unit: timeUnitMap[period] || "month",
         },
         title: {
           display: true,
@@ -97,7 +105,7 @@ export default function AdminDashboard() {
   };
 
   const revenueData = {
-    labels: revenueMonths,
+    labels: revenueDates,
     datasets: [
       {
         label: "Total Revenue (₹)",
@@ -110,7 +118,7 @@ export default function AdminDashboard() {
   };
 
   const ordersData = {
-    labels: orderMonths,
+    labels: orderDates,
     datasets: [
       {
         label: "Total Orders",

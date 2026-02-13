@@ -13,15 +13,15 @@ class AdminStatsSerializer(serializers.Serializer):
     top_vendor = serializers.CharField()
 
 
-class MonthlyRevenueSerializer(serializers.Serializer):
-    """Serializer for monthly revenue chart data"""
-    month = serializers.CharField()
+class ChartRevenueSerializer(serializers.Serializer):
+    """Serializer for revenue chart data (supports all periods)"""
+    date = serializers.CharField()
     revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
 
 
-class MonthlyOrdersSerializer(serializers.Serializer):
-    """Serializer for monthly orders chart data"""
-    month = serializers.CharField()
+class ChartOrdersSerializer(serializers.Serializer):
+    """Serializer for orders chart data (supports all periods)"""
+    date = serializers.CharField()
     orders = serializers.IntegerField()
 
 
