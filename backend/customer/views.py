@@ -16,7 +16,7 @@ from userauth.serializers import ProfileSerializer
 from store.serializers import CartOrderSerializer, WishlistSerializer, NotificationSerializer
 
 # Models
-from userauth.models import Profile, User , Wallet
+from userauth.models import Profile, User, Wallet, WalletTransaction
 from store.models import Product, CartOrder, Wishlist, Notification
 
 import razorpay
@@ -177,25 +177,22 @@ class CustomerNotificationView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        logger.info("=" * 50)
-        logger.info("CustomerNotificationView - get_queryset called")
-        logger.info(f"User authenticated: {self.request.user.is_authenticated}")
-        logger.info(f"Current user: {self.request.user}")
-        
         user_id = self.kwargs['user_id']
-        logger.info(f"Requested user_id: {user_id}")
         
         try:
             user = User.objects.get(id=user_id)
-            logger.info(f"Found user: {user.username}")
         except User.DoesNotExist:
-            logger.error(f"User with ID {user_id} does not exist")
             raise
 
-        notifications = Notification.objects.filter(user=user, seen=False)
-        logger.info(f"Found {notifications.count()} unseen notifications for user {user.username}")
-        logger.info("=" * 50)
-        return notifications
+        notifications = Notification.objects.filter(user=user)
+        
+        # Optional filter by seen status
+        seen_param = self.request.query_params.get('seen')
+        if seen_param is not None:
+            seen_val = seen_param.lower() in ('true', '1')
+            notifications = notifications.filter(seen=seen_val)
+        
+        return notifications.order_by('-date')
 
     
 class MarkNotificationsAsSeen(generics.RetrieveAPIView):
@@ -203,38 +200,23 @@ class MarkNotificationsAsSeen(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
     
     def get_object(self):
-        logger.info("=" * 50)
-        logger.info("MarkNotificationsAsSeen - get_object called")
-        logger.info(f"User authenticated: {self.request.user.is_authenticated}")
-        logger.info(f"Current user: {self.request.user}")
-        
         user_id = self.kwargs['user_id']
         noti_id = self.kwargs['noti_id']
-        logger.info(f"Requested user_id: {user_id}, notification_id: {noti_id}")
 
         try:
             user = User.objects.get(id=user_id)
-            logger.info(f"Found user: {user.username}")
         except User.DoesNotExist:
-            logger.error(f"User with ID {user_id} does not exist")
             raise
 
         try:
             notification = Notification.objects.get(id=noti_id, user=user)
-            logger.info(f"Found notification ID: {notification.id}, seen status: {notification.seen}")
         except Notification.DoesNotExist:
-            logger.error(f"Notification {noti_id} not found for user {user.username}")
             raise
 
-        if not notification.seen:
-            logger.info("Marking notification as seen")
-            notification.seen = True
-            notification.save()
-            logger.info("Notification marked as seen")
-        else:
-            logger.info("Notification already marked as seen")
+        # Toggle seen status
+        notification.seen = not notification.seen
+        notification.save()
         
-        logger.info("=" * 50)
         return notification
 
 
@@ -360,4 +342,52 @@ class WithdrawView(APIView):
             })
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            
+
+
+class CustomerWalletTransactionsView(APIView):
+    """List all wallet transactions for a customer."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        if request.user.id != user_id:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        wallet, _ = Wallet.objects.get_or_create(user_id=user_id)
+
+        transactions = WalletTransaction.objects.filter(
+            wallet=wallet
+        ).select_related('related_order', 'related_order_item').order_by('-created_at')
+
+        # Optional type filter
+        type_filter = request.query_params.get('type')
+        if type_filter:
+            transactions = transactions.filter(transaction_type=type_filter)
+
+        data = []
+        for tx in transactions:
+            tx_data = {
+                'id': tx.id,
+                'transaction_id': tx.transaction_id,
+                'transaction_type': tx.transaction_type,
+                'transaction_type_display': tx.get_transaction_type_display(),
+                'amount': str(tx.amount),
+                'balance_after': str(tx.balance_after),
+                'description': tx.description,
+                'created_at': tx.created_at.isoformat(),
+            }
+
+            if tx.related_order:
+                tx_data['related_order'] = {
+                    'oid': tx.related_order.oid,
+                    'total': str(tx.related_order.total),
+                    'order_status': tx.related_order.order_status,
+                    'payment_status': tx.related_order.payment_status,
+                }
+
+            data.append(tx_data)
+
+        return Response({
+            'transactions': data,
+            'balance': str(wallet.balance),
+            'currency': wallet.currency,
+        })

@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import OrdersAPIView, OrdersDetailAPIView, WishlistCreateAPIView, WishlistAPIView
 from .views import CustomerNotificationView, CustomerUpdateView, MarkNotificationsAsSeen
-from .views import WalletView, DepositView, VerifyPaymentView, WithdrawView
+from .views import WalletView, DepositView, VerifyPaymentView, WithdrawView, CustomerWalletTransactionsView
 
  # Customer API Endpoints
 urlpatterns = [
@@ -16,4 +16,5 @@ urlpatterns = [
     path('customer/wallet/deposit/<int:user_id>/', DepositView.as_view(), name='customer-wallet-deposit'),
     path('customer/wallet/verify/<int:user_id>/', VerifyPaymentView.as_view(), name='customer-wallet-verify'),
     path('customer/wallet/withdraw/<int:user_id>/', WithdrawView.as_view(), name='customer-wallet-withdraw'),
+    path('customer/wallet/transactions/<int:user_id>/', CustomerWalletTransactionsView.as_view(), name='customer-wallet-transactions'),
     ]

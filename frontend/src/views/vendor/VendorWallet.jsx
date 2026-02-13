@@ -26,8 +26,6 @@ function VendorWallet() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   
   const user = useAuthStore((state) => state.user);
@@ -61,33 +59,7 @@ function VendorWallet() {
     }
   };
 
-  const handleWithdraw = async (e) => {
-    e.preventDefault();
-    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
-      Swal.fire({ icon: "warning", title: "Invalid Amount", text: "Please enter a valid amount." });
-      return;
-    }
-    if (parseFloat(withdrawAmount) > stats?.balance) {
-      Swal.fire({ icon: "error", title: "Insufficient Balance", text: "You cannot withdraw more than your balance." });
-      return;
-    }
 
-    setIsWithdrawing(true);
-    try {
-        await new Promise(resolve => setTimeout(resolve, 1000)); 
-        Swal.fire({ 
-            icon: "success", 
-            title: "Request Sent", 
-            text: "Your withdrawal request has been submitted for approval." 
-        });
-        setWithdrawAmount("");
-        fetchStats(); 
-    } catch (error) {
-        Swal.fire({ icon: "error", title: "Failed", text: "Could not process withdrawal." });
-    } finally {
-        setIsWithdrawing(false);
-    }
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -287,7 +259,7 @@ function VendorWallet() {
          </div>
 
          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-            <div className="lg:col-span-2 bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden">
+            <div className="lg:col-span-3 bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden">
                 <div className="relative z-10 flex flex-col justify-between h-full">
                     <div>
                         <p className="text-gray-400 font-medium uppercase tracking-wider text-sm flex items-center gap-2">
@@ -315,37 +287,6 @@ function VendorWallet() {
                         <path fill="#FFFFFF" d="M42.7,-62.9C50.9,-52.8,50.1,-34.4,51.7,-19.2C53.4,-4,57.4,8,54.6,19.1C51.8,30.3,42.1,40.6,31.2,46.7C20.3,52.9,8.2,54.8,-3.1,59.1C-14.4,63.4,-24.8,70,-34.7,68.2C-44.6,66.4,-54,56.1,-61.6,44.9C-69.2,33.7,-75,21.5,-72.7,10.9C-70.4,0.3,-60,-8.7,-51.1,-16.6C-42.3,-24.5,-35,-31.3,-26.9,-41.5C-18.8,-51.7,-9.9,-65.4,3.7,-70.5C17.3,-75.6,34.5,-73.1,42.7,-62.9Z" transform="translate(100 100)" />
                     </svg>
                 </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                   <ArrowUpRight className="text-blue-600" /> Request Withdrawal
-                </h3>
-                <form onSubmit={handleWithdraw}>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Amount (₹)</label>
-                        <input 
-                           type="number" 
-                           className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-gray-900 placeholder:font-normal"
-                           placeholder="0.00"
-                           min="1"
-                           max={stats?.balance}
-                           value={withdrawAmount}
-                           onChange={(e) => setWithdrawAmount(e.target.value)}
-                           required
-                        />
-                    </div>
-                    <button 
-                       type="submit" 
-                       disabled={isWithdrawing || !withdrawAmount || parseFloat(withdrawAmount) > stats?.balance}
-                       className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-                    >
-                       {isWithdrawing ? "Processing..." : "Withdraw Funds"}
-                    </button>
-                    <p className="text-xs text-gray-500 mt-3 text-center">
-                       Minimum withdrawal: ₹500. Processing time: 2-3 days.
-                    </p>
-                </form>
             </div>
          </div>
 

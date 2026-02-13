@@ -65,7 +65,8 @@ class NotificationMarkAsSeen(generics.RetrieveUpdateAPIView):
         noti_id = self.kwargs['noti_id']
         vendor = Vendor.objects.get(id=vendor_id)
         notification = Notification.objects.get(vendor=vendor, id=noti_id)
-        notification.seen = True
+        # Toggle seen status
+        notification.seen = not notification.seen
         notification.save()
         return notification
     

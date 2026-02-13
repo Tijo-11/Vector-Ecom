@@ -19,7 +19,7 @@ from .views.order_status_views import (
 )
 from .views.wallet_views import (
     VendorTransactionsListView, VendorWalletTransactionDetailView,
-    VendorWalletStatsView
+    VendorWalletStatsView, WalletReportPDFView, WalletReportExcelView
 )
 
 urlpatterns=[
@@ -74,6 +74,8 @@ urlpatterns=[
     path('vendor/wallet-transactions/<int:vendor_id>/', VendorTransactionsListView.as_view(), name='vendor-wallet-transactions'),
     path('vendor/wallet-transaction/<int:transaction_id>/', VendorWalletTransactionDetailView.as_view(), name='vendor-wallet-transaction-detail'),
     path('vendor/wallet-stats/<int:vendor_id>/', VendorWalletStatsView.as_view(), name='vendor-wallet-stats'),
+    path('vendor/wallet-report-pdf/<int:vendor_id>/', WalletReportPDFView.as_view(), name='vendor-wallet-report-pdf'),
+    path('vendor/wallet-report-excel/<int:vendor_id>/', WalletReportExcelView.as_view(), name='vendor-wallet-report-excel'),
     
     # Sales Reports
     path('vendor/sales-report/<vendor_id>/', SalesReportAPIView.as_view(), name='vendor-sales-report'),

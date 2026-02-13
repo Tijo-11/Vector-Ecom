@@ -1,10 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import moment from "moment";
-import log from "loglevel";
-import Swal from "sweetalert2"; // Add SweetAlert2 for feedback
+import Swal from "sweetalert2";
+import {
+  Bell,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+} from "lucide-react";
 
 function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -13,6 +21,7 @@ function Notifications() {
   const [hasNext, setHasNext] = useState(false);
   const [hasPrev, setHasPrev] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("unread"); // "all" | "unread" | "read"
 
   const axios = apiInstance;
   const userData = UserData();
@@ -22,79 +31,97 @@ function Notifications() {
     toast: true,
     position: "top-end",
     showConfirmButton: false,
-    timer: 3000,
+    timer: 2000,
     timerProgressBar: true,
   });
 
-  // Construct URL with page param
-  const getNotificationsUrl = (page) => {
-    const base = `customer/notifications/${userId}/`;
-    return page <= 1 ? base : `${base}?page=${page}`;
-  };
+  const buildUrl = useCallback(
+    (page, tab) => {
+      let base = `customer/notifications/${userId}/`;
+      const params = [];
+      if (tab === "unread") params.push("seen=false");
+      if (tab === "read") params.push("seen=true");
+      if (page > 1) params.push(`page=${page}`);
+      return params.length ? `${base}?${params.join("&")}` : base;
+    },
+    [userId],
+  );
 
-  const fetchNotifications = async (page = currentPage) => {
-    if (!userId) {
-      setNotifications([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const fullUrl = getNotificationsUrl(page);
-      const res = await axios.get(fullUrl);
-
-      const data = res.data;
-      const notiList = Array.isArray(data) ? data : data.results || [];
-      const count = data.count ?? notiList.length;
-      const next = data.next ?? null;
-      const prev = data.previous ?? null;
-
-      setNotifications(notiList);
-      setTotalCount(count);
-      setHasNext(!!next);
-      setHasPrev(!!prev);
-      setCurrentPage(page);
-    } catch (error) {
-      log.error("Error fetching notifications:", error);
-      setNotifications([]);
-      setTotalCount(0);
-      setHasNext(false);
-      setHasPrev(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications(1);
-  }, [userId]);
+  const fetchNotifications = useCallback(
+    async (page = 1, tab = activeTab) => {
+      if (!userId) {
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await axios.get(buildUrl(page, tab));
+        const data = res.data;
+        const list = Array.isArray(data) ? data : data.results || [];
+        setNotifications(list);
+        setTotalCount(data.count ?? list.length);
+        setHasNext(!!data.next);
+        setHasPrev(!!data.previous);
+        setCurrentPage(page);
+      } catch {
+        setNotifications([]);
+        setTotalCount(0);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [userId, activeTab, buildUrl],
+  );
 
   useEffect(() => {
-    fetchNotifications(currentPage);
-  }, [currentPage]);
+    fetchNotifications(1, activeTab);
+  }, [userId, activeTab]);
 
-  const markAsSeen = async (noti_id) => {
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
+
+  const toggleSeen = async (notiId, currentSeen) => {
+    // Optimistic update — flip the seen flag in local state instantly
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notiId ? { ...n, seen: !currentSeen } : n)),
+    );
+
     try {
-      // Fixed URL with trailing slash
-      await axios.get(`customer/notifications/${userId}/${noti_id}/`);
-
-      // Optimistic UI update + toast feedback
-      setNotifications((prev) => prev.filter((noti) => noti.id !== noti_id));
+      await axios.get(`customer/notifications/${userId}/${notiId}/`);
       Toast.fire({
         icon: "success",
-        title: "Notification marked as seen",
+        title: currentSeen ? "Marked as unread" : "Marked as read",
       });
 
-      // Refetch to ensure sync (handles if page becomes empty)
-      await fetchNotifications(currentPage);
-    } catch (err) {
-      log.error("Error marking notification as seen", err);
-      Toast.fire({
-        icon: "error",
-        title: "Failed to mark as seen",
-      });
+      // Notify sidebar to update unread count: +1 if marking unread, -1 if marking read
+      window.dispatchEvent(
+        new CustomEvent("notification-count-update", {
+          detail: { delta: currentSeen ? 1 : -1 },
+        }),
+      );
+
+      // If we're on a filtered tab, the toggled item no longer belongs — remove it
+      if (activeTab !== "all") {
+        setNotifications((prev) => prev.filter((n) => n.id !== notiId));
+        setTotalCount((prev) => Math.max(prev - 1, 0));
+      }
+    } catch {
+      // Revert on failure
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notiId ? { ...n, seen: currentSeen } : n)),
+      );
+      Toast.fire({ icon: "error", title: "Failed to update notification" });
     }
   };
+
+  const tabs = [
+    { key: "all", label: "All" },
+    { key: "unread", label: "Unread" },
+    { key: "read", label: "Read" },
+  ];
 
   return (
     <div>
@@ -104,106 +131,205 @@ function Notifications() {
             <div className="flex flex-col lg:flex-row gap-6">
               <Sidebar />
               <div className="flex-1 mt-2">
-                <section>
-                  <main className="mb-5">
-                    <div className="px-4">
-                      <section>
-                        <h3 className="mb-4 flex items-center text-xl font-semibold">
-                          <i className="fas fa-bell mr-2" /> Notifications (
-                          {totalCount})
-                        </h3>
+                <div className="px-4">
+                  {/* Header */}
+                  <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <Bell size={22} className="text-blue-600" />
+                      Notifications
+                      <span className="text-base font-normal text-gray-500">
+                        ({totalCount})
+                      </span>
+                    </h3>
 
-                        {loading ? (
-                          <div className="flex flex-col items-center justify-center py-20">
-                            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-                            <p className="text-lg text-gray-600">
-                              Loading notifications...
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col divide-y divide-gray-200 rounded-lg border border-gray-200">
-                            {notifications.length > 0 ? (
-                              notifications.map((noti) => (
-                                <div
-                                  key={noti.id}
-                                  className="p-4 hover:bg-gray-50  flex justify-between items-start opacity-100 transition-opacity duration-300"
-                                >
-                                  <div className="flex-1">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <h5 className="text-lg font-medium text-gray-800">
-                                        {noti?.title || "New Order!"}
-                                      </h5>
-                                      <small className="text-gray-500">
-                                        {moment(noti.date).format("MM-DD-YYYY")}
-                                      </small>
+                    {/* Tabs */}
+                    <div className="flex gap-2">
+                      {tabs.map((tab) => (
+                        <button
+                          key={tab.key}
+                          onClick={() => handleTabChange(tab.key)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                            activeTab === tab.key
+                              ? "bg-blue-600 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4" />
+                      <p className="text-gray-500">
+                        Loading notifications...
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-100">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">
+                              Status
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">
+                              Notification
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">
+                              Date
+                            </th>
+                            <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {notifications.length > 0 ? (
+                            notifications.map((noti) => (
+                              <tr
+                                key={noti.id}
+                                className={`transition-colors ${
+                                  noti.seen
+                                    ? "bg-white hover:bg-gray-50"
+                                    : "bg-blue-50/40 hover:bg-blue-50"
+                                }`}
+                              >
+                                <td className="px-6 py-4">
+                                  {noti.seen ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500">
+                                      <Eye size={14} /> Read
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                                      <EyeOff size={14} /> Unread
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <div
+                                      className={`p-2 rounded-lg ${noti.seen ? "bg-gray-100" : "bg-blue-100"}`}
+                                    >
+                                      <Package
+                                        size={18}
+                                        className={
+                                          noti.seen
+                                            ? "text-gray-500"
+                                            : "text-blue-600"
+                                        }
+                                      />
                                     </div>
-                                    <p className="text-gray-700 mb-2">
-                                      Your order #{noti?.order?.oid} was
-                                      successful
-                                    </p>
-                                    {noti?.order && (
-                                      <div className="text-sm text-gray-600 space-y-1">
-                                        <p>Total: ₹{noti.order.total ?? "—"}</p>
-                                        <p>
-                                          Shipping: ₹
-                                          {noti.order.shipping_amount ?? "—"}
-                                        </p>
-                                        <p>Tax: ₹{noti.order.tax_fee ?? "—"}</p>
-                                        <p>
-                                          Service Fee: ₹
-                                          {noti.order.service_fee ?? "—"}
-                                        </p>
-                                      </div>
-                                    )}
+                                    <div>
+                                      <p
+                                        className={`font-medium ${noti.seen ? "text-gray-600" : "text-gray-900"}`}
+                                      >
+                                        {noti.order
+                                          ? `Order #${noti.order.oid}`
+                                          : "Notification"}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                        {noti.order
+                                          ? `Your order was successful — ₹${noti.order.total ?? "—"}`
+                                          : ""}
+                                      </p>
+                                    </div>
                                   </div>
-
-                                  {/* Mark as Seen button */}
+                                </td>
+                                <td className="px-6 py-4 text-gray-500 text-sm">
+                                  {moment(noti.date).format("MMM DD, YYYY")}
+                                </td>
+                                <td className="px-6 py-4 text-center">
                                   <button
-                                    onClick={() => markAsSeen(noti.id)}
-                                    className="ml-4 px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                                    onClick={() =>
+                                      toggleSeen(noti.id, noti.seen)
+                                    }
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                                      noti.seen
+                                        ? "text-blue-600 hover:bg-blue-50 border border-blue-200"
+                                        : "text-green-700 hover:bg-green-50 border border-green-200"
+                                    }`}
+                                    title={
+                                      noti.seen
+                                        ? "Mark as unread"
+                                        : "Mark as read"
+                                    }
                                   >
-                                    Mark as Seen
+                                    {noti.seen ? (
+                                      <>
+                                        <EyeOff size={16} /> Unread
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye size={16} /> Read
+                                      </>
+                                    )}
                                   </button>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="p-8 text-center text-gray-500">
-                                No notifications yet
-                              </div>
-                            )}
-                          </div>
-                        )}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan="4"
+                                className="px-6 py-16 text-center"
+                              >
+                                <CheckCircle
+                                  size={48}
+                                  className="text-gray-200 mx-auto mb-3"
+                                />
+                                <p className="text-gray-500 font-medium">
+                                  {activeTab === "unread"
+                                    ? "All caught up!"
+                                    : "No notifications found"}
+                                </p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
 
-                        {/* Pagination Controls */}
-                        {!loading && totalCount > notifications.length && (
-                          <div className="flex justify-center items-center mt-8 gap-8">
+                      {/* Pagination */}
+                      {totalCount > 0 && (
+                        <div className="flex flex-col sm:flex-row justify-between items-center py-4 px-6 border-t border-gray-100 bg-gray-50">
+                          <p className="text-sm text-gray-600 mb-3 sm:mb-0">
+                            Page {currentPage} ({totalCount} total)
+                          </p>
+                          <div className="flex gap-2">
                             <button
                               onClick={() =>
-                                setCurrentPage((prev) => Math.max(prev - 1, 1))
+                                setCurrentPage((p) => {
+                                  const newPage = Math.max(p - 1, 1);
+                                  fetchNotifications(newPage, activeTab);
+                                  return newPage;
+                                })
                               }
-                              disabled={!hasPrev}
-                              className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                              disabled={!hasPrev || loading}
+                              className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                             >
-                              Previous
+                              <ChevronLeft size={16} /> Previous
                             </button>
-
-                            <span className="text-lg font-medium">
-                              Page {currentPage} ({totalCount} total)
-                            </span>
-
                             <button
-                              onClick={() => setCurrentPage((prev) => prev + 1)}
-                              disabled={!hasNext}
-                              className="px-6 py-3 bg-gray-600 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                              onClick={() =>
+                                setCurrentPage((p) => {
+                                  const newPage = p + 1;
+                                  fetchNotifications(newPage, activeTab);
+                                  return newPage;
+                                })
+                              }
+                              disabled={!hasNext || loading}
+                              className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                             >
-                              Next
+                              Next <ChevronRight size={16} />
                             </button>
                           </div>
-                        )}
-                      </section>
+                        </div>
+                      )}
                     </div>
-                  </main>
-                </section>
+                  )}
+                </div>
               </div>
             </div>
           </section>

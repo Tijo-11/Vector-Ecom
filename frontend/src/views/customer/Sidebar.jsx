@@ -26,6 +26,7 @@ const Sidebar = () => {
     const [wishlistCount, setWishlistCount] = useState(0);
     const [notificationCount, setNotificationCount] = useState(0);
     const [walletBalance, setWalletBalance] = useState("0.00");
+    const [countsLoading, setCountsLoading] = useState(true);
 
     if (!userData?.user_id || profileError) {
         return (
@@ -41,13 +42,14 @@ const Sidebar = () => {
         if (!userData?.user_id) return;
 
         const fetchCounts = async () => {
+            setCountsLoading(true);
             try {
-                const [ordersRes, wishlistRes, notificationsRes] = await Promise.all([
+                const [ordersRes, wishlistRes, notificationsRes, walletRes] = await Promise.all([
                     apiInstance.get(`customer/orders/${userData.user_id}/`),
                     apiInstance.get(`customer/wishlist/${userData.user_id}/`),
-                    apiInstance.get(`customer/notifications/${userData.user_id}/`),
+                    apiInstance.get(`customer/notifications/${userData.user_id}/?seen=false`),
+                    apiInstance.get(`customer/wallet/${userData.user_id}/`),
                 ]);
-                const walletRes = await apiInstance.get(`customer/wallet/${userData.user_id}/`);
                 setWalletBalance(walletRes.data.balance || "0.00");
 
                 const getCount = (data) => data.count ?? (Array.isArray(data) ? data.length : 0);
@@ -57,11 +59,27 @@ const Sidebar = () => {
                 setNotificationCount(getCount(notificationsRes.data));
             } catch (error) {
                 log.error("Error fetching sidebar counts:", error);
+            } finally {
+                setCountsLoading(false);
             }
         };
 
         fetchCounts();
     }, [userData?.user_id]);
+
+    // Listen for real-time notification count updates from Notifications page
+    useEffect(() => {
+        const handleCountUpdate = (e) => {
+            const delta = e.detail?.delta ?? 0;
+            setNotificationCount((prev) => Math.max(prev + delta, 0));
+        };
+        window.addEventListener('notification-count-update', handleCountUpdate);
+        return () => window.removeEventListener('notification-count-update', handleCountUpdate);
+    }, []);
+
+    const CountSkeleton = () => (
+        <span className="inline-block w-8 h-5 rounded-full bg-gray-200 animate-pulse" />
+    );
 
     const NavItem = ({ to, icon: Icon, label, count, colorClass = "bg-blue-600" }) => {
         const isActive = location.pathname.includes(to);
@@ -80,11 +98,15 @@ const Sidebar = () => {
                         <span className="font-medium">{label}</span>
                     </div>
                     {count !== undefined && (
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                            isActive ? "bg-white/20 text-white" : `${colorClass.replace('bg-', 'bg-opacity-10 text-')} bg-gray-100 text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600`
-                        }`}>
-                            {count}
-                        </span>
+                        countsLoading ? (
+                            <CountSkeleton />
+                        ) : (
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                isActive ? "bg-white/20 text-white" : `${colorClass.replace('bg-', 'bg-opacity-10 text-')} bg-gray-100 text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600`
+                            }`}>
+                                {count}
+                            </span>
+                        )
                     )}
                 </Link>
             </li>
