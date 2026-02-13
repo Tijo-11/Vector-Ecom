@@ -209,6 +209,7 @@ function Checkout() {
     try {
       const formData = new FormData();
       formData.append("order_oid", order_id);
+      formData.append("user_id", user.user_id);
       await apiInstance.post("/wallet-payment/", formData);
       navigate(`/payments-success/${order_id}/?payment_method=Wallet`);
     } catch (error) {
