@@ -48,7 +48,7 @@ class Cart(models.Model):
 # Generate sequential order ID: YYYYMM + 6-digit sequential number
 def generate_order_id():
     now = timezone.now()
-    prefix = now.strftime('%Y%m')  # e.g., '202602'
+    prefix = 'R' + now.strftime('%Y%m')  # e.g., 'R202602'
     # Find the last order for this month
     last_order = CartOrder.objects.filter(
         oid__startswith=prefix
@@ -59,7 +59,7 @@ def generate_order_id():
         new_number = last_number + 1
     else:
         new_number = 1
-    return f"{prefix}{new_number:06d}"
+    return f"{prefix}{new_number:05d}"
 
 # Model for Cart Orders
 class CartOrder(models.Model):

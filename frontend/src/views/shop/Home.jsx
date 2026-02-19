@@ -3,29 +3,52 @@ import { Link } from "react-router-dom";
 import apiInstance from "../../utils/axios";
 import {
   ArrowRight,
-  Star,
   Truck,
   ShieldCheck,
   Clock,
-  MapPin,
-  ChevronRight,
-  ShoppingBag,
 } from "lucide-react";
+import ProductCard from "./Products/ProductCard";
+import UserData from "../../plugin/UserData";
+import { useAuthStore } from "../../store/auth";
+import log from "loglevel";
 
 export default function Home() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [wishlist, setWishlist] = useState([]);
+
+  const userData = UserData();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  const fetchWishlist = async () => {
+    if (!userData?.user_id) {
+      setWishlist([]);
+      return;
+    }
+    try {
+      const response = await apiInstance.get(
+        `customer/wishlist/${userData?.user_id}/`
+      );
+      const wishlistItems = Array.isArray(response.data)
+        ? response.data
+        : response.data.results || response.data.wishlist_items || [];
+      setWishlist(wishlistItems);
+    } catch (error) {
+      log.error("Error fetching wishlist:", error);
+      setWishlist([]);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [prodRes, catRes] = await Promise.all([
-          apiInstance.get(`products/?page=1`), // Fetch first page
+          apiInstance.get(`products/?page=1`),
           apiInstance.get(`category/`),
         ]);
-        setProducts(prodRes.data.results?.slice(0, 8) || []); // Limit to 8
-        setCategories(catRes.data?.slice(0, 6) || []); // Limit to 6
+        setProducts(prodRes.data.results?.slice(0, 8) || []);
+        setCategories(catRes.data?.slice(0, 6) || []);
       } catch (error) {
         console.error("Error fetching home data:", error);
       } finally {
@@ -34,6 +57,10 @@ export default function Home() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchWishlist();
+  }, [userData?.user_id]);
 
   return (
     <div className="bg-white min-h-screen font-sans">
@@ -174,89 +201,15 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {products.length > 0
               ? products.map((product) => (
-                  <div
+                  <ProductCard
                     key={product.id}
-                    className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col"
-                  >
-                    {/* Image */}
-                    <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      {product.offer_discount > 0 && (
-                        <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-                          {product.offer_discount}% OFF
-                        </span>
-                      )}
-
-                      {/* Hover Overlay */}
-                      <Link
-                        to={`/product/${product.slug}`}
-                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                      >
-                        <button className="bg-white text-gray-900 px-6 py-2 rounded-full font-bold transform translate-y-4 group-hover:translate-y-0 transition-all shadow-lg hover:bg-gray-100">
-                          View Details
-                        </button>
-                      </Link>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-5 flex flex-col flex-1">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                        {product.category?.title || "Vintage"}
-                      </p>
-                      <Link to={`/product/${product.slug}`}>
-                        <h3 className="font-bold text-gray-900 line-clamp-1 hover:text-blue-600 transition-colors">
-                          {product.title}
-                        </h3>
-                      </Link>
-
-                      <div className="flex items-center gap-1 mt-2 mb-4">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-3 w-3 ${i < Math.round(product.rating || 0) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-                          />
-                        ))}
-                        <span className="text-xs text-gray-400 ml-1">
-                          ({product.rating || 0})
-                        </span>
-                      </div>
-
-                      <div className="mt-auto flex items-center justify-between">
-                        <div className="flex flex-col">
-                          {product.offer_discount > 0 ? (
-                            <>
-                              <span className="text-xs text-gray-400 line-through">
-                                ₹{product.price}
-                              </span>
-                              <span className="text-lg font-bold text-blue-600">
-                                ₹
-                                {(
-                                  product.price *
-                                  (1 - product.offer_discount / 100)
-                                ).toFixed(2)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-lg font-bold text-blue-600">
-                              ₹{product.price}
-                            </span>
-                          )}
-                        </div>
-                        <Link
-                          to={`/product/${product.slug}`}
-                          className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-blue-600 hover:text-white transition-colors"
-                        >
-                          <ChevronRight className="h-5 w-5" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
+                    product={product}
+                    wishlist={wishlist}
+                    onWishlistUpdate={fetchWishlist}
+                    isLoggedIn={isLoggedIn}
+                  />
                 ))
-              : // Simple Skeletons
+              : // Skeletons
                 [...Array(4)].map((_, i) => (
                   <div
                     key={i}
