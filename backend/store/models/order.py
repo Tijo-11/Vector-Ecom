@@ -45,6 +45,22 @@ class Cart(models.Model):
     #Including product.title helps quickly recognize what item is in the cart, especially when multiple carts
     # exist — improves readability and debugging.
    
+# Generate sequential order ID: YYYYMM + 6-digit sequential number
+def generate_order_id():
+    now = timezone.now()
+    prefix = now.strftime('%Y%m')  # e.g., '202602'
+    # Find the last order for this month
+    last_order = CartOrder.objects.filter(
+        oid__startswith=prefix
+    ).order_by('-oid').first()
+    if last_order and last_order.oid.startswith(prefix):
+        # Extract the numeric suffix and increment
+        last_number = int(last_order.oid[len(prefix):])
+        new_number = last_number + 1
+    else:
+        new_number = 1
+    return f"{prefix}{new_number:06d}"
+
 # Model for Cart Orders
 class CartOrder(models.Model):
     # Vendors associated with the order
@@ -68,10 +84,7 @@ class CartOrder(models.Model):
     payment_method = models.CharField(max_length=100, choices=PAYMENT_METHOD, null=True, blank=True, help_text="Payment method used for this order")
     # Discounts
     initial_total = models.DecimalField(default=0.00, max_digits=12, decimal_places=2, help_text="The original total before discounts")
-    #helptext is # Tooltip shown in admin panel for clarity on field purpose
-    #help_text improves usability in Django admin/forms by explaining what the field represents — especially useful for non-developers.
     saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, null=True, blank=True, help_text="Amount saved by customer")
-    # Optional field showing how much the customer saved; null in DB, blank in forms; tooltip for admin
     offer_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     coupon_saved = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     # Personal Informations
@@ -81,27 +94,33 @@ class CartOrder(models.Model):
    
     # Shipping Address
     address = models.CharField(max_length=1000, null=True, blank=True)
-    city = models.CharField(max_length=1000, null=True, blank=True) # use it instead of zip_code
+    city = models.CharField(max_length=1000, null=True, blank=True)
     state = models.CharField(max_length=1000, null=True, blank=True)
     country = models.CharField(max_length=1000, null=True, blank=True)
     postal_code = models.CharField(
-        max_length=10,null=True, blank=True,
+        max_length=10, null=True, blank=True,
         validators=[RegexValidator('^[0-9]{6}$', _('Invalid postal code'))],
     )
    
     coupons = models.ManyToManyField('store.Coupon', blank=True)
    
    
-    razorpay_session_id = models.CharField(max_length=200,null=True, blank=True)# Stores Razorpay order ID
-    oid = ShortUUIDField(length=10, max_length=25, alphabet="abcdefghijklmnopqrstuvxyz")
+    razorpay_session_id = models.CharField(max_length=200, null=True, blank=True)
+    oid = models.CharField(max_length=20, unique=True, editable=False, db_index=True)
     date = models.DateTimeField(default=timezone.now)
    
     class Meta:
         ordering = ["-date"]
         verbose_name_plural = "Cart Order"
+    
+    def save(self, *args, **kwargs):
+        if not self.oid:
+            self.oid = generate_order_id()
+        super(CartOrder, self).save(*args, **kwargs)
        
     def __str__(self):
         return self.oid
+    
     def get_order_items(self):
         return CartOrderItem.objects.filter(order=self)
    
