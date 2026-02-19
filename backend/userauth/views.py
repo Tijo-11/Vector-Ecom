@@ -214,7 +214,7 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
         # Generate secure password reset link (uidb64 + token, no OTP)
         uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
         token = token_generator.make_token(user)
-        link = f"http://localhost:5173/create-new-password?uidb64={uidb64}&token={token}"
+        link = f"{settings.SITE_URL.rstrip('/')}/create-new-password?uidb64={uidb64}&token={token}"
 
         subject = "Password Reset Request - MyApp"
         message = (

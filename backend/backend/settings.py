@@ -10,30 +10,45 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
-from decouple import config
+from decouple import config, Csv
 from datetime import timedelta
-#timedelta represents a duration, the difference between two dates or times.
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
+# ====================== SECURITY ======================
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['*']
-SITE_URL = "http://localhost:5173"
+# Azure App Service detection + local fallback
+if os.getenv('WEBSITE_HOSTNAME'):
+    ALLOWED_HOSTS = [os.getenv('WEBSITE_HOSTNAME')]
+    CSRF_TRUSTED_ORIGINS = [f"https://{os.getenv('WEBSITE_HOSTNAME')}"]
+else:
+    ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+    CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
+                                  default='http://localhost:5173,http://127.0.0.1:5173',
+                                  cast=Csv())
+
+SITE_URL = config('SITE_URL', default='http://localhost:5173')
+
+# Production security headers (Azure uses HTTPS termination)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 
-# Application definition
-
+# ====================== APPLICATION ======================
 INSTALLED_APPS = [
     'jazzmin',
     'django.contrib.admin',
@@ -58,6 +73,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',   # ← Required for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -86,23 +102,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# ====================== DATABASE (Azure Postgres) ======================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DATABASE_NAME'),
         'USER': config('DATABASE_USER'),
         'PASSWORD': config('DATABASE_PASSWORD'),
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'HOST': config('DATABASE_HOST', 'localhost'),
+        'PORT': config('DATABASE_PORT', '5432'),
+        'OPTIONS': {
+            'sslmode': 'require',   # required for Azure Postgres
+        },
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
+# ====================== PASSWORD VALIDATION ======================
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -119,61 +135,52 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
+# ====================== INTERNATIONALIZATION ======================
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'Asia/Kolkata'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
+# ====================== STATIC & MEDIA ======================
 STATIC_URL = 'static/' 
 STATICFILES_DIRS = [BASE_DIR / 'static'] 
-STATIC_ROOT = BASE_DIR / 'staticfiles' 
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = 'media/' 
 MEDIA_ROOT = BASE_DIR / 'media' 
 
 
-AUTH_USER_MODEL = 'userauth.User' #Note it is included as string
+# ====================== CUSTOM ======================
+AUTH_USER_MODEL = 'userauth.User'
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
-
-
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+# ====================== JAZZMIN ======================
 JAZZMIN_SETTINGS = {
     "site_title":"RetroRelics",
     "site_header":"RetroRelics",
-    "site_brand" : "RetroRelics", #Your destination for timeless treasures.",
-    #"Shop stories, not just things", "Because memories never go out of style"
+    "site_brand" : "RetroRelics",
     "welcome_sign": "Welcome to RetroRelics",
     "copyright" : "Tijo Thomas 2025 All rights reserved",
     'show_ui_builder' :True,
-    #https://django-jazzmin.readthedocs.io/ui_customisation/
 }
-SIMPLE_JWT= {
+
+
+# ====================== SIMPLE_JWT ======================
+SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=50),
     'ROTATE_REFRESH_TOKENS' : True,
-
     'BLACKLIST_AFTER_ROTATION' :True,
-
     'UPDATE_LAST_LOGIN' :True
-
 }
-# Optional if you're using cookies with JWT
+
+
+# ====================== CORS ======================
 CORS_ALLOW_METHODS = ['GET', 'POST', 'OPTIONS','PUT', 'PATCH', 'DELETE']
 CORS_ALLOW_HEADERS = [
     "X-CSRFToken",
@@ -188,26 +195,17 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-    'x-request-id',  # Add this to allow X-Request-ID
+    'x-request-id',
 ]
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  #"https://894f9abfdc75.ngrok-free.app/",
-]
-
-
-# CORS_ALLOWED_ORIGIN_REGEXES = [
-#     r"^https://[a-z0-9]+\.ngrok-free\.app$",  # Matches random subdomains like 894f9abfdc75.ngrok-free.app
-#     # Optional: also allow local development origins
-#     r"^http://localhost:\d+$",
-#     r"^http://127\.0\.0\.1:\d+$",
-# ]
-
-
-
-
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:5173',
+    cast=Csv()
+)
 CORS_ALLOW_CREDENTIALS = True
 
-# Email Configuration
+
+# ====================== EMAIL ======================
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
@@ -216,6 +214,8 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+
+# ====================== REST FRAMEWORK ======================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -224,10 +224,11 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 12,  # 12 products per page
+    'PAGE_SIZE': 12,
 }
 
 
+# ====================== LOGGING ======================
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -248,7 +249,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'customer': {  # This should match your app name
+        'customer': {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
@@ -265,15 +266,15 @@ LOGGING = {
     },
 }
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# ====================== CELERY (now uses .env) ======================
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 
-
-
-# Razorpay Configuration
+# ====================== RAZORPAY ======================
 RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET')
