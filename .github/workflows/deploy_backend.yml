@@ -7,6 +7,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: retrorelics-api-aecjf7awb0bxe2hc
+  AZURE_RESOURCE_GROUP: retrorelics-rg
   PYTHON_VERSION: "3.12"
 
 jobs:
@@ -38,6 +39,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          resource-group-name: ${{ env.AZURE_RESOURCE_GROUP }} # ← THIS FIXES THE RESOURCE ERROR
           package: ./backend
 
       - name: Azure logout
