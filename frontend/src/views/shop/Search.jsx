@@ -5,7 +5,7 @@ import ProductsPlaceholder from "./Products/ProductsPlaceHolder";
 import apiInstance from "../../utils/axios";
 import UserCountry from "./ProductDetail/UserCountry";
 import UserData from "../../plugin/UserData";
-import cartID from "./ProductDetail/cartId";
+import cartID from "./ProductDetail/CartId";
 import Swal from "sweetalert2";
 import log from "loglevel";
 import { CartContext } from "../../plugin/Context";
