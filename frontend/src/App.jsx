@@ -45,9 +45,9 @@ const Products = lazy(() => import("./views/shop/Products/Products"));
 const ProductDetail = lazy(
   () => import("./views/shop/ProductDetail/ProductDetail"),
 );
-const Category = lazy(() => import("./views/shop/Category/Category"));
+const Category = lazy(() => import("./views/shop/category/Category"));
 const CategoryProducts = lazy(
-  () => import("./views/shop/Category/CategoryProducts"),
+  () => import("./views/shop/category/CategoryProducts"),
 );
 const Cart = lazy(() => import("./views/shop/cart/Cart"));
 const Address = lazy(() => import("./views/shop/cart/Address"));
