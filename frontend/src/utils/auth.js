@@ -3,7 +3,7 @@ import apiInstance from "./axios";
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
 import Swal from "sweetalert2";
-import { generateRandomString } from "../views/shop/ProductDetail/cartId";
+import { generateRandomString } from "../views/shop/ProductDetail/CartId";
 
 const Toast = Swal.mixin({
   toast: true,
