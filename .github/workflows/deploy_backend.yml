@@ -6,9 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: retrorelics-api # ← THIS WAS THE BUG
+  AZURE_WEBAPP_NAME: retrorelics-api
   AZURE_RESOURCE_GROUP: retrorelics-rg
-  AZURE_SUBSCRIPTION_ID: b60f2379-5f10-4b48-ae65-8d629f4067e1
   PYTHON_VERSION: "3.12"
 
 jobs:
@@ -22,8 +21,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # ← ONLY this line (no subscription-id here)
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
