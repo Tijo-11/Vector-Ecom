@@ -278,3 +278,14 @@ CELERY_RESULT_SERIALIZER = 'json'
 # ====================== RAZORPAY ======================
 RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET')
+
+
+
+
+print("\n=== DEBUG SETTINGS LOADED ===")
+print("DATABASE_HOST =", repr(config('DATABASE_HOST', 'NOT_FOUND')))
+print("DATABASE_NAME =", repr(config('DATABASE_NAME', 'NOT_FOUND')))
+print("DATABASE_USER =", repr(config('DATABASE_USER', 'NOT_FOUND')))
+print("DEBUG =", DEBUG)
+print("CELERY_BROKER_URL starts with =", repr(config('CELERY_BROKER_URL', 'NOT_FOUND')[:80]))
+print("==============================")
