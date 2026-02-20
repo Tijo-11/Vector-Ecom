@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import CheckoutForm from "./CheckoutForm";
+import CheckoutForm from "./CheckouTForm";
 import CartSummary from "../cart/CartSummary";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";

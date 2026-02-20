@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import apiInstance from "../../../utils/axios";
 import { useAuthStore } from "../../../store/auth";
-import cartID from "../ProductDetail/cartId";
+import cartID from "../ProductDetail/CartId";
 import { MapPin, User, Mail, Phone, Locate } from "lucide-react";
 
 // Reusable InputField component (moved outside CheckoutForm to prevent re-creation on every render)
@@ -68,7 +68,9 @@ function CheckoutForm() {
       const fetchAddresses = async () => {
         try {
           const res = await apiInstance.get("user/addresses/");
-          const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+          const data = Array.isArray(res.data)
+            ? res.data
+            : res.data.results || [];
           setSavedAddresses(data);
         } catch (err) {
           console.error("Error fetching addresses:", err);
@@ -244,14 +246,20 @@ function CheckoutForm() {
           {loadingAddresses ? (
             <div className="flex items-center justify-center py-6">
               <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-600 mr-2"></div>
-              <span className="text-sm text-gray-500">Loading addresses...</span>
+              <span className="text-sm text-gray-500">
+                Loading addresses...
+              </span>
             </div>
           ) : savedAddresses.length === 0 ? (
             <p className="text-sm text-gray-500 text-center py-4">
               No saved addresses found. You can add addresses from your{" "}
-              <a href="/customer/addresses/" className="text-blue-600 hover:underline font-medium">
+              <a
+                href="/customer/addresses/"
+                className="text-blue-600 hover:underline font-medium"
+              >
                 account settings
-              </a>.
+              </a>
+              .
             </p>
           ) : (
             <>
@@ -283,7 +291,10 @@ function CheckoutForm() {
 
                     {selectedAddress === addr.id && (
                       <div className="absolute top-2 right-2 text-blue-600">
-                        <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                        <svg
+                          className="w-5 h-5 fill-current"
+                          viewBox="0 0 20 20"
+                        >
                           <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
                         </svg>
                       </div>
