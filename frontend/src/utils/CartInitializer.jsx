@@ -4,7 +4,7 @@ import { CartContext } from "../plugin/Context";
 import { useAuthStore } from "../store/auth";
 import CartId, {
   generateRandomString,
-} from "../views/shop/ProductDetail/cartId";
+} from "../views/shop/ProductDetail/CartId";
 import apiInstance from "./axios";
 import log from "./logger";
 
