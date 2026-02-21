@@ -16,12 +16,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ====================== SECURITY ======================
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-temp-key-for-github-actions-collectstatic-only-2026')
 
-DEBUG = config('DEBUG', default=False, cast=bool)
+# Temporarily True so you can see clear error pages instead of 500
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-# Azure App Service detection + local fallback
+# Azure App Service detection + local fallback + Azure health checks
 if os.getenv('WEBSITE_HOSTNAME'):
-    ALLOWED_HOSTS = [os.getenv('WEBSITE_HOSTNAME')]
-    CSRF_TRUSTED_ORIGINS = [f"https://{os.getenv('WEBSITE_HOSTNAME')}"]
+    ALLOWED_HOSTS = [
+        os.getenv('WEBSITE_HOSTNAME'),
+        '.azurewebsites.net',      # Azure internal domains
+        '169.254.129.4',           # Azure health check IP
+        '*',                       # Temporary safety (remove after everything works)
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        f"https://{os.getenv('WEBSITE_HOSTNAME')}",
+        "https://mango-plant-07cc72800.1.azurestaticapps.net",
+        "https://retrorelics-api-aecjf7awb0bxe2hc.centralindia-01.azurewebsites.net",
+    ]
 else:
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
     CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
