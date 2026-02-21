@@ -130,8 +130,13 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-MEDIA_URL = 'media/' 
-MEDIA_ROOT = BASE_DIR / 'media' 
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Production on Azure App Service → use full absolute URL
+if os.getenv('WEBSITE_HOSTNAME'):
+    MEDIA_URL = f"https://{os.getenv('WEBSITE_HOSTNAME')}/media/"
+else:
+    MEDIA_URL = '/media/'
 
 
 # ====================== CUSTOM ======================
