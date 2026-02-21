@@ -2,7 +2,7 @@ import apiInstance from "../utils/axios";
 import Swal from "sweetalert2";
 import { CartContext } from "../plugin/Context";
 import { useContext } from "react";
-import CartId from "../views/shop/ProductDetail/cartId";
+import CartId from "../views/shop/ProductDetail/CartId";
 import { useAuthStore } from "../store/auth";
 
 const Toast = Swal.mixin({
@@ -22,7 +22,7 @@ export const addToCart = async (
   current_address,
   color,
   size,
-  setIsAddingToCart
+  setIsAddingToCart,
 ) => {
   const [cartCount, setCartCount] = useContext(CartContext);
   const { user, isLoggedIn } = useAuthStore();
@@ -47,7 +47,7 @@ export const addToCart = async (
 
     // 3) Find if this product already exists in cart
     const existingItem = cartItems.find(
-      (item) => item.product.id === product_id
+      (item) => item.product.id === product_id,
     );
     const existingQty = existingItem ? existingItem.qty : 0;
 
