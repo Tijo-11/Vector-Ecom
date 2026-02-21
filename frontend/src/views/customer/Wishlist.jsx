@@ -10,7 +10,7 @@ import log from "loglevel";
 import Swal from "sweetalert2";
 import { CartContext } from "../../plugin/Context";
 import UserCountry from "../shop/ProductDetail/UserCountry";
-import CartId from "../shop/ProductDetail/cartId.jsx";
+import CartId from "../shop/ProductDetail/CartId.jsx";
 
 function Wishlist() {
   const [wishlist, setWishlist] = useState([]);
@@ -255,7 +255,12 @@ function Wishlist() {
                                       {w.product.offer_discount > 0 ? (
                                         <>
                                           <h6 className="text-lg font-bold text-blue-600">
-                                            ₹{(w.product.price * (1 - w.product.offer_discount / 100)).toFixed(2)}
+                                            ₹
+                                            {(
+                                              w.product.price *
+                                              (1 -
+                                                w.product.offer_discount / 100)
+                                            ).toFixed(2)}
                                           </h6>
                                           <span className="text-sm text-gray-400 line-through">
                                             ₹{w.product.price}
