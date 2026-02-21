@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.views.static import serve
+from django.views.generic import RedirectView  
 
 # drf-yasg Swagger
 from rest_framework import permissions
@@ -19,28 +20,30 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # ROOT → automatically redirect to Swagger 
+    path('', RedirectView.as_view(url='swagger/', permanent=True)),
+
     path('admin/', admin.site.urls),
 
-    
+    # Your app URLs
     path('api/', include('store.urls')),
     path('api/auth/', include('userauth.urls')),
     path('api/vendor/', include('vendor.urls')),
     path('api/customer/', include('customer.urls')),
-   
+    # path('api/addon/', include('addon.urls')),   # uncomment only when addon.urls.py exists
 
-    # Swagger / Redoc 
+    # Swagger / Redoc (still accessible directly)
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
 ]
 
-# ====================== MEDIA SERVING======================
-
+# ====================== MEDIA SERVING  ======================
 urlpatterns += [
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 
-# Static files (WhiteNoise already handles this in production)
+# Static files only in DEBUG mode (WhiteNoise handles production)
 if settings.DEBUG:
     from django.conf.urls.static import static
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
