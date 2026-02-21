@@ -8,7 +8,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import apiInstance from "../../utils/axios";
-import Toast from "../../plugin/toast";
+import Toast from "../../plugin/Toast";
 
 // Placeholder for missing vendor images
 const PLACEHOLDER_IMAGE = "https://via.placeholder.com/40x40?text=No+Image";
