@@ -15,3 +15,5 @@ export default function PlaceholderContainer() {
     </>
   );
 }
+
+// Production build - env vars from Azure
