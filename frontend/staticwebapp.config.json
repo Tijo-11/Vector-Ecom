@@ -1,8 +1,17 @@
 {
-  "routes": [
-    {
-      "route": "/api/*",
-      "rewrite": "https://retrorelics-api-aecjf7awb0bxe2hc.centralindia-01.azurewebsites.net/api/*"
-    }
-  ]
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/assets/*",
+      "/*.png",
+      "/*.jpg",
+      "/*.jpeg",
+      "/*.gif",
+      "/*.svg",
+      "/*.ico",
+      "/*.json",
+      "/*.css",
+      "/*.js"
+    ]
+  }
 }
