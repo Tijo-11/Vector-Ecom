@@ -6,7 +6,7 @@ import apiInstance from "../../utils/axios";
 import { CartContext } from "../../plugin/Context";
 import { addToWishlist } from "../../plugin/addToWishlist";
 import { addToCart } from "../../plugin/AddToCart";
-import CartID from "../shop/ProductDetail/cartId";
+import CartID from "../shop/ProductDetail/CartId";
 import GetCurrentAddress from "../shop/ProductDetail/UserCountry";
 import UserData from "../../plugin/UserData";
 import log from "loglevel";
@@ -91,7 +91,7 @@ function Shop() {
         colorValue,
         sizeValue,
         cart_id,
-        setIsAddingToCart
+        setIsAddingToCart,
       );
 
       setLoadingStates((prev) => ({
@@ -177,15 +177,23 @@ function Shop() {
                     {product.offer_discount > 0 ? (
                       <>
                         <h6 className="text-lg font-semibold text-blue-600">
-                          ₹{(product.price * (1 - product.offer_discount / 100)).toFixed(2)}
+                          ₹
+                          {(
+                            product.price *
+                            (1 - product.offer_discount / 100)
+                          ).toFixed(2)}
                         </h6>
-                        <span className="text-sm text-gray-400 line-through">₹{product.price}</span>
+                        <span className="text-sm text-gray-400 line-through">
+                          ₹{product.price}
+                        </span>
                         <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
                           -{product.offer_discount}%
                         </span>
                       </>
                     ) : (
-                      <h6 className="text-lg font-semibold">₹{product.price}</h6>
+                      <h6 className="text-lg font-semibold">
+                        ₹{product.price}
+                      </h6>
                     )}
                   </div>
 
@@ -215,7 +223,7 @@ function Shop() {
                                   handleSizeButtonClick(
                                     e,
                                     product.id,
-                                    size.name
+                                    size.name,
                                   )
                                 }
                                 className="px-2 py-1 border rounded text-sm hover:bg-gray-100"
@@ -242,7 +250,7 @@ function Shop() {
                                     e,
                                     product.id,
                                     color.name,
-                                    color.image
+                                    color.image,
                                   )
                                 }
                                 className="w-8 h-8 rounded-full border"
@@ -265,7 +273,7 @@ function Shop() {
                       handleAddToCart(
                         product.id,
                         product.price,
-                        product.shipping_amount
+                        product.shipping_amount,
                       )
                     }
                     disabled={loadingStates[product.id] === "Adding..."}

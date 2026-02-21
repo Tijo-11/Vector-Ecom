@@ -1,6 +1,5 @@
-// src/components/vendor/OrderDetail.jsx (Fixed - Full File)
 import React, { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom"; // ← Added missing import
+import { Link, useParams } from "react-router-dom";
 import { ShoppingCart, AlertCircle, X, RefreshCw, Truck } from "lucide-react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
@@ -198,31 +197,47 @@ function OrderDetail() {
         {/* Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl shadow-lg p-5 text-white">
-            <p className="text-teal-100 font-medium text-sm uppercase tracking-wider">Total</p>
+            <p className="text-teal-100 font-medium text-sm uppercase tracking-wider">
+              Total
+            </p>
             <h2 className="text-2xl font-bold mt-1">₹{order?.total}</h2>
           </div>
           <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-5 text-white">
-            <p className="text-purple-100 font-medium text-sm uppercase tracking-wider">Payment</p>
-            <h2 className="text-2xl font-bold mt-1">{order?.payment_status?.toUpperCase()}</h2>
+            <p className="text-purple-100 font-medium text-sm uppercase tracking-wider">
+              Payment
+            </p>
+            <h2 className="text-2xl font-bold mt-1">
+              {order?.payment_status?.toUpperCase()}
+            </h2>
           </div>
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-5 text-white">
-            <p className="text-blue-100 font-medium text-sm uppercase tracking-wider">Status</p>
+            <p className="text-blue-100 font-medium text-sm uppercase tracking-wider">
+              Status
+            </p>
             <h2 className="text-2xl font-bold mt-1">{order.order_status}</h2>
           </div>
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-5 text-white">
-            <p className="text-green-100 font-medium text-sm uppercase tracking-wider">Shipping</p>
-            <h2 className="text-2xl font-bold mt-1">₹{order.shipping_amount}</h2>
+            <p className="text-green-100 font-medium text-sm uppercase tracking-wider">
+              Shipping
+            </p>
+            <h2 className="text-2xl font-bold mt-1">
+              ₹{order.shipping_amount}
+            </h2>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
             <p className="text-gray-500 text-sm">Tax Fee</p>
-            <h2 className="text-xl font-bold text-gray-900">₹{order.tax_fee}</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              ₹{order.tax_fee}
+            </h2>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
             <p className="text-gray-500 text-sm">Service Fee</p>
-            <h2 className="text-xl font-bold text-gray-900">₹{order.service_fee}</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              ₹{order.service_fee}
+            </h2>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
             <p className="text-gray-500 text-sm">Discount</p>
@@ -239,18 +254,35 @@ function OrderDetail() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Qty</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-red-500 uppercase tracking-wider">Discount</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Qty
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-red-500 uppercase tracking-wider">
+                    Discount
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {orderItems?.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={index}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img
@@ -266,23 +298,33 @@ function OrderDetail() {
                         </Link>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-medium text-gray-900">₹{item.product.price}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      ₹{item.product.price}
+                    </td>
                     <td className="px-6 py-4 text-gray-600">{item.qty}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">₹{item.sub_total}</td>
-                    <td className="px-6 py-4 font-medium text-red-600">-₹{item.saved}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      ₹{item.sub_total}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-red-600">
+                      -₹{item.saved}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}>
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}
+                        >
                           {item.delivery_status}
                         </span>
-                        {item.return_request && getReturnStatusBadge(item.return_request)}
+                        {item.return_request &&
+                          getReturnStatusBadge(item.return_request)}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-2">
                         {!item.product_delivered &&
                           item.delivery_status !== "Cancelled" &&
-                          (!item.return_request || item.return_request.status !== "pending") && (
+                          (!item.return_request ||
+                            item.return_request.status !== "pending") && (
                             <button
                               onClick={() => handleStatusChange(item)}
                               className="flex items-center bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 text-sm transition"
@@ -291,22 +333,27 @@ function OrderDetail() {
                             </button>
                           )}
 
-                        {item.return_request && item.return_request.status === "pending" && (
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => handleReturnRequest(item, "approve")}
-                              className="flex items-center bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 text-xs transition"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() => handleReturnRequest(item, "reject")}
-                              className="flex items-center bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 text-xs transition"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        )}
+                        {item.return_request &&
+                          item.return_request.status === "pending" && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() =>
+                                  handleReturnRequest(item, "approve")
+                                }
+                                className="flex items-center bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 text-xs transition"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleReturnRequest(item, "reject")
+                                }
+                                className="flex items-center bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 text-xs transition"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
                       </div>
                     </td>
                   </tr>
@@ -314,7 +361,9 @@ function OrderDetail() {
                 {orderItems.length < 1 && (
                   <tr>
                     <td colSpan="7" className="px-6 py-16 text-center">
-                      <p className="text-gray-500 font-medium">No Order Items</p>
+                      <p className="text-gray-500 font-medium">
+                        No Order Items
+                      </p>
                     </td>
                   </tr>
                 )}
