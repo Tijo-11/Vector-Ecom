@@ -16,21 +16,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ====================== SECURITY ======================
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-temp-key-for-github-actions-collectstatic-only-2026')
 
-# Temporarily True so you can see clear error pages instead of 500
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)   # ← Production ready
 
-# Azure App Service detection + local fallback + Azure health checks
+# Azure + Custom Domains
 if os.getenv('WEBSITE_HOSTNAME'):
     ALLOWED_HOSTS = [
         os.getenv('WEBSITE_HOSTNAME'),
-        '.azurewebsites.net',      # Azure internal domains
-        '169.254.129.4',           # Azure health check IP
-        '*',                       # Temporary safety (remove after everything works)
+        '.azurewebsites.net',
+        'api.retrorelics.live',
+        'www.retrorelics.live',
+        'retrorelics.live',
     ]
     CSRF_TRUSTED_ORIGINS = [
         f"https://{os.getenv('WEBSITE_HOSTNAME')}",
-        "https://mango-plant-07cc72800.1.azurestaticapps.net",
-        "https://retrorelics-api-aecjf7awb0bxe2hc.centralindia-01.azurewebsites.net",
+        "https://api.retrorelics.live",
+        "https://www.retrorelics.live",
+        "https://retrorelics.live",
+        "https://mango-plant-07cc72800.1.azurestaticapps.net",   # keep for safety
     ]
 else:
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
@@ -38,7 +40,7 @@ else:
                                   default='http://localhost:5173,http://127.0.0.1:5173',
                                   cast=Csv())
 
-SITE_URL = config('SITE_URL', default='http://localhost:5173')
+SITE_URL = config('SITE_URL', default='https://www.retrorelics.live')
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
@@ -142,7 +144,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # MEDIA - Persistent on Azure App Service Linux
 if os.getenv('WEBSITE_HOSTNAME'):
-    MEDIA_ROOT = '/home/site/wwwroot/media'   # ← persistent location
+    MEDIA_ROOT = '/home/site/wwwroot/media'
     MEDIA_URL = f"https://{os.getenv('WEBSITE_HOSTNAME')}/media/"
 else:
     MEDIA_ROOT = BASE_DIR / 'media'
