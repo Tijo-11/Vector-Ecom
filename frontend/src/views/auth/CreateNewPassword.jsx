@@ -7,7 +7,7 @@ import Swal from "sweetalert2";
 export default function CreateNewPassword() {
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
-  const [isLoading, setIsLoading] = useState(false);//abc
+  const [isLoading, setIsLoading] = useState(false);
 
   const [searchParams] = useSearchParams();
   const uidb64 = searchParams.get("uidb64");
