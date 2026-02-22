@@ -27,7 +27,7 @@ urlpatterns = [
 
     # Your app URLs
     path('api/', include('store.urls')),
-    path('api/auth/', include('userauth.urls')),
+    path('api/user/', include('userauth.urls')),
     path('api/vendor/', include('vendor.urls')),
     path('api/customer/', include('customer.urls')),
     # path('api/addon/', include('addon.urls')),   # uncomment only when addon.urls.py exists
