@@ -106,7 +106,7 @@ export default function ProductDetail() {
       {/* Breadcrumb */}
       <div className="bg-gray-50 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center text-sm text-gray-500">
+          <div className="flex items-center text-sm text-gray-500 overflow-x-auto whitespace-nowrap pb-1">
             <Link to="/" className="hover:text-blue-600">
               Home
             </Link>
@@ -181,11 +181,11 @@ export default function ProductDetail() {
 
           {/* Right: Product Info */}
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-2 leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2 leading-tight">
               {product.title}
             </h1>
 
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-6">
               <div className="flex items-center gap-1">
                 <StarRating rating={product.rating} />
               </div>

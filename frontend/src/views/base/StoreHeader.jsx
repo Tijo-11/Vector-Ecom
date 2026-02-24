@@ -84,6 +84,18 @@ function StoreHeader() {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
+
   const showPublicFeatures = !isAdmin;
   const showCart = !isAdmin;
 
@@ -406,7 +418,7 @@ function StoreHeader() {
 
       {/* Mobile Drawer */}
       <div
-        className={`md:hidden fixed inset-y-0 right-0 z-50 w-80 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${
+        className={`md:hidden fixed inset-y-0 right-0 z-50 w-[85vw] max-w-80 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >

@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, SlidersHorizontal, X as XIcon } from "lucide-react";
 import ProductsPlaceholder from "./Products/ProductsPlaceHolder";
 import apiInstance from "../../utils/axios";
 import UserCountry from "./ProductDetail/UserCountry";
@@ -29,6 +29,7 @@ export default function SearchPage() {
   const [selectedSizes, setSelectedSizes] = useState({});
   const [quantityValue, setQuantityValue] = useState({});
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get("query") || "";
@@ -309,8 +310,19 @@ export default function SearchPage() {
 
         {/* Filters + Products Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Mobile Filter Toggle */}
+          <div className="lg:hidden">
+            <button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              {showMobileFilters ? <XIcon className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
+              {showMobileFilters ? "Hide Filters" : "Show Filters"}
+            </button>
+          </div>
+
           {/* Filters Sidebar */}
-          <aside className="lg:sticky lg:top-20 space-y-8">
+          <aside className={`lg:sticky lg:top-20 space-y-8 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}>
             <div className="bg-white p-6 rounded-lg shadow-md">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold">Filters</h3>

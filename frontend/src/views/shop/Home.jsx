@@ -138,7 +138,7 @@ export default function Home() {
 
       {/* Categories Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex justify-between items-end mb-10">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-2 mb-10">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">
               Curated Categories
@@ -182,7 +182,7 @@ export default function Home() {
       {/* Trending Products */}
       <div className="bg-gray-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-end mb-10">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-2 mb-10">
             <div>
               <h2 className="text-3xl font-bold text-gray-900">Trending Now</h2>
               <p className="mt-2 text-gray-500">

@@ -6,7 +6,7 @@ import UserData from "../../../plugin/UserData";
 import { useAuthStore } from "../../../store/auth";
 import log from "loglevel";
 import ProductCard from "./ProductCard";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, SlidersHorizontal, X } from "lucide-react";
 
 const PAGE_SIZE = 12;
 
@@ -16,6 +16,7 @@ export default function Products() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [wishlist, setWishlist] = useState([]);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // URL Params
   const [searchParams, setSearchParams] = useSearchParams();
@@ -114,8 +115,19 @@ export default function Products() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
+          {/* Mobile Filter Toggle */}
+          <div className="lg:hidden mb-4">
+            <button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              {showMobileFilters ? <X className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
+              {showMobileFilters ? "Hide Filters" : "Show Filters"}
+            </button>
+          </div>
+
           {/* Sidebar Categories */}
-          <aside className="w-full lg:w-64 flex-shrink-0">
+          <aside className={`w-full lg:w-64 flex-shrink-0 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sticky top-24">
               <h2 className="font-bold text-gray-900 text-lg mb-6">
                 Categories
