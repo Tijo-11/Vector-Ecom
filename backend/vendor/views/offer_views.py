@@ -41,6 +41,8 @@ class ProductOfferListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return ProductOffer.objects.none()
         vendor = get_object_or_404(Vendor, id=self.kwargs["vendor_id"])
         return ProductOffer.objects.filter(vendor=vendor).order_by("-id")
 
@@ -88,6 +90,8 @@ class ProductOfferDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return ProductOffer.objects.none()
         vendor = get_object_or_404(Vendor, id=self.kwargs["vendor_id"])
         return ProductOffer.objects.filter(vendor=vendor)
 
@@ -122,6 +126,8 @@ class CategoryOfferListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return CategoryOffer.objects.none()
         vendor = get_object_or_404(Vendor, id=self.kwargs["vendor_id"])
         return CategoryOffer.objects.filter(vendor=vendor).order_by("-id")
 
@@ -169,6 +175,8 @@ class CategoryOfferDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return CategoryOffer.objects.none()
         vendor = get_object_or_404(Vendor, id=self.kwargs["vendor_id"])
         return CategoryOffer.objects.filter(vendor=vendor)
 

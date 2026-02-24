@@ -346,6 +346,7 @@ class CouponAPIView(generics.CreateAPIView):
 
 
 class RemoveCouponAPIView(generics.CreateAPIView):
+    serializer_class = CouponSerializer
     permission_classes = (AllowAny,)
 
     def create(self, request):
