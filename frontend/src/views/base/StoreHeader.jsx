@@ -100,6 +100,7 @@ function StoreHeader() {
   const showCart = !isAdmin;
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md shadow-sm transition-all duration-300">
       {/* Main Header Bar */}
       <div className="border-b border-gray-100">
@@ -407,180 +408,204 @@ function StoreHeader() {
           </div>
         </div>
       )}
+    </header>
 
-      {/* Mobile Menu Overlay */}
-      <div
-        className={`md:hidden fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-300 ${
-          isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={() => setIsMobileMenuOpen(false)}
-      />
+    {/* Mobile Menu Overlay - outside header to prevent overflow */}
+    <div
+      className={`md:hidden fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-300 ${
+        isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+      }`}
+      onClick={() => setIsMobileMenuOpen(false)}
+    />
 
-      {/* Mobile Drawer */}
-      <div
-        className={`md:hidden fixed inset-y-0 right-0 z-50 w-[85vw] max-w-80 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${
-          isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Mobile Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <span className="text-xl font-bold text-gray-900">Menu</span>
-            <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2 -mr-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
+    {/* Mobile Drawer - outside header to prevent overflow */}
+    <div
+      className={`md:hidden fixed inset-y-0 right-0 z-50 w-[85vw] max-w-80 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${
+        isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+      }`}
+    >
+      <div className="flex flex-col h-full">
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <span className="text-xl font-bold text-gray-900">Menu</span>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 -mr-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto py-6 px-6 space-y-6">
-            {/* Mobile Search */}
-            {showPublicFeatures && (
-              <form onSubmit={handleSearchSubmit} className="relative">
-                <input
-                  type="text"
-                  className="w-full pl-5 pr-16 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  placeholder="Search products..."
-                  value={search}
-                  onChange={handleSearchChange}
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 gap-2">
-                  {search && (
-                    <button
-                      type="button"
-                      onClick={handleClearSearch}
-                      className="text-gray-400 hover:text-gray-700 transition-colors"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  )}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto py-6 px-6 space-y-6">
+          {/* Mobile Search */}
+          {showPublicFeatures && (
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <input
+                type="text"
+                className="w-full pl-5 pr-16 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                placeholder="Search products..."
+                value={search}
+                onChange={handleSearchChange}
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 gap-2">
+                {search && (
                   <button
-                    type="submit"
-                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="text-gray-400 hover:text-gray-700 transition-colors"
                   >
-                    <Search className="h-5 w-5" />
+                    <X className="h-5 w-5" />
                   </button>
-                </div>
-              </form>
-            )}
-
-            {/* User Info */}
-            {isLoggedIn && (
-              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
-                  {userProfile?.image ? (
-                    <img
-                      src={userProfile.image}
-                      alt=""
-                      className="h-full w-full rounded-full object-cover"
-                    />
-                  ) : (
-                    (userProfile?.full_name ||
-                      user?.username ||
-                      "U")[0].toUpperCase()
-                  )}
-                </div>
-                <div className="overflow-hidden">
-                  <p className="font-semibold text-gray-900 truncate">
-                    {userProfile?.full_name || user?.username}
-                  </p>
-                  <p className="text-xs text-blue-600 truncate">
-                    {user?.email}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation Links */}
-            <nav className="space-y-2">
-              <Link
-                to="/"
-                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-xl transition-colors font-medium"
-              >
-                Home
-              </Link>
-
-              {isVendor && (
-                <div className="space-y-1">
-                  <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-2">
-                    Vendor Area
-                  </p>
-                  <Link
-                    to="/vendor/dashboard/"
-                    className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition-colors"
-                  >
-                    <LayoutDashboard className="mr-3 h-5 w-5 text-gray-400" />{" "}
-                    Dashboard
-                  </Link>
-                  <Link
-                    to="/vendor/products/"
-                    className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition-colors"
-                  >
-                    <ShoppingBag className="mr-3 h-5 w-5 text-gray-400" />{" "}
-                    Products
-                  </Link>
-                </div>
-              )}
-
-              {isLoggedIn && !isAdmin && !isVendor && (
-                <div className="space-y-1">
-                  <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-2">
-                    My Account
-                  </p>
-                  <Link
-                    to="/customer/account/"
-                    className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
-                  >
-                    <User className="mr-3 h-5 w-5 text-gray-400" /> Profile
-                  </Link>
-                  <Link
-                    to="/customer/orders/"
-                    className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
-                  >
-                    <Package className="mr-3 h-5 w-5 text-gray-400" /> Orders
-                  </Link>
-                  <Link
-                    to="/track-order"
-                    className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
-                  >
-                    <Truck className="mr-3 h-5 w-5 text-gray-400" /> Track Order
-                  </Link>
-                </div>
-              )}
-            </nav>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="p-6 border-t border-gray-100 bg-gray-50">
-            {isLoggedIn ? (
-              <Link
-                to="/logout"
-                className="flex items-center justify-center w-full px-4 py-3 text-red-600 bg-red-50 hover:bg-red-100 font-medium rounded-xl transition-colors"
-              >
-                <LogOut className="mr-2 h-5 w-5" /> Sign Out
-              </Link>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <Link
-                  to="/login"
-                  className="flex items-center justify-center px-4 py-3 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 font-medium rounded-xl transition-colors shadow-sm"
+                )}
+                <button
+                  type="submit"
+                  className="text-blue-600 hover:text-blue-800 transition-colors"
                 >
-                  Log In
+                  <Search className="h-5 w-5" />
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* User Info */}
+          {isLoggedIn && (
+            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
+                {userProfile?.image ? (
+                  <img
+                    src={userProfile.image}
+                    alt=""
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  (userProfile?.full_name ||
+                    user?.username ||
+                    "U")[0].toUpperCase()
+                )}
+              </div>
+              <div className="overflow-hidden">
+                <p className="font-semibold text-gray-900 truncate">
+                  {userProfile?.full_name || user?.username}
+                </p>
+                <p className="text-xs text-blue-600 truncate">
+                  {user?.email}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Links */}
+          <nav className="space-y-2">
+            <Link
+              to="/"
+              className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-xl transition-colors font-medium"
+            >
+              Home
+            </Link>
+
+            {showPublicFeatures && (
+              <>
+                <Link
+                  to="/products"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-xl transition-colors font-medium"
+                >
+                  <ShoppingBag className="mr-3 h-5 w-5 text-gray-400" /> Shop
                 </Link>
                 <Link
-                  to="/register"
-                  className="flex items-center justify-center px-4 py-3 text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-xl transition-colors shadow-md"
+                  to="/track-order"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-xl transition-colors font-medium"
                 >
-                  Sign Up
+                  <Truck className="mr-3 h-5 w-5 text-gray-400" /> Track Order
+                </Link>
+              </>
+            )}
+
+            {isVendor && (
+              <div className="space-y-1">
+                <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-2">
+                  Vendor Area
+                </p>
+                <Link
+                  to="/vendor/dashboard/"
+                  className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition-colors"
+                >
+                  <LayoutDashboard className="mr-3 h-5 w-5 text-gray-400" />{" "}
+                  Dashboard
+                </Link>
+                <Link
+                  to="/vendor/products/"
+                  className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition-colors"
+                >
+                  <ShoppingBag className="mr-3 h-5 w-5 text-gray-400" />{" "}
+                  Products
                 </Link>
               </div>
             )}
-          </div>
+
+            {isLoggedIn && !isAdmin && !isVendor && (
+              <div className="space-y-1">
+                <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-2">
+                  My Account
+                </p>
+                <Link
+                  to="/customer/account/"
+                  className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  <User className="mr-3 h-5 w-5 text-gray-400" /> Profile
+                </Link>
+                <Link
+                  to="/customer/orders/"
+                  className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  <Package className="mr-3 h-5 w-5 text-gray-400" /> Orders
+                </Link>
+                <Link
+                  to="/customer/wishlist/"
+                  className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  <Heart className="mr-3 h-5 w-5 text-gray-400" /> Wishlist
+                </Link>
+                <Link
+                  to="/customer/notifications/"
+                  className="flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
+                >
+                  <Bell className="mr-3 h-5 w-5 text-gray-400" /> Notifications
+                </Link>
+              </div>
+            )}
+          </nav>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-6 border-t border-gray-100 bg-gray-50">
+          {isLoggedIn ? (
+            <Link
+              to="/logout"
+              className="flex items-center justify-center w-full px-4 py-3 text-red-600 bg-red-50 hover:bg-red-100 font-medium rounded-xl transition-colors"
+            >
+              <LogOut className="mr-2 h-5 w-5" /> Sign Out
+            </Link>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <Link
+                to="/login"
+                className="flex items-center justify-center px-4 py-3 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 font-medium rounded-xl transition-colors shadow-sm"
+              >
+                Log In
+              </Link>
+              <Link
+                to="/register"
+                className="flex items-center justify-center px-4 py-3 text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-xl transition-colors shadow-md"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-    </header>
+    </div>
+    </>
   );
 }
 
