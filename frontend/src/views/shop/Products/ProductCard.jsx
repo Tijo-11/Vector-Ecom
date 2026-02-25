@@ -124,12 +124,12 @@ export default function ProductCard({
   return (
     <div className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden border border-gray-100">
       {/* Image Container */}
-      <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+      <div className="relative aspect-square bg-gray-50 overflow-hidden">
         <Link to={`/product/${product.slug}`}>
           <img
             src={product.image}
             alt={product.title}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
           />
         </Link>
 
