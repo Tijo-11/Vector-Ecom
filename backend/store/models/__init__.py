@@ -1,36 +1,47 @@
-from .product import Product
-from .category import  Brand, Tag, Category
-from .order import Cart, CartOrder, CartOrderItem, CancelledOrder, Coupon, CouponUsers, DeliveryCouriers
-from .user import Wishlist, Address, Notification
-from .review import Review, ProductFaq
-from .item import Gallery, Specification, Color, Size
 from .cancellation import OrderCancellation, OrderReturn
-from .offer import ProductOffer,CategoryOffer, ReferralOffer
+from .category import Brand, Category, Tag
+from .item import Color, Gallery, Size, Specification
+from .offer import CategoryOffer, ProductOffer, ReferralOffer
+from .order import (CancelledOrder, Cart, CartOrder, CartOrderItem, Coupon,
+                    CouponUsers, DeliveryCouriers)
+from .product import Product
+from .review import ProductFaq, Review
+from .user import Address, Notification, Wishlist
 
 __all__ = [
-    "Product", "Category", "Brand", "Tag", "Specification", "Size", "Color", "Gallery", "ProductFaq",
-    "Cart", "CartOrder", "CartOrderItem", "CancelledOrder", "Coupon", "CouponUsers", "DeliveryCouriers",
-    "Wishlist", "Address", "Notification", "Review",'OrderCancellation',
-    'OrderReturn', "ProductOffer","CategoryOffer", "ReferralOffer"
-    
+    "Product",
+    "Category",
+    "Brand",
+    "Tag",
+    "Specification",
+    "Size",
+    "Color",
+    "Gallery",
+    "ProductFaq",
+    "Cart",
+    "CartOrder",
+    "CartOrderItem",
+    "CancelledOrder",
+    "Coupon",
+    "CouponUsers",
+    "DeliveryCouriers",
+    "Wishlist",
+    "Address",
+    "Notification",
+    "Review",
+    "OrderCancellation",
+    "OrderReturn",
+    "ProductOffer",
+    "CategoryOffer",
+    "ReferralOffer",
 ]
 
-#__all__ is a declaration of what should be exported when someone does from models import *,
+# __all__ is a declaration of what should be exported when someone does from models import *,
 # but it doesn't import anything by itself.
-#Without the actual imports, Python won’t know what Product or Review even are.
+# Without the actual imports, Python won’t know what Product or Review even are.
 
 
-
-
-
-
-
-
-
-
-
-
-'''
+"""
 he __init__.py file in your models/ directory can be a powerful tool to streamline your imports and make
 your codebase cleaner and more DRY.
 
@@ -85,4 +96,4 @@ __all__ = [
     "Product", "Category", "Brand", "Tag", "Specification", "Size", "Color", "Gallery", "ProductFaq",
     "Cart", "CartOrder", "CartOrderItem", "CancelOrder", "Coupon", "CouponUsers", "DeliveryCountries",
     "Wishlist", "Address", "Notifications", "Review"
-'''
+"""

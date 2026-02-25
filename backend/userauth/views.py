@@ -1,41 +1,38 @@
-# userauth/views.py 
+# userauth/views.py
 
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework import generics, status, viewsets
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.exceptions import ValidationError  # <-- NEW IMPORT
-from .serializers import (
-    MyTokenObtainPairSerializer,
-    RegisterSerializer,
-    ProfileSerializer,
-    UserSerializer,
-)
-from .models import User
-import shortuuid
-from google.oauth2 import id_token as google_id_token
-from google.auth.transport import requests as google_requests
-from django.conf import settings
-from django.utils import timezone
 import logging
-from .tasks import send_async_email
 
+import shortuuid
+from django.conf import settings
 # For secure password reset token
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
+from rest_framework import generics, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import ValidationError  # <-- NEW IMPORT
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from store.models import Address
 from store.serializers import AddressSerializer
-
 # NEW IMPORT FOR VENDOR BLOCK CHECK
 from vendor.models import Vendor
+
+from .models import User
+from .serializers import (MyTokenObtainPairSerializer, ProfileSerializer,
+                          RegisterSerializer, UserSerializer)
+from .tasks import send_async_email
 
 logger = logging.getLogger(__name__)
 
 token_generator = PasswordResetTokenGenerator()
+
 
 def mask_email(email: str) -> str:
     try:
@@ -63,7 +60,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
             logger.info("Token generation successful")
             return response
         except ValidationError:
-            # Re-raise ValidationError (including our blocked vendor message) 
+            # Re-raise ValidationError (including our blocked vendor message)
             # so DRF returns the correct {"detail": "..."} with the original message
             raise
         except Exception as e:
@@ -72,7 +69,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
                 {
                     "error": str(e),
                     "detail": "Token generation failed",
-                    "received_fields": list(request.data.keys()), 
+                    "received_fields": list(request.data.keys()),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -206,9 +203,13 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
 
         try:
             user = User.objects.get(email=email)
-            logger.info(f"User found for password reset: {user.id} - {mask_email(user.email)}")
+            logger.info(
+                f"User found for password reset: {user.id} - {mask_email(user.email)}"
+            )
         except User.DoesNotExist:
-            logger.info(f"No user found for email: {mask_email(email)} (silent response)")
+            logger.info(
+                f"No user found for email: {mask_email(email)} (silent response)"
+            )
             return Response({"message": "If this email exists, a reset link was sent."})
 
         # Generate secure password reset link (uidb64 + token, no OTP)
@@ -233,7 +234,9 @@ class PasswordEmailVerify(generics.RetrieveAPIView):
             fail_silently=False,
         )
         logger.info(f"Password reset email queued for user: {mask_email(user.email)}")
-        return Response({"message": "If this email is registered, a reset link was sent."})
+        return Response(
+            {"message": "If this email is registered, a reset link was sent."}
+        )
 
 
 # PasswordChangeView (Forgot Password Reset - Token-based flow)
@@ -245,7 +248,11 @@ class PasswordChangeView(generics.CreateAPIView):
         logger.info("Password change request received")
         logger.info(f"Request method: {request.method}")
         logger.info(f"Request content-type: {request.content_type}")
-        logger.info("Request contains data payload" if request.data else "No request data provided")
+        logger.info(
+            "Request contains data payload"
+            if request.data
+            else "No request data provided"
+        )
         logger.info("Request data logged in generic form (sensitive fields masked)")
 
         payload = request.data
@@ -270,40 +277,54 @@ class PasswordChangeView(generics.CreateAPIView):
             logger.warning("Received payload with sensitive fields masked")
             return Response(
                 {"error": "Missing required fields", "missing": missing_fields},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             user_id = force_str(urlsafe_base64_decode(uidb64))
             logger.info(f"Decoded user_id from uidb64: {user_id}")
             user = User.objects.get(pk=user_id)
-            logger.info(f"User found for password change: {user.id} - {mask_email(user.email)}")
+            logger.info(
+                f"User found for password change: {user.id} - {mask_email(user.email)}"
+            )
         except (ValueError, TypeError) as e:
             logger.error(f"Invalid uidb64 decoding: {str(e)}", exc_info=True)
-            return Response({"error": "Invalid link"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid link"}, status=status.HTTP_400_BAD_REQUEST
+            )
         except User.DoesNotExist:
             logger.warning(f"User not found for decoded user_id: {user_id}")
-            return Response({"error": "Invalid link"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid link"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         if not token_generator.check_token(user, token):
             logger.warning(f"Invalid or expired token for user: {user.id}")
             return Response(
-                {"error": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Prevent reusing the same password
         if user.check_password(password):
-            logger.warning(f"User {user.id} attempted to reuse the same password during reset")
+            logger.warning(
+                f"User {user.id} attempted to reuse the same password during reset"
+            )
             return Response(
                 {"error": "New password cannot be the same as your current password."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         logger.info(f"Token valid for user: {user.id}. Proceeding to set new password.")
         user.set_password(password)
         user.save()
-        logger.info(f"Password successfully changed for user: {user.id} - {mask_email(user.email)}")
-        return Response({"message": "Password Changed Successfully"}, status=status.HTTP_200_OK)
+        logger.info(
+            f"Password successfully changed for user: {user.id} - {mask_email(user.email)}"
+        )
+        return Response(
+            {"message": "Password Changed Successfully"}, status=status.HTTP_200_OK
+        )
+
 
 class VerifyEmailOTP(generics.CreateAPIView):
     permission_classes = (AllowAny,)
@@ -319,12 +340,16 @@ class VerifyEmailOTP(generics.CreateAPIView):
             user_id = int(user_id)
             user = User.objects.get(id=user_id, otp=otp)
         except (ValueError, User.DoesNotExist, TypeError):
-            return Response({"message": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         user.email_verified = True
         user.otp = ""
         user.save()
-        return Response({"message": "Email verified successfully"}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Email verified successfully"}, status=status.HTTP_200_OK
+        )
 
 
 # Updated google_login view with blocked vendor check
@@ -356,7 +381,9 @@ def google_login(request):
 
         if created:
             user.set_unusable_password()
-            logger.info(f"New user created via Google signup: ID={user.id}, Email={user.email}")
+            logger.info(
+                f"New user created via Google signup: ID={user.id}, Email={user.email}"
+            )
 
         user.email_verified = id_info.get("email_verified", False)
         user.save()
@@ -365,7 +392,9 @@ def google_login(request):
         try:
             vendor = user.vendor
             if vendor and not vendor.active:
-                logger.warning(f"Blocked vendor attempted Google login: {user.email} (Vendor ID: {vendor.id})")
+                logger.warning(
+                    f"Blocked vendor attempted Google login: {user.email} (Vendor ID: {vendor.id})"
+                )
                 return Response(
                     {"error": "Your account is blocked, please contact admin."},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -390,10 +419,14 @@ def google_login(request):
 
     except ValueError as e:
         logger.warning(f"Invalid Google credential: {str(e)}")
-        return Response({"error": "Invalid credential"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Invalid credential"}, status=status.HTTP_400_BAD_REQUEST
+        )
     except Exception as e:
         logger.error(f"Unexpected error in google_login: {str(e)}", exc_info=True)
-        return Response({"error": "Authentication failed"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Authentication failed"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 # Address Management ViewSet
@@ -402,23 +435,26 @@ class AddressViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Address.objects.none()
         return Address.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         instance = serializer.save(user=self.request.user)
         if instance.status:
-            Address.objects.filter(user=self.request.user).exclude(pk=instance.pk).update(
-                status=False
-            )
+            Address.objects.filter(user=self.request.user).exclude(
+                pk=instance.pk
+            ).update(status=False)
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        if "status" in serializer.validated_data and serializer.validated_data["status"]:
-            Address.objects.filter(user=self.request.user).exclude(pk=instance.pk).update(
-                status=False
-            )
+        if (
+            "status" in serializer.validated_data
+            and serializer.validated_data["status"]
+        ):
+            Address.objects.filter(user=self.request.user).exclude(
+                pk=instance.pk
+            ).update(status=False)
 
 
 # Profile View (show details + addresses)
@@ -465,19 +501,21 @@ class ChangePasswordView(APIView):
 
         if not request.user.check_password(old_password):
             return Response(
-                {"error": "Old password is incorrect."}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Old password is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if new_password != new_password2:
             return Response(
-                {"error": "New passwords do not match."}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "New passwords do not match."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Prevent reusing the same password
         if request.user.check_password(new_password):
             return Response(
                 {"error": "New password cannot be the same as your current password."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         request.user.set_password(new_password)
@@ -499,7 +537,8 @@ class ChangeEmailRequestView(APIView):
 
         if new_email.lower() == request.user.email.lower():
             return Response(
-                {"error": "This is your current email."}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "This is your current email."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if User.objects.filter(email__iexact=new_email).exists():
@@ -510,9 +549,7 @@ class ChangeEmailRequestView(APIView):
 
         if not request.user.has_usable_password():
             return Response(
-                {
-                    "error": "Email change not available for Google login users."
-                },
+                {"error": "Email change not available for Google login users."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -551,7 +588,9 @@ class VerifyEmailChangeView(APIView):
             )
 
         if request.user.otp != otp:
-            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         old_email = request.user.email
         request.user.email = request.user.pending_email
@@ -563,7 +602,11 @@ class VerifyEmailChangeView(APIView):
         email_username = request.user.email.split("@")[0]
         base_username = email_username
         counter = 1
-        while User.objects.filter(username=base_username).exclude(pk=request.user.pk).exists():
+        while (
+            User.objects.filter(username=base_username)
+            .exclude(pk=request.user.pk)
+            .exists()
+        ):
             base_username = f"{email_username}{counter}"
             counter += 1
         request.user.username = base_username

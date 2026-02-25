@@ -1,80 +1,92 @@
-# store/serializers.py 
+# store/serializers.py
 
-from rest_framework import serializers
-from store.models import (
-    CancelledOrder, Cart, CartOrderItem, Notification, CouponUsers,
-    Product, Tag, Category, DeliveryCouriers, CartOrder, Gallery,
-    Brand, ProductFaq, Review, Specification, Coupon, Color, Size,
-    Address, Wishlist, OrderCancellation, OrderReturn, ProductOffer,
-    CategoryOffer, ReferralOffer
-)
-from addon.models import ConfigSettings
-from userauth.serializers import ProfileSerializer
-from django.utils import timezone
 from django.db.models import Max, Q
+from django.utils import timezone
+from rest_framework import serializers
+
+from addon.models import ConfigSettings
+from store.models import (Address, Brand, CancelledOrder, Cart, CartOrder,
+                          CartOrderItem, Category, CategoryOffer, Color,
+                          Coupon, CouponUsers, DeliveryCouriers, Gallery,
+                          Notification, OrderCancellation, OrderReturn,
+                          Product, ProductFaq, ProductOffer, ReferralOffer,
+                          Review, Size, Specification, Tag, Wishlist)
+from userauth.serializers import ProfileSerializer
+
 
 class ConfigSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfigSettings
         fields = "__all__"
 
+
 class CategorySerializer(serializers.ModelSerializer):
     offer_discount = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = '__all__'
+        fields = "__all__"
 
     def get_offer_discount(self, obj):
         now = timezone.now()
         # Filter offers that have started and have not ended (or no end date)
-        offers = obj.category_offers.filter(
-            start_date__lte=now
-        ).filter(
+        offers = obj.category_offers.filter(start_date__lte=now).filter(
             Q(end_date__gte=now) | Q(end_date__isnull=True)
         )
         if offers.exists():
-            return offers.aggregate(Max('discount_percentage'))['discount_percentage__max'] or 0
+            return (
+                offers.aggregate(Max("discount_percentage"))["discount_percentage__max"]
+                or 0
+            )
         return 0
+
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = '__all__'
+        fields = "__all__"
+
 
 class BrandSerializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
-        fields = '__all__'
+        fields = "__all__"
+
 
 class GallerySerializer(serializers.ModelSerializer):
     class Meta:
         model = Gallery
-        fields = '__all__'
+        fields = "__all__"
+
 
 class SpecificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Specification
-        fields = '__all__'
+        fields = "__all__"
+
 
 class SizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Size
-        fields = '__all__'
+        fields = "__all__"
+
 
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Color
-        fields = '__all__'
+        fields = "__all__"
+
 
 class ProductSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)  # Nested object for reading
-    category_id = serializers.PrimaryKeyRelatedField(  # ← NEW: For writing (accepts category ID)
-        source='category',
-        queryset=Category.objects.all(),
-        write_only=True,
-        required=True,
-        allow_null=False
+    category_id = (
+        serializers.PrimaryKeyRelatedField(  # ← NEW: For writing (accepts category ID)
+            source="category",
+            queryset=Category.objects.all(),
+            write_only=True,
+            required=True,
+            allow_null=False,
+        )
     )
     tags = TagSerializer(many=True, read_only=True)
     gallery = GallerySerializer(many=True, read_only=True, required=False)
@@ -125,7 +137,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "rating_count",
             "order_count",
             "stock_qty",
-            "offer_discount"
+            "offer_discount",
         ]
 
     def get_product_rating(self, obj):
@@ -143,71 +155,76 @@ class ProductSerializer(serializers.ModelSerializer):
         # Product-specific offers (include vendor-specific or global)
         product_discount = 0
         grace_period = timezone.now() + timezone.timedelta(minutes=1)
-        product_offers = obj.product_offers.filter(
-            start_date__lte=grace_period
-        ).filter(
-            Q(end_date__gte=now) | Q(end_date__isnull=True)
-        ).filter(
-            Q(vendor=obj.vendor) | Q(vendor__isnull=True)
+        product_offers = (
+            obj.product_offers.filter(start_date__lte=grace_period)
+            .filter(Q(end_date__gte=now) | Q(end_date__isnull=True))
+            .filter(Q(vendor=obj.vendor) | Q(vendor__isnull=True))
         )
         if product_offers.exists():
-            product_discount = product_offers.aggregate(
-                Max('discount_percentage')
-            )['discount_percentage__max'] or 0
+            product_discount = (
+                product_offers.aggregate(Max("discount_percentage"))[
+                    "discount_percentage__max"
+                ]
+                or 0
+            )
 
         # Category offers
         category_discount = 0
         if obj.category:
             category_offers = obj.category.category_offers.filter(
                 start_date__lte=grace_period
-            ).filter(
-                Q(end_date__gte=now) | Q(end_date__isnull=True)
-            )
+            ).filter(Q(end_date__gte=now) | Q(end_date__isnull=True))
             if category_offers.exists():
-                category_discount = category_offers.aggregate(
-                    Max('discount_percentage')
-                )['discount_percentage__max'] or 0
+                category_discount = (
+                    category_offers.aggregate(Max("discount_percentage"))[
+                        "discount_percentage__max"
+                    ]
+                    or 0
+                )
 
         # Return the highest applicable discount
         return max(product_discount, category_discount)
 
     def __init__(self, *args, **kwargs):
         super(ProductSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
-            
+
+
 class ProductFaqSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
     class Meta:
         model = ProductFaq
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(ProductFaqSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class CartSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
     class Meta:
         model = Cart
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(CartSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class CartOrderItemSerializer(serializers.ModelSerializer):
     is_cancelled = serializers.SerializerMethodField()
@@ -216,237 +233,298 @@ class CartOrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartOrderItem
-        fields = '__all__'
+        fields = "__all__"
 
     def get_is_cancelled(self, obj):
         from store.models import OrderCancellation
+
         return OrderCancellation.objects.filter(items=obj).exists()
 
     def get_return_status(self, obj):
         """Get return request status if exists"""
-        if hasattr(obj, 'orderreturn'):
+        if hasattr(obj, "orderreturn"):
             return obj.orderreturn.status
         return None
 
     def get_return_request(self, obj):
         """Get full return request details if exists"""
-        if hasattr(obj, 'orderreturn'):
+        if hasattr(obj, "orderreturn"):
             return {
-                'id': obj.orderreturn.id,
-                'status': obj.orderreturn.status,
-                'reason': obj.orderreturn.reason,
-                'reason_detail': obj.orderreturn.reason_detail,
-                'requested_at': obj.orderreturn.requested_at,
-                'vendor_response_note': obj.orderreturn.vendor_response_note,
-                'processed_at': obj.orderreturn.processed_at,
+                "id": obj.orderreturn.id,
+                "status": obj.orderreturn.status,
+                "reason": obj.orderreturn.reason,
+                "reason_detail": obj.orderreturn.reason_detail,
+                "requested_at": obj.orderreturn.requested_at,
+                "vendor_response_note": obj.orderreturn.vendor_response_note,
+                "processed_at": obj.orderreturn.processed_at,
             }
         return None
 
     def __init__(self, *args, **kwargs):
         super(CartOrderItemSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class CartOrderSerializer(serializers.ModelSerializer):
     orderitem = CartOrderItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = CartOrder
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(CartOrderSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
 
+
 class ReviewSerializer(serializers.ModelSerializer):
     profile = serializers.SerializerMethodField()
-    user_id = serializers.IntegerField(source='user.id', read_only=True)  # ← Add this line
+    user_id = serializers.IntegerField(
+        source="user.id", read_only=True
+    )  # ← Add this line
 
     class Meta:
         model = Review
-        fields = ['id', 'user_id', 'user', 'product', 'review', 'reply', 'rating', 'active', 
-                  'helpful', 'not_helpful', 'date', 'profile']
-        read_only_fields = ['user', 'product', 'date', 'helpful', 'not_helpful', 'profile', 'user_id']
+        fields = [
+            "id",
+            "user_id",
+            "user",
+            "product",
+            "review",
+            "reply",
+            "rating",
+            "active",
+            "helpful",
+            "not_helpful",
+            "date",
+            "profile",
+        ]
+        read_only_fields = [
+            "user",
+            "product",
+            "date",
+            "helpful",
+            "not_helpful",
+            "profile",
+            "user_id",
+        ]
 
     def get_profile(self, obj):
         if obj.user:
             return ProfileSerializer(obj.user.profile).data
         return None
 
+
 class WishlistSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
     class Meta:
         model = Wishlist
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(WishlistSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(AddressSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class CancelledOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = CancelledOrder
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(CancelledOrderSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class CouponSerializer(serializers.ModelSerializer):
     class Meta:
         model = Coupon
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(CouponSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class CouponUsersSerializer(serializers.ModelSerializer):
     coupon = CouponSerializer()
 
     class Meta:
         model = CouponUsers
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(CouponUsersSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class DeliveryCouriersSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryCouriers
-        fields = '__all__'
+        fields = "__all__"
+
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(NotificationSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class SummarySerializer(serializers.Serializer):
     products = serializers.IntegerField()
     orders = serializers.IntegerField()
     revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
 
+
 class EarningSummarySerializer(serializers.Serializer):
     monthly_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
     total_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
 
+
 class CouponSummarySerializer(serializers.Serializer):
     total_coupons = serializers.IntegerField(default=0)
     active_coupons = serializers.IntegerField(default=0)
+
 
 class NotificationSummarySerializer(serializers.Serializer):
     un_read_noti = serializers.IntegerField(default=0)
     read_noti = serializers.IntegerField(default=0)
     all_noti = serializers.IntegerField(default=0)
 
+
 class OrderCancellationSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderCancellation
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(OrderCancellationSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
 
 class OrderReturnSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderReturn
-        fields = '__all__'
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super(OrderReturnSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
 
+
 class ProductOfferSerializer(serializers.ModelSerializer):
     product_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        write_only=True,
-        required=True
+        child=serializers.IntegerField(), write_only=True, required=True
     )
     start_date = serializers.DateTimeField(required=False, allow_null=True)
 
     class Meta:
         model = ProductOffer
-        fields = ['id', 'discount_percentage', 'start_date', 'end_date', 'is_active', 'products', 'product_ids']
-        read_only_fields = ['products']
+        fields = [
+            "id",
+            "discount_percentage",
+            "start_date",
+            "end_date",
+            "is_active",
+            "products",
+            "product_ids",
+        ]
+        read_only_fields = ["products"]
+
 
 class CategoryOfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = CategoryOffer
-        fields = ['id', 'discount_percentage', 'start_date', 'end_date', 'category', 'is_active']
-
+        fields = [
+            "id",
+            "discount_percentage",
+            "start_date",
+            "end_date",
+            "category",
+            "is_active",
+        ]
 
     def __init__(self, *args, **kwargs):
         super(CategoryOfferSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
 
+
 class ReferralOfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReferralOffer
-        fields = ['id', 'token', 'created_at', 'is_used', 'expiry_date', 'referring_user', 'reward_coupon']
+        fields = [
+            "id",
+            "token",
+            "created_at",
+            "is_used",
+            "expiry_date",
+            "referring_user",
+            "reward_coupon",
+        ]
 
     def __init__(self, *args, **kwargs):
         super(ReferralOfferSerializer, self).__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and request.method == 'POST':
+        request = self.context.get("request")
+        if request and request.method == "POST":
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3

@@ -3,9 +3,9 @@ from decouple import config
 
 print("=== EXPLICIT REDIS TEST (no URL) ===")
 
-host = config('REDIS_HOST')
-port = config('REDIS_PORT', cast=int)
-password = config('REDIS_PASSWORD')
+host = config("REDIS_HOST")
+port = config("REDIS_PORT", cast=int)
+password = config("REDIS_PASSWORD")
 
 print(f"Connecting to {host}:{port} ...")
 

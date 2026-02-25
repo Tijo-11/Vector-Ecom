@@ -1,9 +1,8 @@
 from celery import shared_task
-from django.core.mail import send_mail
-from django.conf import settings #noqa
-    
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string #noqa
+from django.conf import settings  # noqa
+from django.core.mail import EmailMultiAlternatives, send_mail
+from django.template.loader import render_to_string  # noqa
+
 
 @shared_task
 def send_async_email(subject, message, from_email, recipient_list, fail_silently=False):

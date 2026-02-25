@@ -1,18 +1,20 @@
 # store/views/referral_views.py
 
 import logging
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+
+import shortuuid
 from django.conf import settings
 from django.utils import timezone
-from store.models.offer import ReferralOffer
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from store.models import Coupon
+from store.models.offer import ReferralOffer
+from store.serializers import CouponSerializer
 from userauth.models import User
 from userauth.tasks import send_async_email
-import shortuuid
-from store.serializers import CouponSerializer
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -22,7 +24,9 @@ class GenerateReferralView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        logger.info(f"GenerateReferralView called by user: {request.user.id} ({request.user.email})")
+        logger.info(
+            f"GenerateReferralView called by user: {request.user.id} ({request.user.email})"
+        )
 
         try:
             # Generate unique token
@@ -31,25 +35,28 @@ class GenerateReferralView(APIView):
 
             # Create referral offer
             offer = ReferralOffer.objects.create(
-                referring_user=request.user,
-                token=token  
+                referring_user=request.user, token=token
             )
-            logger.info(f"ReferralOffer created successfully: ID={offer.id}, Token={offer.token}")
+            logger.info(
+                f"ReferralOffer created successfully: ID={offer.id}, Token={offer.token}"
+            )
 
             # Build referral link
             referral_link = f"{settings.SITE_URL}/register/?ref={offer.token}"
             logger.debug(f"Generated referral link: {referral_link}")
 
             return Response(
-                {"referral_link": referral_link},
-                status=status.HTTP_201_CREATED
+                {"referral_link": referral_link}, status=status.HTTP_201_CREATED
             )
 
         except Exception as e:
-            logger.error(f"Error generating referral link for user {request.user.id}: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error generating referral link for user {request.user.id}: {str(e)}",
+                exc_info=True,
+            )
             return Response(
                 {"error": "Failed to generate referral link. Please try again."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
 
@@ -57,29 +64,33 @@ class ApplyReferralView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        token = request.data.get('token')
-        new_user_id = request.data.get('new_user_id')
+        token = request.data.get("token")
+        new_user_id = request.data.get("new_user_id")
 
-        logger.info(f"ApplyReferralView called with token={token}, new_user_id={new_user_id}")
+        logger.info(
+            f"ApplyReferralView called with token={token}, new_user_id={new_user_id}"
+        )
 
         if not token or not new_user_id:
             logger.warning("ApplyReferralView: Missing token or new_user_id")
             return Response(
                 {"error": "Token and new_user_id are required"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             # Find unused referral
             offer = ReferralOffer.objects.get(token=token, is_used=False)
-            logger.info(f"Valid referral found: ID={offer.id}, referrer={offer.referring_user.email}")
+            logger.info(
+                f"Valid referral found: ID={offer.id}, referrer={offer.referring_user.email}"
+            )
 
             # Check expiry
             if offer.expiry_date and offer.expiry_date < timezone.now():
                 logger.info(f"Referral expired: {offer.expiry_date}")
                 return Response(
                     {"error": "This referral link has expired"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Validate new user
@@ -89,8 +100,7 @@ class ApplyReferralView(APIView):
             except User.DoesNotExist:
                 logger.warning(f"Invalid new_user_id: {new_user_id}")
                 return Response(
-                    {"error": "Invalid user ID"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Invalid user ID"}, status=status.HTTP_400_BAD_REQUEST
                 )
 
             # Generate coupon code
@@ -99,9 +109,11 @@ class ApplyReferralView(APIView):
                 vendor=None,  # Or assign a platform/admin vendor
                 code=coupon_code,
                 discount=10,  # You can make this configurable
-                active=True
+                active=True,
             )
-            logger.info(f"Coupon created: {coupon_code} for referrer {offer.referring_user.email}")
+            logger.info(
+                f"Coupon created: {coupon_code} for referrer {offer.referring_user.email}"
+            )
 
             # Update referral
             offer.reward_coupon = coupon
@@ -131,61 +143,74 @@ class ApplyReferralView(APIView):
             )
             logger.info(f"Reward email queued for {offer.referring_user.email}")
 
-            return Response({
-                "message": "Referral applied successfully!",
-                "coupon_code": coupon_code
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "message": "Referral applied successfully!",
+                    "coupon_code": coupon_code,
+                },
+                status=status.HTTP_200_OK,
+            )
 
         except ReferralOffer.DoesNotExist:
             logger.warning(f"Invalid or already used referral token: {token}")
             return Response(
                 {"error": "Invalid or already used referral link"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
-            logger.error(f"Unexpected error in ApplyReferralView: {str(e)}", exc_info=True)
+            logger.error(
+                f"Unexpected error in ApplyReferralView: {str(e)}", exc_info=True
+            )
             return Response(
                 {"error": "Something went wrong. Please try again later."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-            
+
 
 class MyReferralCouponsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        logger.info(f"MyReferralCouponsView called by user: {request.user.id} ({request.user.email})")
+        logger.info(
+            f"MyReferralCouponsView called by user: {request.user.id} ({request.user.email})"
+        )
 
         try:
             offers = ReferralOffer.objects.filter(
-                referring_user=request.user,
-                is_used=True
-            ).select_related('reward_coupon')
+                referring_user=request.user, is_used=True
+            ).select_related("reward_coupon")
 
             coupons_data = []
             for offer in offers:
                 if offer.reward_coupon:
                     coupon = offer.reward_coupon
-                    
+
                     # Check if the current user has used this coupon
                     is_used_by_me = coupon.used_by.filter(id=request.user.id).exists()
-                    
-                    coupons_data.append({
-                        'id': coupon.id,
-                        'code': coupon.code,
-                        'discount': coupon.discount,
-                        'active': coupon.active,
-                        'date': coupon.date,
-                        'is_used_by_me': is_used_by_me,  # NEW: Shows if user already used it
-                        'vendor': coupon.vendor.id if coupon.vendor else None,
-                    })
 
-            logger.info(f"Returning {len(coupons_data)} coupons for user {request.user.id}")
+                    coupons_data.append(
+                        {
+                            "id": coupon.id,
+                            "code": coupon.code,
+                            "discount": coupon.discount,
+                            "active": coupon.active,
+                            "date": coupon.date,
+                            "is_used_by_me": is_used_by_me,  # NEW: Shows if user already used it
+                            "vendor": coupon.vendor.id if coupon.vendor else None,
+                        }
+                    )
+
+            logger.info(
+                f"Returning {len(coupons_data)} coupons for user {request.user.id}"
+            )
             return Response(coupons_data, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logger.error(f"Error fetching referral coupons for user {request.user.id}: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error fetching referral coupons for user {request.user.id}: {str(e)}",
+                exc_info=True,
+            )
             return Response(
                 {"error": "Failed to fetch coupons. Please try again."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

@@ -1,17 +1,18 @@
 # Restframework Packages
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny  # , IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import generics
-from rest_framework.permissions import AllowAny#, IsAuthenticated
-from rest_framework import status
+
+from store.models import Coupon
+from store.serializers import CouponSerializer, CouponSummarySerializer
+from vendor.models import Vendor
+
 # Serializers
 
-from store.serializers import CouponSerializer, CouponSummarySerializer
 
 # Models
 
-from store.models import Coupon
 
-from vendor.models import Vendor
 
 ## Others Packages
 
@@ -20,10 +21,10 @@ from vendor.models import Vendor
 class CouponListAPIView(generics.ListAPIView):
     serializer_class = CouponSerializer
     queryset = Coupon.objects.all()
-    permission_classes = (AllowAny, )
+    permission_classes = (AllowAny,)
 
     def get_queryset(self):
-        vendor_id = self.kwargs['vendor_id']
+        vendor_id = self.kwargs["vendor_id"]
         vendor = Vendor.objects.get(id=vendor_id)
         coupon = Coupon.objects.filter(vendor=vendor)
         return coupon
@@ -32,15 +33,15 @@ class CouponListAPIView(generics.ListAPIView):
 class CouponCreateAPIView(generics.CreateAPIView):
     serializer_class = CouponSerializer
     queryset = Coupon.objects.all()
-    permission_classes = (AllowAny, )
+    permission_classes = (AllowAny,)
 
     def create(self, request, *args, **kwargs):
         payload = request.data
 
-        vendor_id = payload['vendor_id']
-        code = payload['code']
-        discount = payload['discount']
-        active = payload['active']
+        vendor_id = payload["vendor_id"]
+        code = payload["code"]
+        discount = payload["discount"]
+        active = payload["active"]
 
         print("vendor_id ======", vendor_id)
         print("code ======", code)
@@ -48,23 +49,25 @@ class CouponCreateAPIView(generics.CreateAPIView):
         print("active ======", active)
 
         vendor = Vendor.objects.get(id=vendor_id)
-        coupon = Coupon.objects.create(#noqa
+        coupon = Coupon.objects.create(  # noqa
             vendor=vendor,
             code=code,
             discount=discount,
-            active=(active.lower() == "true")
+            active=(active.lower() == "true"),
         )
 
-        return Response({"message": "Coupon Created Successfully."}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"message": "Coupon Created Successfully."}, status=status.HTTP_201_CREATED
+        )
 
 
 class CouponDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CouponSerializer
-    permission_classes = (AllowAny, )
+    permission_classes = (AllowAny,)
 
     def get_object(self):
-        vendor_id = self.kwargs['vendor_id']
-        coupon_id = self.kwargs['coupon_id']
+        vendor_id = self.kwargs["vendor_id"]
+        coupon_id = self.kwargs["coupon_id"]
 
         vendor = Vendor.objects.get(id=vendor_id)
 
@@ -77,17 +80,18 @@ class CouponStats(generics.ListAPIView):
 
     def get_queryset(self):
 
-        vendor_id = self.kwargs['vendor_id']
+        vendor_id = self.kwargs["vendor_id"]
         vendor = Vendor.objects.get(id=vendor_id)
 
         total_coupons = Coupon.objects.filter(vendor=vendor).count()
-        active_coupons = Coupon.objects.filter(
-            vendor=vendor, active=True).count()
+        active_coupons = Coupon.objects.filter(vendor=vendor, active=True).count()
 
-        return [{
-            'total_coupons': total_coupons,
-            'active_coupons': active_coupons,
-        }]
+        return [
+            {
+                "total_coupons": total_coupons,
+                "active_coupons": active_coupons,
+            }
+        ]
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

@@ -1,12 +1,13 @@
-from rest_framework import serializers
-from vendor.models import Vendor
-from store.models import Product, CartOrder, CategoryOffer
 from django.db.models import Count, Sum
+from rest_framework import serializers
 
+from store.models import CartOrder, CategoryOffer, Product
+from vendor.models import Vendor
 
 
 class AdminStatsSerializer(serializers.Serializer):
     """Serializer for admin dashboard statistics"""
+
     total_vendors = serializers.IntegerField()
     total_orders = serializers.IntegerField()
     total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -15,20 +16,23 @@ class AdminStatsSerializer(serializers.Serializer):
 
 class ChartRevenueSerializer(serializers.Serializer):
     """Serializer for revenue chart data (supports all periods)"""
+
     date = serializers.CharField()
     revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
 
 
 class ChartOrdersSerializer(serializers.Serializer):
     """Serializer for orders chart data (supports all periods)"""
+
     date = serializers.CharField()
     orders = serializers.IntegerField()
 
 
 class AdminVendorSerializer(serializers.ModelSerializer):
     """Serializer for vendor management"""
+
     products = serializers.SerializerMethodField()
-    email = serializers.EmailField(source='user.email', read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
     status = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()  # ← Makes URL absolute
     mobile = serializers.CharField(read_only=True, allow_null=True)  # ← Add mobile
@@ -36,8 +40,16 @@ class AdminVendorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
         fields = [
-            'id', 'vid', 'name', 'image', 'email', 'mobile',  # ← Added image & mobile
-            'products', 'active', 'status', 'date'
+            "id",
+            "vid",
+            "name",
+            "image",
+            "email",
+            "mobile",  # ← Added image & mobile
+            "products",
+            "active",
+            "status",
+            "date",
         ]
 
     def get_products(self, obj):
@@ -48,45 +60,76 @@ class AdminVendorSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         if obj.image:
-            request = self.context.get('request')
+            request = self.context.get("request")
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url  # fallback relative URL
         return None  # frontend will show placeholder
 
+
 class AdminProductSerializer(serializers.ModelSerializer):
     """Serializer for product management"""
-    vendor_name = serializers.CharField(source='vendor.name', read_only=True, allow_null=True)
-    category_title = serializers.CharField(source='category.title', read_only=True, allow_null=True)
+
+    vendor_name = serializers.CharField(
+        source="vendor.name", read_only=True, allow_null=True
+    )
+    category_title = serializers.CharField(
+        source="category.title", read_only=True, allow_null=True
+    )
     image = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
-            'id', 'pid', 'title', 'image', 'category_title', 'vendor_name',
-            'price', 'status', 'status_display', 'in_stock', 'stock_qty', 'date'
+            "id",
+            "pid",
+            "title",
+            "image",
+            "category_title",
+            "vendor_name",
+            "price",
+            "status",
+            "status_display",
+            "in_stock",
+            "stock_qty",
+            "date",
         ]
         # Removed 'vendor' (the ID) to avoid confusion — we only need the name
 
     def get_image(self, obj):
         if obj.image:
-            request = self.context.get('request')
+            request = self.context.get("request")
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url  # fallback (relative)
         return None  # will show placeholder in frontend
 
     def get_status_display(self, obj):
-        return obj.get_status_display() if hasattr(obj, 'get_status_display') else obj.status
+        return (
+            obj.get_status_display()
+            if hasattr(obj, "get_status_display")
+            else obj.status
+        )
+
 
 class AdminOrderSerializer(serializers.ModelSerializer):
     """Serializer for order management"""
+
     vendor_names = serializers.SerializerMethodField()
 
     class Meta:
         model = CartOrder
-        fields = ['id', 'oid', 'vendor_names', 'full_name', 'total', 'payment_status', 'order_status', 'date']
+        fields = [
+            "id",
+            "oid",
+            "vendor_names",
+            "full_name",
+            "total",
+            "payment_status",
+            "order_status",
+            "date",
+        ]
 
     def get_vendor_names(self, obj):
         return ", ".join([v.name for v in obj.vendor.all()])
@@ -94,15 +137,25 @@ class AdminOrderSerializer(serializers.ModelSerializer):
 
 class AdminCategoryOfferSerializer(serializers.ModelSerializer):
     """Serializer for category offer management"""
-    category_name = serializers.CharField(source='category.title', read_only=True)
+
+    category_name = serializers.CharField(source="category.title", read_only=True)
 
     class Meta:
         model = CategoryOffer
-        fields = ['id', 'category', 'category_name', 'discount_percentage', 'start_date', 'end_date', 'is_active']
+        fields = [
+            "id",
+            "category",
+            "category_name",
+            "discount_percentage",
+            "start_date",
+            "end_date",
+            "is_active",
+        ]
 
 
 class SalesReportSerializer(serializers.Serializer):
     """Serializer for sales report"""
+
     total_sales = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_orders = serializers.IntegerField()
     pending_orders = serializers.IntegerField()
@@ -112,6 +165,7 @@ class SalesReportSerializer(serializers.Serializer):
 
 class VendorPerformanceSerializer(serializers.Serializer):
     """Serializer for vendor performance report"""
+
     vendor_id = serializers.IntegerField()
     vendor_name = serializers.CharField()
     total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -121,6 +175,7 @@ class VendorPerformanceSerializer(serializers.Serializer):
 
 class ProductReportSerializer(serializers.Serializer):
     """Serializer for product report"""
+
     product_id = serializers.IntegerField()
     product_title = serializers.CharField()
     vendor_name = serializers.CharField()
@@ -130,6 +185,7 @@ class ProductReportSerializer(serializers.Serializer):
 
 class BestSellingProductSerializer(serializers.Serializer):
     """Serializer for best selling products"""
+
     id = serializers.IntegerField()
     title = serializers.CharField()
     image = serializers.CharField(allow_null=True)
@@ -141,8 +197,8 @@ class BestSellingProductSerializer(serializers.Serializer):
 
 class BestSellingCategorySerializer(serializers.Serializer):
     """Serializer for best selling categories"""
+
     id = serializers.IntegerField()
     title = serializers.CharField()
     image = serializers.CharField(allow_null=True)
     sell_count = serializers.IntegerField()
-

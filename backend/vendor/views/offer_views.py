@@ -1,13 +1,14 @@
-from rest_framework import generics, status, serializers
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
 import logging
 
-from store.models.offer import ProductOffer, CategoryOffer
-from store.serializers import ProductOfferSerializer, CategoryOfferSerializer
-from store.models import Product, Category
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import generics, serializers, status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+
+from store.models import Category, Product
+from store.models.offer import CategoryOffer, ProductOffer
+from store.serializers import CategoryOfferSerializer, ProductOfferSerializer
 from vendor.models import Vendor
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,9 @@ def validate_discount_percentage(discount):
 
     if discount <= 0 or discount >= 100:
         raise serializers.ValidationError(
-            {"discount_percentage": "Discount percentage must be greater than 0 and less than 100."}
+            {
+                "discount_percentage": "Discount percentage must be greater than 0 and less than 100."
+            }
         )
 
 
@@ -41,7 +44,7 @@ class ProductOfferListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return ProductOffer.objects.none()
         vendor = get_object_or_404(Vendor, id=self.kwargs["vendor_id"])
         return ProductOffer.objects.filter(vendor=vendor).order_by("-id")
@@ -90,7 +93,7 @@ class ProductOfferDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return ProductOffer.objects.none()
         vendor = get_object_or_404(Vendor, id=self.kwargs["vendor_id"])
         return ProductOffer.objects.filter(vendor=vendor)
@@ -126,7 +129,7 @@ class CategoryOfferListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return CategoryOffer.objects.none()
         vendor = get_object_or_404(Vendor, id=self.kwargs["vendor_id"])
         return CategoryOffer.objects.filter(vendor=vendor).order_by("-id")
@@ -175,7 +178,7 @@ class CategoryOfferDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return CategoryOffer.objects.none()
         vendor = get_object_or_404(Vendor, id=self.kwargs["vendor_id"])
         return CategoryOffer.objects.filter(vendor=vendor)
