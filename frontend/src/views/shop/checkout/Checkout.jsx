@@ -553,19 +553,21 @@ function Checkout() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none uppercase placeholder:normal-case"
+                    className={`flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none uppercase placeholder:normal-case ${Number(order.coupon_saved || 0) > 0 ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}`}
                     placeholder="Enter code"
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
+                    disabled={Number(order.coupon_saved || 0) > 0}
                   />
                   <button
                     onClick={applyCoupon}
-                    className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors"
+                    disabled={Number(order.coupon_saved || 0) > 0}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${Number(order.coupon_saved || 0) > 0 ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-gray-900 text-white hover:bg-black"}`}
                   >
                     Apply
                   </button>
                 </div>
-                {order.applied_coupon && (
+                {Number(order.coupon_saved || 0) > 0 && (
                   <div className="mt-3 flex justify-between items-center bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm">
                     <span className="font-medium flex items-center gap-1">
                       <CheckCircle2 className="w-4 h-4" /> Coupon Applied

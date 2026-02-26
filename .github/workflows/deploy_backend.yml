@@ -21,7 +21,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # ← ONLY this line (no subscription-id here)
+          creds: ${{ secrets.AZURE_CREDENTIALS }} 
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
