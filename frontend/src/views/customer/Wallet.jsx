@@ -19,6 +19,7 @@ import {
   ExternalLink,
   ArrowDownLeft,
   ArrowUpRight,
+  Loader2,
 } from "lucide-react";
 
 const Wallet = () => {
@@ -27,6 +28,7 @@ const Wallet = () => {
 
   const [wallet, setWallet] = useState({ balance: "0.00", currency: "INR" });
   const [depositAmount, setDepositAmount] = useState("");
+  const [pageLoading, setPageLoading] = useState(true);
 
   // Transaction states
   const [transactions, setTransactions] = useState([]);
@@ -56,6 +58,8 @@ const Wallet = () => {
     } catch (err) {
       console.error(err);
       Toast.fire({ icon: "error", title: "Failed to load wallet balance" });
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -341,6 +345,12 @@ const Wallet = () => {
               <div className="w-full lg:w-3/4 mt-1">
                 <main className="mb-5">
                   <div className="px-4">
+                  {pageLoading ? (
+                    <div className="flex items-center justify-center py-20">
+                      <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                    </div>
+                  ) : (
+                  <>
                     {/* Current Balance Section */}
                     <section className="mb-6">
                       <div className="rounded-2xl shadow-sm border border-gray-100 p-6 bg-white">
@@ -496,6 +506,8 @@ const Wallet = () => {
                         )}
                       </div>
                     </section>
+                  </>
+                  )}
                   </div>
                 </main>
               </div>

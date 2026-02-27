@@ -64,6 +64,9 @@ class CancelOrderView(APIView):
         if not is_full:
             items = items.filter(id__in=item_ids)
 
+        # Exclude already-cancelled items to prevent double refunds
+        items = items.exclude(delivery_status="Cancelled")
+
         if not items.exists():
             return Response({"error": "No valid items to cancel"}, status=400)
 
