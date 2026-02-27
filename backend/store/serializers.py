@@ -270,11 +270,39 @@ class CartOrderItemSerializer(serializers.ModelSerializer):
 
 
 class CartOrderSerializer(serializers.ModelSerializer):
-    orderitem = CartOrderItemSerializer(many=True, read_only=True)
+    orderitem = serializers.SerializerMethodField()
 
     class Meta:
         model = CartOrder
         fields = "__all__"
+
+    def get_orderitem(self, obj):
+        """
+        If vendor_id is in the serializer context, return only items
+        belonging to that vendor. Otherwise, return all items.
+        """
+        vendor_id = self.context.get("vendor_id")
+        items = obj.orderitem.all()
+        if vendor_id:
+            items = items.filter(vendor__id=vendor_id)
+        return CartOrderItemSerializer(
+            items, many=True, context=self.context
+        ).data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        vendor_id = self.context.get("vendor_id")
+        if vendor_id:
+            # Recalculate totals from only this vendor's items
+            vendor_items = instance.orderitem.filter(vendor__id=vendor_id)
+            data["sub_total"] = str(sum(i.sub_total for i in vendor_items))
+            data["total"] = str(
+                sum(i.total for i in vendor_items)
+            )
+            data["saved"] = str(sum(i.saved for i in vendor_items))
+            data["coupon_saved"] = str(sum(i.coupon_saved for i in vendor_items))
+            data["offer_saved"] = str(sum(i.offer_saved for i in vendor_items))
+        return data
 
     def __init__(self, *args, **kwargs):
         super(CartOrderSerializer, self).__init__(*args, **kwargs)

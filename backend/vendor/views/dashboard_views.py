@@ -129,6 +129,11 @@ class OrdersAPIView(generics.ListAPIView):
         orders = CartOrder.objects.filter(vendor=vendor, payment_status="paid")
         return orders
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["vendor_id"] = self.kwargs["vendor_id"]
+        return context
+
 
 # Revenue
 class RevenueAPIView(generics.ListAPIView):
@@ -177,6 +182,11 @@ class OrderDetailAPIView(generics.RetrieveAPIView):
             raise Http404("Order not found.")
 
         return order
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["vendor_id"] = self.kwargs["vendor_id"]
+        return context
 
 
 ##------Earning
@@ -339,3 +349,8 @@ class FilterOrderAPIView(generics.ListAPIView):
         else:
             orders = CartOrder.objects.filter(vendor=vendor).order_by("id")
         return orders
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["vendor_id"] = self.kwargs["vendor_id"]
+        return context
