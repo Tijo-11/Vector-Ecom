@@ -7,6 +7,7 @@ from django.db import transaction
 # Django Packages
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 # Restframework Packages
@@ -20,7 +21,7 @@ from store.serializers import (CartOrderSerializer, CouponSerializer,
                                OrderCancellationSerializer,
                                OrderReturnSerializer)
 # Models
-from userauth.models import User
+from userauth.models import User, Wallet
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +77,9 @@ class CancelOrderView(APIView):
                 status=400,
             )
 
+        # Calculate refund amount from cancelled items
+        refund_amount = sum(item.total for item in items)
+
         # Create cancellation record
         log.info(
             f"Creating cancellation record. is_full={is_full}, item_count={items.count()}"
@@ -86,6 +90,7 @@ class CancelOrderView(APIView):
             reason=reason,
             reason_detail=reason_detail,
             is_full_order=is_full,
+            refund_amount=refund_amount,
         )
         log.info(f"Cancellation created with ID: {cancellation.id}")
 
@@ -101,6 +106,30 @@ class CancelOrderView(APIView):
         log.info("Calling restore_stock()")
         cancellation.restore_stock()
         log.info("restore_stock() completed")
+
+        # Process refund
+        if order.buyer:
+            # Registered user: credit wallet automatically
+            try:
+                wallet, _ = Wallet.objects.get_or_create(user=order.buyer)
+                wallet.deposit(
+                    amount=refund_amount,
+                    transaction_type="refund",
+                    description=f"Refund for cancelled order #{order.oid}",
+                    related_order=order,
+                )
+                cancellation.refund_status = "refunded_to_wallet"
+                cancellation.refunded_at = timezone.now()
+                log.info(f"Refund of ₹{refund_amount} credited to wallet for user {order.buyer.email}")
+            except Exception as e:
+                log.error(f"Error processing wallet refund: {e}")
+                cancellation.refund_status = "pending"
+        else:
+            # Guest user: mark as pending for manual vendor processing
+            cancellation.refund_status = "pending"
+            log.info(f"Guest order refund of ₹{refund_amount} marked as pending")
+
+        cancellation.save()
 
         # Update order status if full cancellation
         if is_full:
@@ -123,9 +152,16 @@ class CancelOrderView(APIView):
         log.info(
             f"Order {order_oid} cancellation processed successfully. Full order: {is_full}, Items cancelled: {items.count()}"
         )
+
+        refund_message = ""
+        if order.buyer:
+            refund_message = f" ₹{refund_amount} has been refunded to your wallet."
+        else:
+            refund_message = f" Refund of ₹{refund_amount} will be processed by the vendor."
+
         return Response(
             {
-                "message": "Order cancellation request submitted successfully",
+                "message": f"Order cancellation request submitted successfully.{refund_message}",
                 "cancellation_id": cancellation.id,
             },
             status=200,

@@ -30,7 +30,9 @@ from .views.shop_views import (CourierListAPIView, MarkOrderAsDeliveredView,
                                OrderItemDetailAPIView, ShopAPIView,
                                ShopProductsAPIView, ShopUpdateView,
                                VendorProfileUpdateView, VendorRegister)
-from .views.wallet_views import (VendorTransactionsListView,
+from .views.wallet_views import (MarkGuestRefundedView,
+                                 VendorPendingGuestRefundsView,
+                                 VendorTransactionsListView,
                                  VendorWalletStatsView,
                                  VendorWalletTransactionDetailView,
                                  WalletReportExcelView, WalletReportPDFView)
@@ -225,6 +227,17 @@ urlpatterns = [
         "vendor/wallet-report-excel/<int:vendor_id>/",
         WalletReportExcelView.as_view(),
         name="vendor-wallet-report-excel",
+    ),
+    # Guest Refund Management
+    path(
+        "vendor/guest-refunds/<int:vendor_id>/",
+        VendorPendingGuestRefundsView.as_view(),
+        name="vendor-guest-refunds",
+    ),
+    path(
+        "vendor/guest-refund-mark/<int:cancellation_id>/",
+        MarkGuestRefundedView.as_view(),
+        name="mark-guest-refunded",
     ),
     # Sales Reports
     path(
