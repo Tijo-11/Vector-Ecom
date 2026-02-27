@@ -43,9 +43,10 @@ const refreshAccessToken = async () => {
   const newAccessToken = response.data.access;
   const newRefreshToken = response.data.refresh; // May or may not be present if rotating
   // Set cookies consistently with auth.js
-  Cookies.set("access_token", newAccessToken, { expires: 1, secure: true });
+  const isSecure = window.location.protocol === "https:";
+  Cookies.set("access_token", newAccessToken, { expires: 1, secure: isSecure });
   if (newRefreshToken) {
-    Cookies.set("refresh_token", newRefreshToken, { expires: 7, secure: true });
+    Cookies.set("refresh_token", newRefreshToken, { expires: 7, secure: isSecure });
   }
   // Update Zustand store
   const user = jwtDecode(newAccessToken) || null;

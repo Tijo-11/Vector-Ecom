@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [orderChartData, setOrderChartData] = useState([]);
   const [productsChartData, setProductsChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     apiInstance.get(`/vendor/stats/${UserData()?.vendor_id}/`).then((res) => {
@@ -40,6 +41,8 @@ export default function Dashboard() {
       setProductsChartData(product_response?.data || []);
     } catch (err) {
       console.error("Error fetching chart data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -146,48 +149,57 @@ export default function Dashboard() {
              </button>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-             <StatCard 
-                 title="Total Products" 
-                 value={stats?.products || 0} 
-                 icon={Package} 
-                 color="bg-blue-500" 
-             />
-             <StatCard 
-                 title="Total Orders" 
-                 value={stats?.orders || 0} 
-                 icon={ShoppingCart} 
-                 color="bg-orange-500" 
-             />
-             <StatCard 
-                 title="Total Revenue" 
-                 value={`₹${stats?.revenue || 0}`} 
-                 icon={IndianRupee} 
-                 color="bg-green-500" 
-             />
-          </div>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+              <p className="text-lg text-gray-600">Loading dashboard...</p>
+            </div>
+          ) : (
+            <>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                 <StatCard 
+                     title="Total Products" 
+                     value={stats?.products || 0} 
+                     icon={Package} 
+                     color="bg-blue-500" 
+                 />
+                 <StatCard 
+                     title="Total Orders" 
+                     value={stats?.orders || 0} 
+                     icon={ShoppingCart} 
+                     color="bg-orange-500" 
+                 />
+                 <StatCard 
+                     title="Total Revenue" 
+                     value={`₹${stats?.revenue || 0}`} 
+                     icon={IndianRupee} 
+                     color="bg-green-500" 
+                 />
+              </div>
 
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-             
-             {/* Order Bar Chart */}
-             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="font-bold text-gray-900 mb-6">Order Volume</h3>
-                <div className="h-[300px]">
-                   <Bar data={order_data} options={commonOptions} />
-                </div>
-             </div>
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                 
+                 {/* Order Bar Chart */}
+                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-gray-900 mb-6">Order Volume</h3>
+                    <div className="h-[300px]">
+                       <Bar data={order_data} options={commonOptions} />
+                    </div>
+                 </div>
 
-             {/* Product Line Chart */}
-             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="font-bold text-gray-900 mb-6">Product Growth</h3>
-                <div className="h-[300px]">
-                   <Line data={product_data} options={commonOptions} />
-                </div>
-             </div>
+                 {/* Product Line Chart */}
+                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-gray-900 mb-6">Product Growth</h3>
+                    <div className="h-[300px]">
+                       <Line data={product_data} options={commonOptions} />
+                    </div>
+                 </div>
 
-          </div>
+              </div>
+            </>
+          )}
        </div>
     </div>
   );

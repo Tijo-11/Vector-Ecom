@@ -153,6 +153,13 @@ function Notifications() {
           </p>
         </div>
 
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4" />
+            <p className="text-lg text-gray-600">Loading notifications...</p>
+          </div>
+        ) : (
+        <>
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
@@ -230,12 +237,6 @@ function Notifications() {
         </div>
 
         {/* Notifications Table */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4" />
-            <p className="text-gray-500">Loading notifications...</p>
-          </div>
-        ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -386,6 +387,7 @@ function Notifications() {
               </div>
             )}
           </div>
+        </>
         )}
       </div>
     </div>

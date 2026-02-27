@@ -1,5 +1,6 @@
 import { useAuthStore } from "../store/auth";
 import apiInstance from "./axios";
+import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
 import Swal from "sweetalert2";
@@ -148,8 +149,9 @@ export const setUser = async () => {
 };
 
 export const setAuthUser = (access_token, refresh_token) => {
-  Cookies.set("access_token", access_token, { expires: 1, secure: true });
-  Cookies.set("refresh_token", refresh_token, { expires: 7, secure: true });
+  const isSecure = window.location.protocol === "https:";
+  Cookies.set("access_token", access_token, { expires: 1, secure: isSecure });
+  Cookies.set("refresh_token", refresh_token, { expires: 7, secure: isSecure });
   const user = jwtDecode(access_token) || null;
   if (user) {
     useAuthStore.getState().setUser(user);
@@ -159,7 +161,9 @@ export const setAuthUser = (access_token, refresh_token) => {
 };
 
 export const getRefreshToken = async (refresh_token) => {
-  const response = await apiInstance.post("user/token/refresh/", {
+  // Use raw axios to bypass apiInstance interceptors and avoid circular refresh
+  const refreshUrl = new URL("user/token/refresh/", import.meta.env.VITE_API_URL).toString();
+  const response = await axios.post(refreshUrl, {
     refresh: refresh_token,
   });
   return response.data;

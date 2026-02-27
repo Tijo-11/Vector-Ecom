@@ -32,6 +32,7 @@ import { format } from "date-fns";
 function VendorWallet() {
   // Stats and Balance (Always fetch total)
   const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // Transactions and Filtering
   const [transactions, setTransactions] = useState([]);
@@ -58,6 +59,7 @@ function VendorWallet() {
   // Fetch Stats (Unfiltered total balance)
   const fetchStats = async () => {
     try {
+      setStatsLoading(true);
       const response = await apiInstance.get(
         `vendor/wallet-stats/${vendorId}/`,
       );
@@ -65,6 +67,8 @@ function VendorWallet() {
     } catch (error) {
       console.error("Error fetching stats:", error);
       setStats({ balance: 0 });
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -448,6 +452,13 @@ function VendorWallet() {
           </p>
         </div>
 
+        {statsLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+            <p className="text-lg text-gray-600">Loading wallet data...</p>
+          </div>
+        ) : (
+        <>
         {/* Stats Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
           <div className="lg:col-span-3 bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden">
@@ -714,6 +725,8 @@ function VendorWallet() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
 
       {/* Detail Modal */}
