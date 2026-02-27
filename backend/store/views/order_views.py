@@ -334,13 +334,14 @@ class CouponAPIView(generics.CreateAPIView):
                 item.coupon.clear()
                 item.save()
 
-            # Update order after reversal
-            order.sub_total = sum(i.sub_total for i in order_items)
+            # Update order after reversal (use ALL items, not just coupon vendor items)
+            all_items = CartOrderItem.objects.filter(order=order)
+            order.sub_total = sum(i.sub_total for i in all_items)
             order.tax_fee = Decimal("0.00")
             order.service_fee = Decimal("0.00")
-            order.total = sum(i.total for i in order_items)
-            order.saved = sum(i.saved for i in order_items)
-            order.coupon_saved = sum(i.coupon_saved for i in order_items)
+            order.total = sum(i.total for i in all_items) + order.shipping_amount
+            order.saved = sum(i.saved for i in all_items)
+            order.coupon_saved = sum(i.coupon_saved for i in all_items)
             order.save()
 
             # Step 2: Apply the new coupon
@@ -359,13 +360,14 @@ class CouponAPIView(generics.CreateAPIView):
                 item.coupon.add(coupon)
                 item.save()
 
-            # Update order after application
-            order.sub_total = sum(i.sub_total for i in order_items)
+            # Update order after application (use ALL items, not just coupon vendor items)
+            all_items = CartOrderItem.objects.filter(order=order)
+            order.sub_total = sum(i.sub_total for i in all_items)
             order.tax_fee = Decimal("0.00")
             order.service_fee = Decimal("0.00")
-            order.total = sum(i.total for i in order_items)
-            order.saved = sum(i.saved for i in order_items)
-            order.coupon_saved = sum(i.coupon_saved for i in order_items)
+            order.total = sum(i.total for i in all_items) + order.shipping_amount
+            order.saved = sum(i.saved for i in all_items)
+            order.coupon_saved = sum(i.coupon_saved for i in all_items)
             order.coupons.add(coupon)
             order.save()
 
@@ -416,11 +418,13 @@ class RemoveCouponAPIView(generics.CreateAPIView):
                 item.coupon.clear()
                 item.save()
 
-            order.sub_total = sum(i.sub_total for i in order_items)
+            # Recalculate order totals from ALL items (not just coupon items)
+            all_items = CartOrderItem.objects.filter(order=order)
+            order.sub_total = sum(i.sub_total for i in all_items)
             order.tax_fee = Decimal("0.00")
             order.service_fee = Decimal("0.00")
-            order.total = sum(i.total for i in order_items)
-            order.saved = sum(i.saved for i in order_items)
+            order.total = sum(i.total for i in all_items) + order.shipping_amount
+            order.saved = sum(i.saved for i in all_items)
             order.coupon_saved = Decimal("0.00")
             order.save()
 
