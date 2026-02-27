@@ -110,18 +110,7 @@ function ProductBasicInfo({
                   </p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Brand
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                  name="brand"
-                  value={product.brand || ""}
-                  onChange={handleProductInputChange}
-                />
-              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Sale Price <span className="text-red-500">*</span>
@@ -139,22 +128,6 @@ function ProductBasicInfo({
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Shipping Amount <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                  name="shipping_amount"
-                  value={product.shipping_amount || ""}
-                  onChange={handleProductInputChange}
-                  placeholder="₹0.00"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Stock Qty <span className="text-red-500">*</span>

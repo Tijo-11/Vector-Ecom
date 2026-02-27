@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { ShoppingCart, Heart, SlidersHorizontal, X as XIcon } from "lucide-react";
+import { ShoppingCart, Heart, SlidersHorizontal, X as XIcon, ArrowUpDown } from "lucide-react";
 import ProductsPlaceholder from "./Products/ProductsPlaceHolder";
 import apiInstance from "../../utils/axios";
 import UserCountry from "./ProductDetail/UserCountry";
@@ -40,6 +40,7 @@ export default function SearchPage() {
   const [tempPriceMax, setTempPriceMax] = useState("");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
+  const [sortBy, setSortBy] = useState("");
 
   const [cartCount, setCartCount] = useContext(CartContext);
   const [wishlist, setWishlist] = useState([]); // Always an array
@@ -90,6 +91,9 @@ export default function SearchPage() {
     const pmax = searchParams.get("price_max") || "";
     setPriceMax(pmax);
     setTempPriceMax(pmax);
+
+    const sort = searchParams.get("ordering") || "";
+    setSortBy(sort);
   }, [searchParams]);
 
   // Update URL whenever filters change
@@ -103,6 +107,7 @@ export default function SearchPage() {
     selectedCategories.forEach((id) => currentParams.append("category", id));
     if (priceMin) currentParams.set("price_min", priceMin);
     if (priceMax) currentParams.set("price_max", priceMax);
+    if (sortBy) currentParams.set("ordering", sortBy);
 
     const newSearch = currentParams.toString();
     const currentSearch = searchParams.toString();
@@ -110,7 +115,7 @@ export default function SearchPage() {
     if (newSearch !== currentSearch) {
       navigate(`/search?${newSearch}`, { replace: true });
     }
-  }, [selectedCategories, priceMin, priceMax, query, searchParams, navigate]);
+  }, [selectedCategories, priceMin, priceMax, sortBy, query, searchParams, navigate]);
 
   // Debounce price inputs
   useEffect(() => {
@@ -142,6 +147,10 @@ export default function SearchPage() {
       params.set("price_max", priceMax);
     }
 
+    if (sortBy) {
+      params.set("ordering", sortBy);
+    }
+
     let url = "search/";
     const queryString = params.toString();
     if (queryString) {
@@ -168,7 +177,7 @@ export default function SearchPage() {
         log.error("Error fetching search results:", error);
         setLoading(false);
       });
-  }, [query, selectedCategories, priceMin, priceMax]);
+  }, [query, selectedCategories, priceMin, priceMax, sortBy]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -193,6 +202,7 @@ export default function SearchPage() {
     setPriceMax("");
     setTempPriceMin("");
     setTempPriceMax("");
+    setSortBy("");
   };
 
   const handleColorButtonClick = (e, productId, colorName) => {
@@ -281,7 +291,7 @@ export default function SearchPage() {
   };
 
   const hasActiveFilters =
-    query || selectedCategories.length > 0 || priceMin || priceMax;
+    query || selectedCategories.length > 0 || priceMin || priceMax || sortBy;
 
   // Helper to safely check if product is in wishlist
   const isInWishlist = (productId) => {
@@ -381,6 +391,26 @@ export default function SearchPage() {
 
           {/* Products Grid */}
           <div className="lg:col-span-3">
+            {/* Sort Bar */}
+            <div className="flex items-center justify-between mb-6 bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-3">
+              <p className="text-sm text-gray-500">
+                {products.length} product{products.length !== 1 ? "s" : ""}
+              </p>
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="">Default</option>
+                  <option value="title">Name: A → Z</option>
+                  <option value="-title">Name: Z → A</option>
+                  <option value="price">Price: Low → High</option>
+                  <option value="-price">Price: High → Low</option>
+                </select>
+              </div>
+            </div>
             {products.length === 0 && !loading && (
               <div className="text-center py-20">
                 {hasActiveFilters ? (

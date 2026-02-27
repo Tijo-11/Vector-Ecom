@@ -90,6 +90,8 @@ class SearchProductView(
     serializer_class = ProductSerializer
     permission_classes = (AllowAny,)
 
+    ALLOWED_ORDERING = {"title", "-title", "price", "-price", "date", "-date"}
+
     def get_queryset(self):
         # Filter by published status and active vendor
         queryset = Product.objects.filter(status="published", vendor__active=True)
@@ -122,9 +124,12 @@ class SearchProductView(
             except ValueError:
                 pass  # Ignore invalid price_max
 
-        # Optional: order results (e.g., newest first, or by relevance)
-        # You can change this as needed
-        queryset = queryset.order_by("-date")  # or '-price', 'title', etc.
+        # Ordering (dynamic via query param, defaults to newest first)
+        ordering = self.request.GET.get("ordering", "-date")
+        if ordering in self.ALLOWED_ORDERING:
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by("-date")
 
         return queryset
 

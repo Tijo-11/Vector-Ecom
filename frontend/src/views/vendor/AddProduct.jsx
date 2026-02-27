@@ -26,9 +26,8 @@ function AddProduct() {
     description: "",
     category_id: "", // ← Changed to category_id to match backend expectation
     tags: "",
-    brand: "",
     price: "",
-    shipping_amount: "",
+    shipping_amount: "0",
     stock_qty: "",
     vendor: userData?.vendor_id,
   });
@@ -129,7 +128,6 @@ function AddProduct() {
       product.description === "" ||
       product.price === "" ||
       product.category_id === "" || // ← Updated
-      product.shipping_amount === "" ||
       product.stock_qty === "" ||
       product.image === null
     ) {
@@ -138,7 +136,7 @@ function AddProduct() {
       Swal.fire({
         icon: "warning",
         title: "Missing Required Fields!",
-        text: "Title, description, price, category, shipping amount, stock quantity, and thumbnail are required.",
+        text: "Title, description, price, category, stock quantity, and thumbnail are required.",
       });
       return;
     }
