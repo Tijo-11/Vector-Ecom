@@ -16,12 +16,37 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
     permission_classes = (AllowAny,)
 
+    ALLOWED_ORDERING = {"title", "-title", "price", "-price", "date", "-date"}
+
     def get_queryset(self):
         # Filter by published status and active vendor
         queryset = Product.objects.filter(status="published", vendor__active=True)
         category_slug = self.request.query_params.get("category")
         if category_slug:
             queryset = queryset.filter(category__slug=category_slug)
+
+        # Price range filters
+        price_min = self.request.query_params.get("price_min")
+        if price_min:
+            try:
+                queryset = queryset.filter(price__gte=float(price_min))
+            except ValueError:
+                pass
+
+        price_max = self.request.query_params.get("price_max")
+        if price_max:
+            try:
+                queryset = queryset.filter(price__lte=float(price_max))
+            except ValueError:
+                pass
+
+        # Ordering
+        ordering = self.request.query_params.get("ordering", "-date")
+        if ordering in self.ALLOWED_ORDERING:
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by("-date")
+
         return queryset
 
 

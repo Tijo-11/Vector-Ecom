@@ -6,7 +6,7 @@ import UserData from "../../../plugin/UserData";
 import { useAuthStore } from "../../../store/auth";
 import log from "loglevel";
 import ProductCard from "./ProductCard";
-import { ShoppingBag, SlidersHorizontal, X } from "lucide-react";
+import { ShoppingBag, SlidersHorizontal, X, ArrowUpDown } from "lucide-react";
 
 const PAGE_SIZE = 12;
 
@@ -23,6 +23,11 @@ export default function Products() {
 
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
   const selectedCategory = searchParams.get("category") || ""; // single slug
+  const sortBy = searchParams.get("ordering") || "";
+
+  // Price filter states
+  const [tempPriceMin, setTempPriceMin] = useState(searchParams.get("price_min") || "");
+  const [tempPriceMax, setTempPriceMax] = useState(searchParams.get("price_max") || "");
 
   const userData = UserData();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -47,16 +52,28 @@ export default function Products() {
     }
   };
 
-  const fetchData = async (page = 1, cat = "") => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const timestamp = Date.now();
-      let url = `products/?page=${page}&_=${timestamp}`;
+      const params = new URLSearchParams();
+      params.set("page", searchParams.get("page") || "1");
+      params.set("_", timestamp.toString());
 
-      if (cat) url += `&category=${cat}`;
+      const cat = searchParams.get("category");
+      if (cat) params.set("category", cat);
+
+      const priceMin = searchParams.get("price_min");
+      if (priceMin) params.set("price_min", priceMin);
+
+      const priceMax = searchParams.get("price_max");
+      if (priceMax) params.set("price_max", priceMax);
+
+      const ordering = searchParams.get("ordering");
+      if (ordering) params.set("ordering", ordering);
 
       const [prodResponse, catResponse] = await Promise.all([
-        apiInstance.get(url),
+        apiInstance.get(`products/?${params.toString()}`),
         apiInstance.get(`category/?_=${timestamp}`),
       ]);
 
@@ -73,12 +90,46 @@ export default function Products() {
 
   // Sync from URL and fetch
   useEffect(() => {
-    fetchData(currentPage, selectedCategory);
+    fetchData();
   }, [searchParams]);
 
   useEffect(() => {
     fetchWishlist();
   }, [userData?.user_id]);
+
+  // Sync temp price inputs from URL on mount / URL change
+  useEffect(() => {
+    setTempPriceMin(searchParams.get("price_min") || "");
+    setTempPriceMax(searchParams.get("price_max") || "");
+  }, [searchParams]);
+
+  // Debounce price inputs
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams);
+      let changed = false;
+
+      const currentMin = searchParams.get("price_min") || "";
+      const currentMax = searchParams.get("price_max") || "";
+
+      if (tempPriceMin !== currentMin) {
+        if (tempPriceMin) params.set("price_min", tempPriceMin);
+        else params.delete("price_min");
+        changed = true;
+      }
+      if (tempPriceMax !== currentMax) {
+        if (tempPriceMax) params.set("price_max", tempPriceMax);
+        else params.delete("price_max");
+        changed = true;
+      }
+
+      if (changed) {
+        params.set("page", "1");
+        setSearchParams(params);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [tempPriceMin, tempPriceMax]);
 
   const handlePageChange = (newPage) => {
     const params = new URLSearchParams(searchParams);
@@ -100,6 +151,25 @@ export default function Products() {
     params.set("page", "1");
     setSearchParams(params);
   };
+
+  const handleSortChange = (value) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) {
+      params.set("ordering", value);
+    } else {
+      params.delete("ordering");
+    }
+    params.set("page", "1");
+    setSearchParams(params);
+  };
+
+  const handleClearFilters = () => {
+    setTempPriceMin("");
+    setTempPriceMax("");
+    setSearchParams({});
+  };
+
+  const hasActiveFilters = selectedCategory || searchParams.get("price_min") || searchParams.get("price_max");
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
@@ -126,14 +196,24 @@ export default function Products() {
             </button>
           </div>
 
-          {/* Sidebar Categories */}
+          {/* Sidebar Filters */}
           <aside className={`w-full lg:w-64 flex-shrink-0 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sticky top-24">
-              <h2 className="font-bold text-gray-900 text-lg mb-6">
-                Categories
-              </h2>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="font-bold text-gray-900 text-lg">Filters</h2>
+                {hasActiveFilters && (
+                  <button
+                    onClick={handleClearFilters}
+                    className="text-red-600 hover:underline text-sm"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
 
-              <div className="space-y-1">
+              {/* Categories */}
+              <h3 className="font-medium text-gray-900 mb-3">Categories</h3>
+              <div className="space-y-1 mb-6">
                 <button
                   onClick={() => handleCategoryChange("")}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
@@ -158,11 +238,54 @@ export default function Products() {
                   </button>
                 ))}
               </div>
+
+              {/* Price Range */}
+              <h3 className="font-medium text-gray-900 mb-3">Price Range (₹)</h3>
+              <div className="grid grid-cols-2 gap-3 mb-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  min="0"
+                  value={tempPriceMin}
+                  onChange={(e) => setTempPriceMin(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  min="0"
+                  value={tempPriceMax}
+                  onChange={(e) => setTempPriceMax(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <p className="text-xs text-gray-500">Auto-applies after typing</p>
             </div>
           </aside>
 
           {/* Main Grid */}
           <div className="flex-1">
+            {/* Sort Bar */}
+            <div className="flex items-center justify-between mb-6 bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-3">
+              <p className="text-sm text-gray-500">
+                Showing {products.length} of {totalCount} products
+              </p>
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => handleSortChange(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="">Default</option>
+                  <option value="title">Name: A → Z</option>
+                  <option value="-title">Name: Z → A</option>
+                  <option value="price">Price: Low → High</option>
+                  <option value="-price">Price: High → Low</option>
+                </select>
+              </div>
+            </div>
+
             {loading ? (
               <ProductsPlaceholder />
             ) : products.length > 0 ? (
@@ -252,7 +375,9 @@ export default function Products() {
                   No products found
                 </h3>
                 <p className="text-gray-500 mt-2">
-                  No products available in this category at the moment.
+                  {hasActiveFilters
+                    ? "Try adjusting your filters or price range."
+                    : "No products available in this category at the moment."}
                 </p>
               </div>
             )}

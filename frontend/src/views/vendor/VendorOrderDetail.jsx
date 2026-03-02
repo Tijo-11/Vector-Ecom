@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ShoppingCart, AlertCircle, X, RefreshCw, Truck } from "lucide-react";
+import { ShoppingCart, AlertCircle, X, RefreshCw, Truck, Loader2 } from "lucide-react";
 import apiInstance from "../../utils/axios";
 import UserData from "../../plugin/UserData";
 import Sidebar from "./Sidebar";
@@ -17,6 +17,7 @@ function OrderDetail() {
   const [returnNote, setReturnNote] = useState("");
   const [statusLoading, setStatusLoading] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: "", text: "" });
 
   const deliveryStatuses = [
@@ -58,6 +59,7 @@ function OrderDetail() {
   const param = useParams(); // Now correctly imported
 
   const fetchOrderDetails = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(
         `vendor/orders/${userData?.vendor_id}/${param.oid}`,
@@ -66,6 +68,8 @@ function OrderDetail() {
       setOrderItems(response.data.orderitem);
     } catch (error) {
       log.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -185,6 +189,12 @@ function OrderDetail() {
       <Sidebar />
 
       <div className="flex-1 p-8 lg:p-12 overflow-x-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-[60vh]">
+            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+          </div>
+        ) : (
+        <>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
@@ -226,19 +236,7 @@ function OrderDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <p className="text-gray-500 text-sm">Tax Fee</p>
-            <h2 className="text-xl font-bold text-gray-900">
-              ₹{order.tax_fee}
-            </h2>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <p className="text-gray-500 text-sm">Service Fee</p>
-            <h2 className="text-xl font-bold text-gray-900">
-              ₹{order.service_fee}
-            </h2>
-          </div>
+        <div className="grid grid-cols-1 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
             <p className="text-gray-500 text-sm">Discount</p>
             <h2 className="text-xl font-bold text-red-600">-₹{order.saved}</h2>
@@ -371,6 +369,8 @@ function OrderDetail() {
             </table>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* Status Update Modal */}

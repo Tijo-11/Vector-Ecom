@@ -180,20 +180,38 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
 
     try {
       await apiInstance.delete(deleteUrl);
+    } catch (error) {
+      log.error("Error deleting cart item:", error);
+      toast.fire({ icon: "error", title: "Deletion failed" });
+      return;
+    }
+
+    // Delete succeeded — update the UI
+    try {
       const updatedItems = await fetchCartItems();
       setCart(updatedItems);
       setCartCount(
         updatedItems.reduce((sum, item) => sum + (item.qty || 0), 0),
       );
 
-      const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
-      setCartTotal(totalResponse.data);
+      try {
+        const totalResponse = await apiInstance.get(`/cart-detail/${cart_id}/`);
+        setCartTotal(totalResponse.data);
+      } catch {
+        // Cart may be empty now (404), reset totals
+        setCartTotal({
+          mrp_total: 0,
+          discounted_total: 0,
+          shipping: 0,
+          grand_total: 0,
+        });
+      }
 
       toast.fire({ icon: "success", title: "Item removed" });
     } catch (error) {
+      log.error("Error refreshing cart after delete:", error);
       setCart(previousCart);
       setCartCount(previousCount);
-      toast.fire({ icon: "error", title: "Deletion failed" });
     }
   };
 

@@ -46,6 +46,10 @@ function VendorWallet() {
   // Modal State
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
+  // Guest Refund State
+  const [guestRefunds, setGuestRefunds] = useState([]);
+  const [guestRefundsLoading, setGuestRefundsLoading] = useState(true);
+
   const user = useAuthStore((state) => state.user);
   const vendorId = user?.vendor_id;
 
@@ -53,6 +57,7 @@ function VendorWallet() {
     if (vendorId) {
       fetchStats();
       fetchTransactions();
+      fetchGuestRefunds();
     }
   }, [vendorId]); // Fetch initially
 
@@ -91,6 +96,58 @@ function VendorWallet() {
       console.error("Error fetching transactions:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch Pending Guest Refunds
+  const fetchGuestRefunds = async () => {
+    try {
+      setGuestRefundsLoading(true);
+      const response = await apiInstance.get(
+        `vendor/guest-refunds/${vendorId}/`,
+      );
+      setGuestRefunds(response.data.refunds || []);
+    } catch (error) {
+      console.error("Error fetching guest refunds:", error);
+    } finally {
+      setGuestRefundsLoading(false);
+    }
+  };
+
+  // Mark Guest Refund as Processed
+  const handleMarkRefunded = async (cancellationId) => {
+    const result = await Swal.fire({
+      title: "Confirm Manual Refund",
+      text: "Are you sure you have processed this refund manually?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10B981",
+      cancelButtonColor: "#6B7280",
+      confirmButtonText: "Yes, Mark as Refunded",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await apiInstance.post(
+          `vendor/guest-refund-mark/${cancellationId}/`,
+        );
+        Swal.fire({
+          icon: "success",
+          title: "Refund Marked",
+          text: "The refund has been marked as manually processed.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        fetchGuestRefunds();
+        fetchStats();
+      } catch (error) {
+        console.error("Error marking refund:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error.response?.data?.error || "Failed to mark refund.",
+        });
+      }
     }
   };
 
@@ -724,6 +781,113 @@ function VendorWallet() {
               </table>
             </div>
           )}
+        </div>
+
+        {/* Guest Refunds Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mt-8">
+          <div className="p-5 border-b border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <AlertCircle size={20} className="text-orange-500" />
+              Refunds to be Processed for Guest Users
+              {guestRefunds.length > 0 && (
+                <span className="ml-2 bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  {guestRefunds.length}
+                </span>
+              )}
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              These are cancelled orders from guest users that require manual refund processing.
+            </p>
+          </div>
+
+          <div className="p-5">
+            {guestRefundsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+              </div>
+            ) : guestRefunds.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <AlertCircle size={40} className="mx-auto mb-2 text-gray-200" />
+                <p>No pending guest refunds.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {guestRefunds.map((refund) => (
+                  <div
+                    key={refund.id}
+                    className="border border-orange-200 rounded-xl p-5 bg-orange-50/50"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-full">
+                            Pending Refund
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            Order #{refund.order_oid}
+                          </span>
+                          <span className="text-sm text-gray-400">
+                            {formatDate(refund.cancelled_at)}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                          <div>
+                            <p className="text-xs text-gray-500">Customer Name</p>
+                            <p className="font-medium text-gray-900">{refund.customer_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Email</p>
+                            <p className="font-medium text-gray-900">{refund.customer_email}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Phone</p>
+                            <p className="font-medium text-gray-900">{refund.customer_phone}</p>
+                          </div>
+                        </div>
+
+                        <div className="mb-3">
+                          <p className="text-xs text-gray-500 mb-1">Reason</p>
+                          <p className="text-sm text-gray-700">
+                            {refund.reason}{refund.reason_detail ? ` — ${refund.reason_detail}` : ""}
+                          </p>
+                        </div>
+
+                        {refund.items && refund.items.length > 0 && (
+                          <div className="bg-white rounded-lg border border-gray-200 p-3">
+                            <p className="text-xs text-gray-500 mb-2 font-medium">Cancelled Items</p>
+                            {refund.items.map((item) => (
+                              <div key={item.id} className="flex justify-between text-sm py-1">
+                                <span className="text-gray-700">
+                                  {item.product_title} × {item.qty}
+                                </span>
+                                <span className="text-gray-900 font-medium">₹{item.total}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-end gap-3">
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">Refund Amount</p>
+                          <p className="text-2xl font-bold text-orange-600">
+                            ₹{refund.refund_amount}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleMarkRefunded(refund.id)}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap"
+                        >
+                          ✓ Mark as Refunded
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         </>
         )}

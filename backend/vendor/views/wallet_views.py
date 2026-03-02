@@ -11,6 +11,7 @@ from decimal import Decimal
 
 from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
+from django.utils import timezone
 from openpyxl import Workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -22,7 +23,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from store.models import CartOrder, CartOrderItem
+from store.models import CartOrder, CartOrderItem, OrderCancellation
 from userauth.models import Wallet, WalletTransaction
 from vendor.models import Vendor
 
@@ -612,3 +613,111 @@ class WalletReportExcelView(APIView):
         )
         response["Content-Disposition"] = 'attachment; filename="wallet_report.xlsx"'
         return response
+
+
+class VendorPendingGuestRefundsView(APIView):
+    """
+    List all pending guest user refunds for a vendor's orders.
+    GET /vendor/guest-refunds/<vendor_id>/
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, vendor_id):
+        try:
+            vendor = Vendor.objects.get(id=vendor_id)
+        except Vendor.DoesNotExist:
+            return Response(
+                {"error": "Vendor not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get cancellations with pending refunds for this vendor's order items
+        cancellations = (
+            OrderCancellation.objects.filter(
+                refund_status="pending",
+                order__orderitem__vendor=vendor,
+            )
+            .distinct()
+            .select_related("order")
+            .prefetch_related("items", "items__product")
+            .order_by("-cancelled_at")
+        )
+
+        refunds = []
+        for cancel in cancellations:
+            vendor_items = cancel.items.filter(vendor=vendor)
+            vendor_refund_amount = sum(item.total for item in vendor_items)
+
+            items_data = []
+            for item in vendor_items:
+                items_data.append(
+                    {
+                        "id": item.id,
+                        "product_title": item.product.title if item.product else "N/A",
+                        "qty": item.qty,
+                        "sub_total": str(item.sub_total),
+                        "total": str(item.total),
+                    }
+                )
+
+            refunds.append(
+                {
+                    "id": cancel.id,
+                    "order_oid": cancel.order.oid,
+                    "customer_name": cancel.order.full_name or "Guest",
+                    "customer_email": cancel.order.email or "N/A",
+                    "customer_phone": cancel.order.mobile or "N/A",
+                    "refund_amount": str(vendor_refund_amount),
+                    "total_refund_amount": str(cancel.refund_amount),
+                    "reason": cancel.reason,
+                    "reason_detail": cancel.reason_detail or "",
+                    "cancelled_at": cancel.cancelled_at.isoformat(),
+                    "is_full_order": cancel.is_full_order,
+                    "items": items_data,
+                }
+            )
+
+        return Response(
+            {"count": len(refunds), "refunds": refunds},
+            status=status.HTTP_200_OK,
+        )
+
+
+class MarkGuestRefundedView(APIView):
+    """
+    Mark a guest refund as manually processed.
+    POST /vendor/guest-refund-mark/<cancellation_id>/
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, cancellation_id):
+        try:
+            cancellation = OrderCancellation.objects.get(id=cancellation_id)
+        except OrderCancellation.DoesNotExist:
+            return Response(
+                {"error": "Cancellation not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if cancellation.refund_status != "pending":
+            return Response(
+                {"error": "This refund is not in pending status"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cancellation.refund_status = "manually_refunded"
+        cancellation.refunded_at = timezone.now()
+        cancellation.save()
+
+        log.info(
+            f"Guest refund for cancellation {cancellation_id} marked as manually refunded"
+        )
+
+        return Response(
+            {
+                "message": "Refund marked as manually processed",
+                "refunded_at": cancellation.refunded_at.isoformat(),
+            },
+            status=status.HTTP_200_OK,
+        )
+

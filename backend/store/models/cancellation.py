@@ -9,6 +9,13 @@ from .order import (  # , Cart, CancelOrder, Coupon, CouponUsers, DeliveryCountr
 
 
 class OrderCancellation(models.Model):
+    REFUND_STATUS_CHOICES = [
+        ("not_applicable", "Not Applicable"),
+        ("pending", "Pending"),
+        ("refunded_to_wallet", "Refunded to Wallet"),
+        ("manually_refunded", "Manually Refunded"),
+    ]
+
     order = models.ForeignKey(
         CartOrder, on_delete=models.CASCADE, related_name="cancellations"
     )
@@ -18,6 +25,13 @@ class OrderCancellation(models.Model):
     cancelled_at = models.DateTimeField(auto_now_add=True)
     is_full_order = models.BooleanField(default=False)
     items = models.ManyToManyField(CartOrderItem, blank=True)
+
+    # Refund tracking
+    refund_status = models.CharField(
+        max_length=30, choices=REFUND_STATUS_CHOICES, default="not_applicable"
+    )
+    refund_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    refunded_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Cancellation for Order {self.order.oid}"
