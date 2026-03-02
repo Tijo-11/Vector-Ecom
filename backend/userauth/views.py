@@ -364,7 +364,8 @@ def google_login(request):
 
     try:
         id_info = google_id_token.verify_oauth2_token(
-            credential, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+            credential, google_requests.Request(), settings.GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=10,
         )
         email = id_info["email"]
         full_name = id_info.get("name", "")
