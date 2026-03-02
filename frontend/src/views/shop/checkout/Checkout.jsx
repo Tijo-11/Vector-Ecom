@@ -18,6 +18,7 @@ import {
   Phone,
   ChevronDown,
   ChevronUp,
+  Bookmark,
 } from "lucide-react";
 
 function Checkout() {
@@ -35,6 +36,7 @@ function Checkout() {
   const [showAddressSelector, setShowAddressSelector] = useState(false);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [updatingAddress, setUpdatingAddress] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
 
   // States for selected payment method
   const [paymentMethod, setPaymentMethod] = useState("razorpay"); // Default
@@ -143,8 +145,63 @@ function Checkout() {
   }, [order_id]);
 
   useEffect(() => {
-    if (user?.user_id) fetchWalletBalance();
+    if (user?.user_id) {
+      fetchWalletBalance();
+      fetchSavedAddresses();
+    }
   }, [user]);
+
+  // Compare the current order address against all saved addresses
+  const isAddressDifferentFromSaved = () => {
+    if (!user?.user_id || loadingAddresses || savedAddresses.length === 0) return savedAddresses.length === 0 && !loadingAddresses && !!user?.user_id;
+    const normalize = (val) => (val || "").toString().trim().toLowerCase();
+    return !savedAddresses.some(
+      (addr) =>
+        normalize(order.full_name) === normalize(addr.full_name) &&
+        normalize(order.mobile) === normalize(addr.mobile) &&
+        normalize(order.email) === normalize(addr.email) &&
+        normalize(order.address) === normalize(addr.address) &&
+        normalize(order.city) === normalize(addr.town_city) &&
+        normalize(order.state) === normalize(addr.state) &&
+        normalize(order.country) === normalize(addr.country) &&
+        normalize(order.postal_code) === normalize(addr.zip)
+    );
+  };
+
+  const saveCurrentAddress = async () => {
+    try {
+      setSavingAddress(true);
+      await apiInstance.post("user/addresses/", {
+        full_name: order.full_name || "",
+        email: order.email || "",
+        mobile: order.mobile || "",
+        address: order.address || "",
+        town_city: order.city || "",
+        state: order.state || "",
+        country: order.country || "",
+        zip: order.postal_code || "",
+      });
+      await fetchSavedAddresses();
+      Swal.fire({
+        icon: "success",
+        title: "Address Saved",
+        text: "This address has been added to your saved addresses.",
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 2000,
+      });
+    } catch (error) {
+      log.error("Error saving address:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Failed to save address",
+        text: error.response?.data?.detail || "Please try again.",
+      });
+    } finally {
+      setSavingAddress(false);
+    }
+  };
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -293,6 +350,23 @@ function Checkout() {
                     <Phone className="w-3 h-3" /> {order.mobile}
                   </span>
                 </div>
+
+                {/* Save Address Button – only if address differs from all saved */}
+                {user?.user_id && !loadingAddresses && isAddressDifferentFromSaved() && (
+                  <button
+                    type="button"
+                    onClick={saveCurrentAddress}
+                    disabled={savingAddress}
+                    className={`mt-3 flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border-2 transition-all ${
+                      savingAddress
+                        ? "border-gray-300 text-gray-400 cursor-wait bg-gray-50"
+                        : "border-blue-500 text-blue-600 hover:bg-blue-50 hover:border-blue-600"
+                    }`}
+                  >
+                    <Bookmark className="w-4 h-4" />
+                    {savingAddress ? "Saving..." : "Save this Address"}
+                  </button>
+                )}
               </div>
 
               {/* Saved Address Selector */}
