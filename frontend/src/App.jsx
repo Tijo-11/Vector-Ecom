@@ -106,6 +106,9 @@ const AdminNotifications = lazy(
   () => import("./views/admin/AdminNotifications.jsx"),
 );
 const AdminSettings = lazy(() => import("./views/admin/AdminSettings.jsx"));
+const CategoryManagement = lazy(
+  () => import("./views/admin/CategoryManagement.jsx"),
+);
 
 // Generic full-screen spinner
 const LoadingSpinner = () => (
@@ -593,6 +596,16 @@ export default function App() {
                 <Suspense fallback={<LoadingSpinner />}>
                   <AdminRoute>
                     <CategoryOffer />
+                  </AdminRoute>
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin/categories"
+              element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminRoute>
+                    <CategoryManagement />
                   </AdminRoute>
                 </Suspense>
               }

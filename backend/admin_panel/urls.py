@@ -74,4 +74,20 @@ urlpatterns = [
     ),
     # Settings
     path("settings/", views.AdminSettingsAPIView.as_view(), name="admin-settings"),
+    # Category Management
+    path(
+        "categories/",
+        views.AdminCategoryListCreateAPIView.as_view(),
+        name="admin-categories",
+    ),
+    path(
+        "categories/<int:pk>/",
+        views.AdminCategoryDetailAPIView.as_view(),
+        name="admin-category-detail",
+    ),
+    path(
+        "categories/<int:pk>/toggle/",
+        views.AdminCategoryToggleAPIView.as_view(),
+        name="admin-category-toggle",
+    ),
 ]

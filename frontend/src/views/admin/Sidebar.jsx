@@ -3,6 +3,7 @@ import {
   Gauge,
   Users,
   Package,
+  LayoutGrid,
   ShoppingCart,
   IndianRupee,
   BarChart2,
@@ -65,6 +66,18 @@ export default function AdminSidebar() {
             }
           >
             <Package size={18} /> <span>Products</span>
+          </Link>
+        </li>
+        <li>
+          <Link
+            to="/admin/categories"
+            className={
+              isActiveLink(location.pathname, "/admin/categories")
+                ? activeLink
+                : nonActiveLink
+            }
+          >
+            <LayoutGrid size={18} /> <span>Categories</span>
           </Link>
         </li>
         <li>
