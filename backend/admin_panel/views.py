@@ -11,13 +11,14 @@ from rest_framework.views import APIView
 
 from addon.models import ConfigSettings
 from addon.serializers import ConfigSettingsSerializer
-from store.models import (CartOrder, CartOrderItem, CategoryOffer,
+from store.models import (CartOrder, CartOrderItem, Category, CategoryOffer,
                           Notification, Product)
 from store.serializers import NotificationSerializer
 from vendor.models import Vendor
 
 from .permissions import IsAdminUser
-from .serializers import (AdminCategoryOfferSerializer, AdminOrderSerializer,
+from .serializers import (AdminCategoryOfferSerializer, AdminCategorySerializer,
+                          AdminOrderSerializer,
                           AdminProductSerializer, AdminStatsSerializer,
                           AdminVendorSerializer, BestSellingCategorySerializer,
                           BestSellingProductSerializer, ChartOrdersSerializer,
@@ -585,3 +586,83 @@ class BestSellingCategoriesAPIView(APIView):
 
         serializer = BestSellingCategorySerializer(data, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminCategoryListCreateAPIView(generics.ListCreateAPIView):
+    """
+    GET: List all categories
+    POST: Create a new category (supports multipart/form-data for image upload)
+    """
+
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminCategorySerializer
+    queryset = Category.objects.all().order_by("title")
+
+    def get_parsers(self):
+        from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+
+        return [MultiPartParser(), FormParser(), JSONParser()]
+
+    def create(self, request, *args, **kwargs):
+        title = request.data.get("title", "").strip()
+        if not title:
+            return Response(
+                {"error": "Category title is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if Category.objects.filter(title__iexact=title).exists():
+            return Response(
+                {"error": "A category with this title already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().create(request, *args, **kwargs)
+
+
+class AdminCategoryDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET: Retrieve a category
+    PATCH/PUT: Update a category
+    DELETE: Delete a category
+    """
+
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminCategorySerializer
+    queryset = Category.objects.all()
+
+    def get_parsers(self):
+        from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+
+        return [MultiPartParser(), FormParser(), JSONParser()]
+
+    def update(self, request, *args, **kwargs):
+        title = request.data.get("title", "").strip()
+        instance = self.get_object()
+        if title and Category.objects.filter(title__iexact=title).exclude(pk=instance.pk).exists():
+            return Response(
+                {"error": "A category with this title already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().update(request, *args, **kwargs)
+
+
+class AdminCategoryToggleAPIView(APIView):
+    """
+    PATCH: Toggle category active status
+    """
+
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            category = Category.objects.get(pk=pk)
+            category.active = not category.active
+            category.save()
+            serializer = AdminCategorySerializer(
+                category, context={"request": request}
+            )
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Category.DoesNotExist:
+            return Response(
+                {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+

@@ -1,8 +1,31 @@
 from django.db.models import Count, Sum
 from rest_framework import serializers
 
-from store.models import CartOrder, CategoryOffer, Product
+from store.models import CartOrder, Category, CategoryOffer, Product
 from vendor.models import Vendor
+
+
+class AdminCategorySerializer(serializers.ModelSerializer):
+    """Serializer for admin category management"""
+
+    product_count = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ["id", "title", "image", "active", "slug", "product_count"]
+        read_only_fields = ["slug"]
+
+    def get_product_count(self, obj):
+        return obj.product_count()
+
+    def get_image(self, obj):
+        if obj.image:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 
 class AdminStatsSerializer(serializers.Serializer):
