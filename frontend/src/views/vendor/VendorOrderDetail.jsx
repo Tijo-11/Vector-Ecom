@@ -73,8 +73,23 @@ function OrderDetail() {
     }
   };
 
+  // Silent poll — updates data without showing loading spinner
+  const pollOrderDetails = async () => {
+    try {
+      const response = await axios.get(
+        `vendor/orders/${userData?.vendor_id}/${param.oid}`,
+      );
+      setOrder(response.data);
+      setOrderItems(response.data.orderitem);
+    } catch {
+      // Silently ignore poll errors
+    }
+  };
+
   useEffect(() => {
     fetchOrderDetails();
+    const interval = setInterval(pollOrderDetails, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   // Handle Status Change
@@ -320,17 +335,31 @@ function OrderDetail() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}
-                        >
-                          {item.delivery_status}
-                        </span>
-                        {item.return_request &&
-                          getReturnStatusBadge(item.return_request)}
+                        {item.is_cancelled ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Cancelled
+                          </span>
+                        ) : (
+                          <>
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}
+                            >
+                              {item.delivery_status}
+                            </span>
+                            {item.return_request &&
+                              getReturnStatusBadge(item.return_request)}
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-2">
+                        {item.is_cancelled ? (
+                          <span className="text-xs font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg text-center">
+                            Order Cancelled
+                          </span>
+                        ) : (
+                          <>
                         {!item.product_delivered &&
                           item.delivery_status !== "Cancelled" &&
                           (!item.return_request ||
@@ -345,6 +374,14 @@ function OrderDetail() {
 
                         {item.return_request &&
                           item.return_request.status === "pending" && (
+                            <div className="flex flex-col gap-2">
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs max-w-[220px]">
+                                <p className="font-semibold text-yellow-800 mb-0.5">Return Reason:</p>
+                                <p className="text-yellow-700 capitalize">{item.return_request.reason?.replace(/_/g, " ")}</p>
+                                {item.return_request.reason_detail && (
+                                  <p className="text-yellow-600 mt-1 italic">"{item.return_request.reason_detail}"</p>
+                                )}
+                              </div>
                             <div className="flex gap-1">
                               <button
                                 onClick={() =>
@@ -363,7 +400,10 @@ function OrderDetail() {
                                 Reject
                               </button>
                             </div>
+                            </div>
                           )}
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

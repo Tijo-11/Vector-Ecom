@@ -42,8 +42,21 @@ function OrderDetail() {
       });
   };
 
+  // Silent poll — updates data without showing loading spinner
+  const pollOrderDetails = () => {
+    axios
+      .get(`customer/order/detail/${userData?.user_id}/${param?.order_oid}`)
+      .then((res) => {
+        setOrder(res.data);
+        setOrderItems(res.data.orderitem);
+      })
+      .catch(() => {}); // Silently ignore poll errors
+  };
+
   useEffect(() => {
     fetchOrderDetails();
+    const interval = setInterval(pollOrderDetails, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   // Check if any item is delivered (to hide full order cancel if partial delivery)
