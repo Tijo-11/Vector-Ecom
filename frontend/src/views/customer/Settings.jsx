@@ -1,5 +1,3 @@
-// Settings.jsx
-
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import apiInstance from "../../utils/axios";
@@ -22,13 +20,16 @@ function Settings() {
   const [loading, setLoading] = useState(false);
   const [isSocialUser, setIsSocialUser] = useState(false);
 
+  // ✅ Validation errors state
+  const [errors, setErrors] = useState({});
+
   // Password change state
   const [passwordData, setPasswordData] = useState({
     old_password: "",
     new_password: "",
     new_password2: "",
   });
-  const [passwordError, setPasswordError] = useState(""); // New state for mismatch error
+  const [passwordError, setPasswordError] = useState("");
 
   // Email change state
   const [emailData, setEmailData] = useState({
@@ -39,6 +40,50 @@ function Settings() {
 
   const axios = apiInstance;
   const userData = UserData();
+
+  // ✅ NEW VALIDATION FUNCTION (no auto-cleaning while typing)
+  const validateField = (name, value) => {
+    if (!value || value.trim() === "") return "";
+
+    const trimmed = value.trim();
+
+    switch (name) {
+      case "full_name":
+      case "city":
+      case "state":
+      case "country":
+        // NEW RULE: Must start with a letter + minimum 3 characters
+        if (!/^[a-zA-Z]/.test(trimmed)) {
+          return "Must start with a letter and be at least 3 characters long";
+        }
+        if (trimmed.length < 3) {
+          return "Must start with a letter and be at least 3 characters long";
+        }
+        if (trimmed.length > 80) {
+          return "Maximum 80 characters allowed";
+        }
+        break;
+
+      case "address":
+        if (trimmed.length < 5) return "Must be at least 5 characters";
+        if (trimmed.length > 200) return "Maximum 200 characters allowed";
+        break;
+
+      case "about":
+        if (trimmed.length > 500) return "Maximum 500 characters allowed";
+        break;
+
+      case "postal_code":
+        if (trimmed.length > 0 && trimmed.length < 5) {
+          return "Pincode must be 5-6 digits";
+        }
+        break;
+
+      default:
+        break;
+    }
+    return "";
+  };
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -57,7 +102,6 @@ function Settings() {
         });
         setImagePreview(res.data?.image || "");
 
-        // Reliable detection: Hide sections if user cannot change password (i.e., Google user)
         if (res.data.can_change_password === false) {
           setIsSocialUser(true);
         } else {
@@ -70,11 +114,22 @@ function Settings() {
     fetchProfileData();
   }, [userData?.user_id]);
 
+  // ✅ FIXED: Now raw value is stored → characters ALWAYS appear while typing
   const handleInputChange = (e) => {
-    setProfileData({
-      ...profileData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    // Update state with exactly what user typed (no cleaning)
+    setProfileData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // Show error instantly
+    const error = validateField(name, value);
+    setErrors((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
   };
 
   const handleFileChange = (e) => {
@@ -85,15 +140,54 @@ function Settings() {
     }
   };
 
+  // ✅ Clean data only before sending to backend
+  const cleanDataForSubmit = (data) => {
+    const cleaned = { ...data };
+    Object.keys(cleaned).forEach((key) => {
+      if (typeof cleaned[key] === "string") {
+        let str = cleaned[key].trim();
+
+        if (["full_name", "city", "state", "country"].includes(key)) {
+          str = str.replace(/[^a-zA-Z\s'.\-]/g, "");
+        } else if (key === "address") {
+          str = str.replace(/[^a-zA-Z0-9\s,#'./\-]/g, "");
+        } else if (key === "about") {
+          str = str.replace(/[<>&"']/g, "");
+        } else if (key === "postal_code") {
+          str = str.replace(/\D/g, "").slice(0, 6);
+        }
+
+        str = str.replace(/\s{2,}/g, " ").replace(/-{2,}/g, "-");
+        cleaned[key] = str;
+      }
+    });
+    return cleaned;
+  };
+
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
+
+    // Final check
+    if (Object.values(errors).some((err) => err !== "")) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "Please fix the red errors before saving.",
+      });
+      return;
+    }
+
     setLoading(true);
+
+    // Clean data before sending
+    const cleanedProfileData = cleanDataForSubmit(profileData);
+
     try {
       const formData = new FormData();
-      if (profileData.p_image) {
-        formData.append("image", profileData.p_image);
+      if (cleanedProfileData.p_image) {
+        formData.append("image", cleanedProfileData.p_image);
       }
-      Object.entries(profileData).forEach(([key, value]) => {
+      Object.entries(cleanedProfileData).forEach(([key, value]) => {
         if (
           key !== "p_image" &&
           value !== undefined &&
@@ -107,9 +201,7 @@ function Settings() {
       await apiInstance.patch(
         `customer/setting/${userData?.user_id}/`,
         formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        },
+        { headers: { "Content-Type": "multipart/form-data" } },
       );
 
       Swal.fire({
@@ -135,7 +227,6 @@ function Settings() {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
 
-    // Final validation check before submitting
     if (passwordData.new_password !== passwordData.new_password2) {
       setPasswordError("Passwords do not match");
       Swal.fire({
@@ -154,7 +245,7 @@ function Settings() {
         new_password: "",
         new_password2: "",
       });
-      setPasswordError(""); // Clear any lingering error
+      setPasswordError("");
     } catch (err) {
       Swal.fire(
         "Error",
@@ -190,7 +281,7 @@ function Settings() {
       setOtpSent(false);
       window.location.reload();
     } catch (err) {
-      Swall.fire("Error", err.response?.data?.error || "Invalid OTP", "error");
+      Swal.fire("Error", err.response?.data?.error || "Invalid OTP", "error");
     }
   };
 
@@ -207,7 +298,6 @@ function Settings() {
                     <i className="fas fa-cog fa-spin mr-2" /> Settings
                   </h3>
 
-                  {/* Profile Image Preview */}
                   {imagePreview && (
                     <div className="mb-6 text-center">
                       <img
@@ -218,7 +308,6 @@ function Settings() {
                     </div>
                   )}
 
-                  {/* Profile Update Form */}
                   <form
                     onSubmit={handleProfileSubmit}
                     encType="multipart/form-data"
@@ -247,6 +336,11 @@ function Settings() {
                         onChange={handleInputChange}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300"
                       />
+                      {errors.full_name && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.full_name}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -258,6 +352,11 @@ function Settings() {
                         rows="4"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring focus:ring-blue-300"
                       />
+                      {errors.about && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.about}
+                        </p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -272,6 +371,11 @@ function Settings() {
                           onChange={handleInputChange}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
+                        {errors.address && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.address}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="block mb-2 font-medium">City</label>
@@ -282,6 +386,11 @@ function Settings() {
                           onChange={handleInputChange}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
+                        {errors.city && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.city}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="block mb-2 font-medium">State</label>
@@ -292,6 +401,11 @@ function Settings() {
                           onChange={handleInputChange}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
+                        {errors.state && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.state}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="block mb-2 font-medium">
@@ -301,17 +415,14 @@ function Settings() {
                           type="text"
                           name="postal_code"
                           value={profileData.postal_code}
-                          onChange={(e) => {
-                            const value = e.target.value
-                              .replace(/\D/g, "")
-                              .slice(0, 6);
-                            setProfileData({
-                              ...profileData,
-                              postal_code: value,
-                            });
-                          }}
+                          onChange={handleInputChange}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
+                        {errors.postal_code && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.postal_code}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="block mb-2 font-medium">
@@ -324,6 +435,11 @@ function Settings() {
                           onChange={handleInputChange}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2"
                         />
+                        {errors.country && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.country}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -346,7 +462,6 @@ function Settings() {
                     </div>
                   </form>
 
-                  {/* Message for Social/Google Users */}
                   {isSocialUser && (
                     <div className="mt-12 border-t pt-8">
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -373,155 +488,153 @@ function Settings() {
                     </div>
                   )}
 
-                  {/* Change Password - Only for Email/Password Users */}
                   {!isSocialUser && (
-                    <div className="mt-12 border-t pt-8">
-                      <h3 className="text-xl font-semibold mb-6">
-                        Change Password
-                      </h3>
-                      <form
-                        onSubmit={handlePasswordChange}
-                        className="max-w-lg space-y-4"
-                      >
-                        <input
-                          type="password"
-                          placeholder="Current Password"
-                          value={passwordData.old_password}
-                          onChange={(e) =>
-                            setPasswordData({
-                              ...passwordData,
-                              old_password: e.target.value,
-                            })
-                          }
-                          required
-                          className="w-full border rounded px-3 py-2"
-                        />
-                        <div>
-                          <input
-                            type="password"
-                            placeholder="New Password"
-                            value={passwordData.new_password}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setPasswordData({
-                                ...passwordData,
-                                new_password: value,
-                              });
-                              if (
-                                value !== "" &&
-                                passwordData.new_password2 !== "" &&
-                                value !== passwordData.new_password2
-                              ) {
-                                setPasswordError("Passwords do not match");
-                              } else {
-                                setPasswordError("");
-                              }
-                            }}
-                            required
-                            className="w-full border rounded px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <input
-                            type="password"
-                            placeholder="Confirm New Password"
-                            value={passwordData.new_password2}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setPasswordData({
-                                ...passwordData,
-                                new_password2: value,
-                              });
-                              if (
-                                passwordData.new_password !== "" &&
-                                value !== "" &&
-                                passwordData.new_password !== value
-                              ) {
-                                setPasswordError("Passwords do not match");
-                              } else {
-                                setPasswordError("");
-                              }
-                            }}
-                            required
-                            className="w-full border rounded px-3 py-2"
-                          />
-                          {passwordError && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {passwordError}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          type="submit"
-                          className="px-6 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
-                        >
+                    <>
+                      <div className="mt-12 border-t pt-8">
+                        <h3 className="text-xl font-semibold mb-6">
                           Change Password
-                        </button>
-                      </form>
-                    </div>
-                  )}
+                        </h3>
+                        <form
+                          onSubmit={handlePasswordChange}
+                          className="max-w-lg space-y-4"
+                        >
+                          <input
+                            type="password"
+                            placeholder="Current Password"
+                            value={passwordData.old_password}
+                            onChange={(e) =>
+                              setPasswordData({
+                                ...passwordData,
+                                old_password: e.target.value,
+                              })
+                            }
+                            required
+                            className="w-full border rounded px-3 py-2"
+                          />
+                          <div>
+                            <input
+                              type="password"
+                              placeholder="New Password"
+                              value={passwordData.new_password}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setPasswordData({
+                                  ...passwordData,
+                                  new_password: value,
+                                });
+                                if (
+                                  value !== "" &&
+                                  passwordData.new_password2 !== "" &&
+                                  value !== passwordData.new_password2
+                                ) {
+                                  setPasswordError("Passwords do not match");
+                                } else {
+                                  setPasswordError("");
+                                }
+                              }}
+                              required
+                              className="w-full border rounded px-3 py-2"
+                            />
+                          </div>
+                          <div>
+                            <input
+                              type="password"
+                              placeholder="Confirm New Password"
+                              value={passwordData.new_password2}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setPasswordData({
+                                  ...passwordData,
+                                  new_password2: value,
+                                });
+                                if (
+                                  passwordData.new_password !== "" &&
+                                  value !== "" &&
+                                  passwordData.new_password !== value
+                                ) {
+                                  setPasswordError("Passwords do not match");
+                                } else {
+                                  setPasswordError("");
+                                }
+                              }}
+                              required
+                              className="w-full border rounded px-3 py-2"
+                            />
+                            {passwordError && (
+                              <p className="text-red-500 text-sm mt-1">
+                                {passwordError}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="submit"
+                            className="px-6 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700"
+                          >
+                            Change Password
+                          </button>
+                        </form>
+                      </div>
 
-                  {/* Change Email - Only for Email/Password Users */}
-                  {!isSocialUser && (
-                    <div className="mt-12 border-t pt-8">
-                      <h3 className="text-xl font-semibold mb-6">
-                        Change Email Address
-                      </h3>
-                      {!otpSent ? (
-                        <form
-                          onSubmit={handleEmailRequest}
-                          className="max-w-lg space-y-4"
-                        >
-                          <input
-                            type="email"
-                            placeholder="New Email Address"
-                            value={emailData.new_email}
-                            onChange={(e) =>
-                              setEmailData({
-                                ...emailData,
-                                new_email: e.target.value,
-                              })
-                            }
-                            required
-                            className="w-full border rounded px-3 py-2"
-                          />
-                          <button
-                            type="submit"
-                            className="px-6 py-2 rounded-lg bg-orange-600 text-white font-medium hover:bg-orange-700"
+                      <div className="mt-12 border-t pt-8">
+                        <h3 className="text-xl font-semibold mb-6">
+                          Change Email Address
+                        </h3>
+                        {!otpSent ? (
+                          <form
+                            onSubmit={handleEmailRequest}
+                            className="max-w-lg space-y-4"
                           >
-                            Send OTP
-                          </button>
-                        </form>
-                      ) : (
-                        <form
-                          onSubmit={handleEmailVerify}
-                          className="max-w-lg space-y-4"
-                        >
-                          <p className="text-green-600 mb-4">
-                            OTP has been sent to {emailData.new_email}
-                          </p>
-                          <input
-                            type="text"
-                            placeholder="Enter OTP"
-                            value={emailData.otp}
-                            onChange={(e) =>
-                              setEmailData({
-                                ...emailData,
-                                otp: e.target.value,
-                              })
-                            }
-                            required
-                            className="w-full border rounded px-3 py-2"
-                          />
-                          <button
-                            type="submit"
-                            className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
+                            <input
+                              type="email"
+                              placeholder="New Email Address"
+                              value={emailData.new_email}
+                              onChange={(e) =>
+                                setEmailData({
+                                  ...emailData,
+                                  new_email: e.target.value,
+                                })
+                              }
+                              required
+                              className="w-full border rounded px-3 py-2"
+                            />
+                            <button
+                              type="submit"
+                              className="px-6 py-2 rounded-lg bg-orange-600 text-white font-medium hover:bg-orange-700"
+                            >
+                              Send OTP
+                            </button>
+                          </form>
+                        ) : (
+                          <form
+                            onSubmit={handleEmailVerify}
+                            className="max-w-lg space-y-4"
                           >
-                            Verify & Change Email
-                          </button>
-                        </form>
-                      )}
-                    </div>
+                            <p className="text-green-600 mb-4">
+                              OTP has been sent to {emailData.new_email}
+                            </p>
+                            <input
+                              type="text"
+                              placeholder="Enter OTP"
+                              value={emailData.otp}
+                              onChange={(e) =>
+                                setEmailData({
+                                  ...emailData,
+                                  otp: e.target.value,
+                                })
+                              }
+                              required
+                              className="w-full border rounded px-3 py-2"
+                            />
+                            <button
+                              type="submit"
+                              className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
+                            >
+                              Verify & Change Email
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               </main>
