@@ -292,8 +292,8 @@ function Checkout() {
 
   // --- Display Prep ---
   const subTotal = Number(order.initial_total) || 0;
-  const discountAmount =
-    Number(order.offer_saved || 0) + Number(order.coupon_saved || 0);
+  const offerDiscount = Number(order.offer_saved || 0);
+  const couponDiscount = Number(order.coupon_saved || 0);
   const tax = Number(order.tax_fee) || 0;
   const shipping = Number(order.shipping_amount) || 0;
   const grandTotal = Number(order.total) || 0;
@@ -684,10 +684,17 @@ function Checkout() {
                     </span>
                   </div>
 
-                  {discountAmount > 0 && (
+                  {offerDiscount > 0 && (
+                    <div className="flex justify-between text-orange-600 font-medium">
+                      <span>Offer Discount</span>
+                      <span>-₹{offerDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {couponDiscount > 0 && (
                     <div className="flex justify-between text-green-600 font-medium">
-                      <span>Discount</span>
-                      <span>-₹{discountAmount.toFixed(2)}</span>
+                      <span>Coupon Discount</span>
+                      <span>-₹{couponDiscount.toFixed(2)}</span>
                     </div>
                   )}
 

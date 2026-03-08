@@ -236,11 +236,17 @@ function OrderDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <p className="text-gray-500 text-sm">Discount</p>
-            <h2 className="text-xl font-bold text-red-600">-₹{order.saved}</h2>
+            <p className="text-gray-500 text-sm">Offer Discount</p>
+            <h2 className="text-xl font-bold text-orange-600">-₹{order.offer_saved}</h2>
           </div>
+          {Number(order.coupon_saved || 0) > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <p className="text-gray-500 text-sm">Coupon Discount</p>
+              <h2 className="text-xl font-bold text-green-600">-₹{order.coupon_saved}</h2>
+            </div>
+          )}
         </div>
 
         {/* Order Items Section */}
@@ -264,8 +270,11 @@ function OrderDetail() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Total
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-red-500 uppercase tracking-wider">
-                    Discount
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-orange-500 uppercase tracking-wider">
+                    Offer
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-green-500 uppercase tracking-wider">
+                    Coupon
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Status
@@ -303,8 +312,11 @@ function OrderDetail() {
                     <td className="px-6 py-4 font-medium text-gray-900">
                       ₹{item.sub_total}
                     </td>
-                    <td className="px-6 py-4 font-medium text-red-600">
-                      -₹{item.saved}
+                    <td className="px-6 py-4 font-medium text-orange-600">
+                      -₹{item.offer_saved}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-green-600">
+                      {Number(item.coupon_saved || 0) > 0 ? `-₹${item.coupon_saved}` : "₹0.00"}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
