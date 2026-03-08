@@ -7,8 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import ProductBasicInfo from "./EditProduct/ProductBasicInfo";
 import ProductGallery from "./EditProduct/ProductGallery";
 import ProductSpecifications from "./EditProduct/ProductSpecifications";
-import ProductVariants from "./EditProduct/ProductVariants";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, FileText, ImageIcon, Settings } from "lucide-react";
 import log from "loglevel";
 
 function UpdateProduct() {
@@ -36,12 +35,7 @@ function UpdateProduct() {
   const [specifications, setSpecifications] = useState([
     { title: "", content: "" },
   ]);
-  const [colors, setColors] = useState([
-    { name: "", color_code: "", image: null },
-  ]);
-  const [sizes, setSizes] = useState([{ name: "", price: 0.0 }]);
   const [gallery, setGallery] = useState([{ image: null }]);
-  2;
   const [category, setCategory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
@@ -76,27 +70,6 @@ function UpdateProduct() {
                 content: spec.content || "",
               }))
             : [{ title: "", content: "" }],
-        );
-
-        // Colors
-        setColors(
-          productData.color?.length > 0
-            ? productData.color.map((color) => ({
-                name: color.name || "",
-                color_code: color.color_code || "",
-                image: color.image ? { preview: color.image } : null,
-              }))
-            : [{ name: "", color_code: "", image: null }],
-        );
-
-        // Sizes
-        setSizes(
-          productData.size?.length > 0
-            ? productData.size.map((size) => ({
-                name: size.name || "",
-                price: size.price || 0.0,
-              }))
-            : [{ name: "", price: 0.0 }],
         );
 
         // Gallery
@@ -242,29 +215,6 @@ function UpdateProduct() {
         });
       });
 
-      const validColors = colors.filter(
-        (color) =>
-          color.name?.trim() || color.color_code?.trim() || color.image,
-      );
-      validColors.forEach((color, index) => {
-        Object.entries(color).forEach(([k, v]) => {
-          if (k === "image" && v?.file) {
-            formData.append(`colors[${index}][${k}]`, v.file, v.file.name);
-          } else if (v) {
-            formData.append(`colors[${index}][${k}]`, String(v));
-          }
-        });
-      });
-
-      const validSizes = sizes.filter(
-        (size) => size.name?.trim() || size.price,
-      );
-      validSizes.forEach((size, index) => {
-        Object.entries(size).forEach(([k, v]) => {
-          if (v) formData.append(`sizes[${index}][${k}]`, v);
-        });
-      });
-
       gallery.forEach((item, index) => {
         if (item.image?.file) {
           formData.append(`gallery[${index}][image]`, item.image.file);
@@ -305,13 +255,30 @@ function UpdateProduct() {
           <div className="md:w-3/4 lg:w-4/5 mt-6">
             <h2 className="text-2xl font-semibold mb-4">Update Product</h2>
             <div className="mb-4 text-center text-sm text-gray-600">
-              Note: Specifications, Sizes, Colors, and Gallery images are
-              optional.
+              Note: Specifications and Gallery images are optional.
             </div>
             <form onSubmit={handleSubmit} encType="multipart/form-data">
-              {/* Tabs same as before */}
-              <div className="flex justify-center mb-6 space-x-4">
-                {/* ... your tab buttons ... */}
+              {/* Tab Buttons */}
+              <div className="flex justify-center mb-6 space-x-2">
+                {[
+                  { id: "basic", label: "Basic Info", icon: FileText },
+                  { id: "specs", label: "Specifications", icon: Settings },
+                  { id: "gallery", label: "Gallery", icon: ImageIcon },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      activeTab === tab.id
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
+                ))}
               </div>
 
               <div>
@@ -324,7 +291,24 @@ function UpdateProduct() {
                     handleProductFileChange={handleProductFileChange}
                   />
                 )}
-                {/* ... other tabs ... */}
+                {activeTab === "specs" && (
+                  <ProductSpecifications
+                    specifications={specifications}
+                    setSpecifications={setSpecifications}
+                    handleInputChange={handleInputChange}
+                    handleRemove={handleRemove}
+                    handleAddMore={handleAddMore}
+                  />
+                )}
+                {activeTab === "gallery" && (
+                  <ProductGallery
+                    gallery={gallery}
+                    setGallery={setGallery}
+                    handleImageChange={handleImageChange}
+                    handleRemove={handleRemove}
+                    handleAddMore={handleAddMore}
+                  />
+                )}
 
                 <div className="flex justify-center mt-6 mb-8">
                   {isLoading ? (
