@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import ProductBasicInfo from "./EditProduct/ProductBasicInfo";
 import ProductGallery from "./EditProduct/ProductGallery";
 import ProductSpecifications from "./EditProduct/ProductSpecifications";
-import ProductVariants from "./EditProduct/ProductVariants";
+
 import { CheckCircle } from "lucide-react";
 import log from "loglevel";
 
@@ -34,10 +34,7 @@ function AddProduct() {
   const [specifications, setSpecifications] = useState([
     { title: "", content: "" },
   ]);
-  const [colors, setColors] = useState([
-    { name: "", color_code: "", image: null },
-  ]);
-  const [sizes, setSizes] = useState([{ name: "", price: 0.0 }]);
+
   const [gallery, setGallery] = useState([{ image: null }]);
   const [category, setCategory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -161,39 +158,7 @@ function AddProduct() {
         });
       });
 
-      // Valid colors
-      const validColors = colors.filter(
-        (color) =>
-          color.name?.trim() || color.color_code?.trim() || color.image,
-      );
-      validColors.forEach((color, index) => {
-        Object.entries(color).forEach(([key, value]) => {
-          if (
-            key === "image" &&
-            value &&
-            value.file &&
-            value.file.type.startsWith("image/")
-          ) {
-            formData.append(
-              `colors[${index}][${key}]`,
-              value.file,
-              value.file.name,
-            );
-          } else if (value) {
-            formData.append(`colors[${index}][${key}]`, String(value));
-          }
-        });
-      });
 
-      // Valid sizes
-      const validSizes = sizes.filter(
-        (size) => size.name?.trim() || size.price,
-      );
-      validSizes.forEach((size, index) => {
-        Object.entries(size).forEach(([key, value]) => {
-          if (value) formData.append(`sizes[${index}][${key}]`, value);
-        });
-      });
 
       // Gallery
       gallery.forEach((item, index) => {
@@ -244,8 +209,7 @@ function AddProduct() {
               <h4 className="text-xl font-semibold mb-4">Add New Product</h4>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6 text-sm text-blue-700">
-                <strong>Note:</strong> Specifications, Sizes, Colors, and
-                Gallery images are optional.
+                <strong>Note:</strong> Specifications and Gallery images are optional.
               </div>
 
               <form onSubmit={handleSubmit} encType="multipart/form-data">
@@ -284,28 +248,7 @@ function AddProduct() {
                   >
                     Specifications
                   </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
-                      activeTab === "size"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                    onClick={() => setActiveTab("size")}
-                  >
-                    Size
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
-                      activeTab === "color"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                    onClick={() => setActiveTab("color")}
-                  >
-                    Color
-                  </button>
+
                 </div>
 
                 <hr className="my-6" />
@@ -339,27 +282,7 @@ function AddProduct() {
                       handleAddMore={handleAddMore}
                     />
                   )}
-                  {activeTab === "size" && (
-                    <ProductVariants
-                      type="size"
-                      items={sizes}
-                      setItems={setSizes}
-                      handleInputChange={handleInputChange}
-                      handleRemove={handleRemove}
-                      handleAddMore={handleAddMore}
-                    />
-                  )}
-                  {activeTab === "color" && (
-                    <ProductVariants
-                      type="color"
-                      items={colors}
-                      setItems={setColors}
-                      handleInputChange={handleInputChange}
-                      handleImageChange={handleImageChange}
-                      handleRemove={handleRemove}
-                      handleAddMore={handleAddMore}
-                    />
-                  )}
+
                 </div>
 
                 <hr className="my-6" />
