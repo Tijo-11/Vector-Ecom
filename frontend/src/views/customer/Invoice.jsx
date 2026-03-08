@@ -34,13 +34,12 @@ export default function Invoice() {
             0,
           ) || 0;
 
-        // Total saved = offer_saved + coupon_saved (order level)
-        const totalSaved =
-          parseFloat(data.offer_saved || 0) +
-          parseFloat(data.coupon_saved || 0);
+        // Separate discounts
+        const totalOfferSaved = parseFloat(data.offer_saved || 0);
+        const totalCouponSaved = parseFloat(data.coupon_saved || 0);
 
         // Sub total after discounts
-        const subTotal = initialTotal - totalSaved;
+        const subTotal = initialTotal - totalOfferSaved - totalCouponSaved;
 
         setOrder({
           full_name: data.full_name || "N/A",
@@ -49,7 +48,8 @@ export default function Invoice() {
           oid: data.oid || order_oid,
           initial_total: initialTotal,
           shipping_amount: parseFloat(data.shipping_amount || 0),
-          saved: totalSaved,
+          offer_saved: totalOfferSaved,
+          coupon_saved: totalCouponSaved,
           sub_total: subTotal,
           total: parseFloat(data.total || 0),
         });
@@ -63,9 +63,8 @@ export default function Invoice() {
               parseFloat(item.price || 0) * parseInt(item.qty || 0) -
               (parseFloat(item.offer_saved || 0) +
                 parseFloat(item.coupon_saved || 0)),
-            saved:
-              parseFloat(item.offer_saved || 0) +
-              parseFloat(item.coupon_saved || 0),
+            offer_saved: parseFloat(item.offer_saved || 0),
+            coupon_saved: parseFloat(item.coupon_saved || 0),
           })) || [],
         );
       } catch (err) {
@@ -149,7 +148,8 @@ export default function Invoice() {
                 <th className="p-3 border border-gray-300">Price</th>
                 <th className="p-3 border border-gray-300">Qty</th>
                 <th className="p-3 border border-gray-300">Sub Total</th>
-                <th className="p-3 border border-gray-300">Saved</th>
+                <th className="p-3 border border-gray-300">Offer Discount</th>
+                <th className="p-3 border border-gray-300">Coupon Discount</th>
               </tr>
             </thead>
             <tbody>
@@ -165,8 +165,11 @@ export default function Invoice() {
                   <td className="p-3 border border-gray-300">
                     ₹{item.sub_total.toFixed(2)}
                   </td>
-                  <td className="p-3 border border-gray-300">
-                    ₹{item.saved.toFixed(2)}
+                  <td className="p-3 border border-gray-300" style={{ color: "#c2410c" }}>
+                    -₹{item.offer_saved.toFixed(2)}
+                  </td>
+                  <td className="p-3 border border-gray-300" style={{ color: "#15803d" }}>
+                    {item.coupon_saved > 0 ? `-₹${item.coupon_saved.toFixed(2)}` : "₹0.00"}
                   </td>
                 </tr>
               ))}
@@ -181,9 +184,14 @@ export default function Invoice() {
             <p className="text-sm">
               <b>Original Subtotal: </b> ₹{order.initial_total.toFixed(2)}
             </p>
-            <p className="text-sm">
-              <b>Saved: </b> ₹{order.saved.toFixed(2)}
+            <p className="text-sm" style={{ color: "#c2410c" }}>
+              <b>Offer Discount: </b> -₹{order.offer_saved.toFixed(2)}
             </p>
+            {order.coupon_saved > 0 && (
+              <p className="text-sm" style={{ color: "#15803d" }}>
+                <b>Coupon Discount: </b> -₹{order.coupon_saved.toFixed(2)}
+              </p>
+            )}
             <p className="text-sm">
               <b>Subtotal (after discounts): </b> ₹{order.sub_total.toFixed(2)}
             </p>

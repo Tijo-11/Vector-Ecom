@@ -126,7 +126,9 @@ class OrdersAPIView(generics.ListAPIView):
     def get_queryset(self):
         vendor_id = self.kwargs["vendor_id"]
         vendor = get_object_or_404(Vendor, id=vendor_id)
-        orders = CartOrder.objects.filter(vendor=vendor, payment_status="paid")
+        orders = CartOrder.objects.filter(
+            vendor=vendor, payment_status__in=["paid", "cancelled"]
+        )
         return orders
 
     def get_serializer_context(self):
@@ -176,7 +178,7 @@ class OrderDetailAPIView(generics.RetrieveAPIView):
 
         try:
             order = CartOrder.objects.get(
-                vendor=vendor, payment_status="paid", oid=order_oid
+                vendor=vendor, payment_status__in=["paid", "cancelled"], oid=order_oid
             )
         except CartOrder.DoesNotExist:
             raise Http404("Order not found.")
@@ -340,7 +342,7 @@ class FilterOrderAPIView(generics.ListAPIView):
             ).order_by("-id")
         elif filter == "Cancelled":
             orders = CartOrder.objects.filter(
-                vendor=vendor, payment_status="paid", order_status="Cancelled"
+                vendor=vendor, order_status="Cancelled"
             ).order_by("-id")
         elif filter == "Pending":
             orders = CartOrder.objects.filter(

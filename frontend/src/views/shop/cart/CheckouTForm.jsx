@@ -61,6 +61,7 @@ function CheckoutForm() {
 
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const isVendor = useAuthStore((state) => state.isVendor);
   const cart_id = cartID();
 
   useEffect(() => {
@@ -234,6 +235,29 @@ function CheckoutForm() {
       setIsSubmitting(false);
     }
   };
+
+  // Block vendors from placing orders
+  if (isVendor) {
+    return (
+      <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8 text-center max-w-lg mx-auto">
+        <div className="mb-4 inline-flex p-4 bg-red-100 rounded-full">
+          <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-red-800 mb-2">Ordering Not Allowed</h2>
+        <p className="text-red-600 mb-6">
+          Vendor accounts are not permitted to place orders. Please use a customer account to shop.
+        </p>
+        <a
+          href="/vendor/dashboard/"
+          className="inline-flex items-center px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+        >
+          Go to Vendor Dashboard
+        </a>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">

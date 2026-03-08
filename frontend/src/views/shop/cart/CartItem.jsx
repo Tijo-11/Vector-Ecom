@@ -269,8 +269,21 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
                     </span>
                   )}
                 </div>
-                <div className="md:hidden font-bold text-gray-900">
-                  ₹{finalPrice.toFixed(2)}
+                {/* Amazon-style pricing */}
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-lg font-bold text-gray-900">
+                    ₹{finalPrice.toFixed(2)}
+                  </span>
+                  {discount > 0 && (
+                    <>
+                      <span className="text-sm text-gray-400 line-through">
+                        M.R.P: ₹{originalPrice.toFixed(2)}
+                      </span>
+                      <span className="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
+                        {discount}% off
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -311,8 +324,15 @@ function CartItem({ cartItems, setCart, setCartTotal }) {
 
             {/* Total & Remove (Col 3) */}
             <div className="md:col-span-3 flex items-center justify-between md:justify-end gap-6">
-              <div className="hidden md:block font-bold text-gray-900 text-base">
-                ₹{itemTotal.toFixed(2)}
+              <div className="hidden md:flex flex-col items-end">
+                <span className="font-bold text-gray-900 text-base">
+                  ₹{itemTotal.toFixed(2)}
+                </span>
+                {discount > 0 && (
+                  <span className="text-xs text-gray-400 line-through">
+                    ₹{(originalPrice * currentQty).toFixed(2)}
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => handleDeleteCartItem(c.id)}

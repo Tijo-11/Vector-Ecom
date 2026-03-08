@@ -27,9 +27,12 @@ function Profile() {
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <div className="flex items-center gap-6 mb-6">
                 <img
-                  src={profile.image || "/default-avatar.png"}
+                  src={profile.image || "/avatar.webp"}
                   alt="Profile"
                   className="w-32 h-32 rounded-full object-cover"
+                  onError={(e) => {
+                    e.target.src = "/avatar.webp";
+                  }}
                 />
                 <div>
                   <h4 className="text-xl font-bold">

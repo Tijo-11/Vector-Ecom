@@ -40,6 +40,14 @@ class CreateOrderView(generics.CreateAPIView):
                     {"error": "User with provided ID does not exist"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            # Block vendors from placing orders
+            from vendor.models import Vendor
+
+            if Vendor.objects.filter(user=user).exists():
+                return Response(
+                    {"error": "Vendors are not allowed to place orders."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         cart_items = Cart.objects.filter(cart_id=cart_id, is_active=True)
         if user:

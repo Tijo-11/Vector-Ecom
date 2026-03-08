@@ -1,29 +1,91 @@
-import React, { useState, useEffect } from "react";
-import { useRazorpay } from "react-razorpay";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import apiInstance from "../../../utils/axios";
 import Swal from "sweetalert2";
-import { log } from "loglevel";
+import log from "loglevel";
 
-function RazorpayButton({ order, order_id }) {
-  const { error, isLoading, Razorpay } = useRazorpay();
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js";
 
-  // Track script loading
-  useEffect(() => {
-    if (!isLoading && Razorpay) {
-      setScriptLoaded(true);
+/**
+ * Manually loads the Razorpay script and retries until window.Razorpay is available.
+ * This replaces the useRazorpay() hook which doesn't retry on failure.
+ */
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    // Already loaded
+    if (window.Razorpay) {
+      resolve(true);
+      return;
     }
-  }, [isLoading, Razorpay]);
 
-  const handleRazorpayCheckout = async () => {
-    if (!scriptLoaded) {
-      Swal.fire({
-        icon: "info",
-        title: "Loading",
-        text: "Razorpay is still loading, please wait.",
+    // Check if script tag already exists (pending load)
+    const existingScript = document.querySelector(
+      `script[src="${RAZORPAY_SCRIPT_URL}"]`
+    );
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(true));
+      existingScript.addEventListener("error", () => {
+        existingScript.remove();
+        resolve(false);
       });
       return;
     }
+
+    const script = document.createElement("script");
+    script.src = RAZORPAY_SCRIPT_URL;
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => {
+      script.remove();
+      resolve(false);
+    };
+    document.body.appendChild(script);
+  });
+}
+
+function RazorpayButton({ order, order_id }) {
+  const [scriptReady, setScriptReady] = useState(!!window.Razorpay);
+  const retryRef = useRef(null);
+  const mountedRef = useRef(true);
+
+  const attemptLoad = useCallback(async () => {
+    if (window.Razorpay) {
+      setScriptReady(true);
+      return;
+    }
+
+    const loaded = await loadRazorpayScript();
+    if (!mountedRef.current) return;
+
+    if (loaded && window.Razorpay) {
+      setScriptReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    // Immediately try to load
+    attemptLoad();
+
+    // Keep retrying every 2s until ready
+    retryRef.current = setInterval(() => {
+      if (window.Razorpay) {
+        setScriptReady(true);
+        clearInterval(retryRef.current);
+        return;
+      }
+      attemptLoad();
+    }, 2000);
+
+    return () => {
+      mountedRef.current = false;
+      if (retryRef.current) clearInterval(retryRef.current);
+    };
+  }, [attemptLoad]);
+
+  const handleRazorpayCheckout = async () => {
+    if (!scriptReady || !window.Razorpay) return;
+
     if (
       order?.payment_status === "paid" ||
       order?.payment_status === "processing"
@@ -32,14 +94,6 @@ function RazorpayButton({ order, order_id }) {
         icon: "warning",
         title: "Already Paid",
         text: "This order has already been paid. Please visit Order Section in your Profile",
-      });
-      return;
-    }
-    if (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: `Failed to load Razorpay: ${error.message}`,
       });
       return;
     }
@@ -71,7 +125,7 @@ function RazorpayButton({ order, order_id }) {
         theme: { color: "#1E40AF" },
       };
 
-      const rzp = new Razorpay(options);
+      const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", (response) => {
         Swal.fire({
           icon: "error",
@@ -92,23 +146,43 @@ function RazorpayButton({ order, order_id }) {
   };
 
   return (
-    <>
-      {!scriptLoaded && (
-        <p className="text-gray-700 mt-4">Loading Razorpay...</p>
+    <button
+      onClick={handleRazorpayCheckout}
+      disabled={!scriptReady}
+      className={`w-full mt-4 py-3 rounded-md text-sm uppercase font-semibold transition flex items-center justify-center gap-2 ${
+        !scriptReady
+          ? "bg-blue-500 text-white cursor-wait"
+          : "bg-blue-500 text-white hover:bg-blue-600 cursor-pointer"
+      }`}
+    >
+      {!scriptReady ? (
+        <>
+          <svg
+            className="animate-spin h-5 w-5 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          Preparing Payment...
+        </>
+      ) : (
+        "Pay with Razorpay"
       )}
-      {error && (
-        <p className="text-red-600 mt-4">
-          Error loading Razorpay: {error.message}
-        </p>
-      )}
-      <button
-        onClick={handleRazorpayCheckout}
-        disabled={!scriptLoaded || isLoading}
-        className="w-full mt-4 bg-blue-500 text-white py-3 rounded-md text-sm uppercase font-semibold hover:bg-blue-600 transition disabled:bg-gray-400"
-      >
-        Pay with Razorpay
-      </button>
-    </>
+    </button>
   );
 }
 

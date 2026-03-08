@@ -73,8 +73,23 @@ function OrderDetail() {
     }
   };
 
+  // Silent poll — updates data without showing loading spinner
+  const pollOrderDetails = async () => {
+    try {
+      const response = await axios.get(
+        `vendor/orders/${userData?.vendor_id}/${param.oid}`,
+      );
+      setOrder(response.data);
+      setOrderItems(response.data.orderitem);
+    } catch {
+      // Silently ignore poll errors
+    }
+  };
+
   useEffect(() => {
     fetchOrderDetails();
+    const interval = setInterval(pollOrderDetails, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   // Handle Status Change
@@ -236,11 +251,17 @@ function OrderDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <p className="text-gray-500 text-sm">Discount</p>
-            <h2 className="text-xl font-bold text-red-600">-₹{order.saved}</h2>
+            <p className="text-gray-500 text-sm">Offer Discount</p>
+            <h2 className="text-xl font-bold text-orange-600">-₹{order.offer_saved}</h2>
           </div>
+          {Number(order.coupon_saved || 0) > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <p className="text-gray-500 text-sm">Coupon Discount</p>
+              <h2 className="text-xl font-bold text-green-600">-₹{order.coupon_saved}</h2>
+            </div>
+          )}
         </div>
 
         {/* Order Items Section */}
@@ -264,8 +285,11 @@ function OrderDetail() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Total
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-red-500 uppercase tracking-wider">
-                    Discount
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-orange-500 uppercase tracking-wider">
+                    Offer
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-green-500 uppercase tracking-wider">
+                    Coupon
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Status
@@ -303,22 +327,39 @@ function OrderDetail() {
                     <td className="px-6 py-4 font-medium text-gray-900">
                       ₹{item.sub_total}
                     </td>
-                    <td className="px-6 py-4 font-medium text-red-600">
-                      -₹{item.saved}
+                    <td className="px-6 py-4 font-medium text-orange-600">
+                      -₹{item.offer_saved}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-green-600">
+                      {Number(item.coupon_saved || 0) > 0 ? `-₹${item.coupon_saved}` : "₹0.00"}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}
-                        >
-                          {item.delivery_status}
-                        </span>
-                        {item.return_request &&
-                          getReturnStatusBadge(item.return_request)}
+                        {item.is_cancelled ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Cancelled
+                          </span>
+                        ) : (
+                          <>
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.delivery_status)}`}
+                            >
+                              {item.delivery_status}
+                            </span>
+                            {item.return_request &&
+                              getReturnStatusBadge(item.return_request)}
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-2">
+                        {item.is_cancelled ? (
+                          <span className="text-xs font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg text-center">
+                            Order Cancelled
+                          </span>
+                        ) : (
+                          <>
                         {!item.product_delivered &&
                           item.delivery_status !== "Cancelled" &&
                           (!item.return_request ||
@@ -333,6 +374,14 @@ function OrderDetail() {
 
                         {item.return_request &&
                           item.return_request.status === "pending" && (
+                            <div className="flex flex-col gap-2">
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs max-w-[220px]">
+                                <p className="font-semibold text-yellow-800 mb-0.5">Return Reason:</p>
+                                <p className="text-yellow-700 capitalize">{item.return_request.reason?.replace(/_/g, " ")}</p>
+                                {item.return_request.reason_detail && (
+                                  <p className="text-yellow-600 mt-1 italic">"{item.return_request.reason_detail}"</p>
+                                )}
+                              </div>
                             <div className="flex gap-1">
                               <button
                                 onClick={() =>
@@ -351,7 +400,10 @@ function OrderDetail() {
                                 Reject
                               </button>
                             </div>
+                            </div>
                           )}
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

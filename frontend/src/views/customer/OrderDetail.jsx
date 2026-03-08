@@ -42,8 +42,21 @@ function OrderDetail() {
       });
   };
 
+  // Silent poll — updates data without showing loading spinner
+  const pollOrderDetails = () => {
+    axios
+      .get(`customer/order/detail/${userData?.user_id}/${param?.order_oid}`)
+      .then((res) => {
+        setOrder(res.data);
+        setOrderItems(res.data.orderitem);
+      })
+      .catch(() => {}); // Silently ignore poll errors
+  };
+
   useEffect(() => {
     fetchOrderDetails();
+    const interval = setInterval(pollOrderDetails, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   // Check if any item is delivered (to hide full order cancel if partial delivery)
@@ -214,16 +227,28 @@ function OrderDetail() {
                               </div>
                             </div>
                           </div>
-                          <div className="rounded-lg shadow bg-purple-100 p-4">
+                          <div className="rounded-lg shadow bg-orange-100 p-4">
                             <div className="flex items-center">
                               <div>
-                                <p className="mb-1 text-sm">Saved</p>
-                                <h2 className="text-xl font-semibold">
-                                  ₹{order.saved}
+                                <p className="mb-1 text-sm">Offer Discount</p>
+                                <h2 className="text-xl font-semibold text-orange-700">
+                                  -₹{order.offer_saved}
                                 </h2>
                               </div>
                             </div>
                           </div>
+                          {Number(order.coupon_saved || 0) > 0 && (
+                            <div className="rounded-lg shadow bg-green-100 p-4">
+                              <div className="flex items-center">
+                                <div>
+                                  <p className="mb-1 text-sm">Coupon Discount</p>
+                                  <h2 className="text-xl font-semibold text-green-700">
+                                    -₹{order.coupon_saved}
+                                  </h2>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                           <div className="rounded-lg shadow bg-blue-100 p-4">
                             <div className="flex items-center">
                               <div>
@@ -270,7 +295,8 @@ function OrderDetail() {
                                   <th className="p-3">Price</th>
                                   <th className="p-3">Qty</th>
                                   <th className="p-3">Subtotal</th>
-                                  <th className="p-3 text-red-600">Saved</th>
+                                  <th className="p-3 text-orange-600">Offer</th>
+                                  <th className="p-3 text-green-600">Coupon</th>
                                   <th className="p-3">Status</th>
                                   <th className="p-3">Tracking</th>
                                   <th className="p-3">Actions</th>
@@ -301,8 +327,11 @@ function OrderDetail() {
                                     <td className="p-3">
                                       ₹{orderItem.sub_total}
                                     </td>
-                                    <td className="p-3 text-red-600">
-                                      ₹{orderItem.saved}
+                                    <td className="p-3 text-orange-600">
+                                      -₹{orderItem.offer_saved}
+                                    </td>
+                                    <td className="p-3 text-green-600">
+                                      {Number(orderItem.coupon_saved || 0) > 0 ? `-₹${orderItem.coupon_saved}` : "₹0.00"}
                                     </td>
                                     <td className="p-3">
                                       <div className="flex flex-col gap-1">

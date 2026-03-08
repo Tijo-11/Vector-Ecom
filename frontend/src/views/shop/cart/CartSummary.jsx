@@ -79,8 +79,8 @@ function CartSummary({ cartItems, setCartTotal }) {
         </div>
 
         {cart_total.mrp_total > cart_total.discounted_total && (
-          <div className="flex justify-between text-green-600">
-            <span>Total Discount</span>
+          <div className="flex justify-between text-orange-600">
+            <span>Offer Discount</span>
             <span className="font-medium">
               -₹
               {(cart_total.mrp_total - cart_total.discounted_total).toFixed(2)}
