@@ -14,6 +14,8 @@ import { addToWishlist } from "../../../plugin/addToWishlist";
 import { useAuthStore } from "../../../store/auth";
 import {
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Star,
   Truck,
   ShieldCheck,
@@ -25,8 +27,11 @@ export default function ProductDetail() {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [mainImage, setMainImage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("description"); // description, specs, reviews
+  const [activeTab, setActiveTab] = useState("description");
   const [wishlist, setWishlist] = useState([]);
+
+  // ✅ Controls expand/collapse
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   const param = useParams();
   const currentAddress = UserCountry();
@@ -53,6 +58,11 @@ export default function ProductDetail() {
     if (isLoggedIn) fetchWishlist();
   }, [isLoggedIn, userData?.user_id]);
 
+  // ✅ Reset expand state when user opens a new product
+  useEffect(() => {
+    setShowFullDescription(false);
+  }, [param.slug]);
+
   useEffect(() => {
     setLoading(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -63,7 +73,6 @@ export default function ProductDetail() {
         setProduct(response.data);
         setMainImage(response.data.image || "");
 
-        // Fetch related products if category exists
         if (response.data?.category?.slug) {
           apiInstance
             .get(`products/?category=${response.data.category.slug}`)
@@ -84,6 +93,8 @@ export default function ProductDetail() {
         setLoading(false);
       });
   }, [param.slug]);
+
+  const descriptionNeedsToggle = (product.description || "").length > 150;
 
   const allImages = [
     { id: "main", image: product.image },
@@ -220,16 +231,42 @@ export default function ProductDetail() {
               )}
             </div>
 
+            {/* Expandable Description */}
             {product.description && (
-              <p className="text-gray-600 mb-8 line-clamp-3 leading-relaxed">
-                {product.description.substring(0, 150)}...
-                <button
-                  onClick={() => setActiveTab("description")}
-                  className="text-blue-600 hover:underline text-sm ml-1 font-medium"
-                >
-                  Read more
-                </button>
-              </p>
+              <div className="mb-8">
+                <div className="relative">
+                  <div
+                    className="overflow-hidden transition-all duration-400 ease-in-out"
+                    style={{
+                      maxHeight: showFullDescription ? "2000px" : "4.5em",
+                    }}
+                  >
+                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                      {product.description}
+                    </p>
+                  </div>
+                  {/* Gradient fade overlay when collapsed */}
+                  {descriptionNeedsToggle && !showFullDescription && (
+                    <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+                  )}
+                </div>
+                {descriptionNeedsToggle && (
+                  <button
+                    onClick={() => setShowFullDescription(!showFullDescription)}
+                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    {showFullDescription ? (
+                      <>
+                        Read less <ChevronUp className="h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        Read more <ChevronDown className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Purchase Options Component */}
@@ -269,7 +306,7 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Tabs Section */}
+        {/* Tabs Section (unchanged) */}
         <div className="mt-20">
           <div className="border-b border-gray-200">
             <nav className="flex gap-8">
