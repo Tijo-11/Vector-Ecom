@@ -198,10 +198,28 @@ function Settings() {
         }
       });
 
-      await apiInstance.patch(
+      const updateRes = await apiInstance.patch(
         `customer/setting/${userData?.user_id}/`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } },
+      );
+
+      // Re-fetch the latest profile to get the server-generated image URL
+      const freshProfile = await apiInstance.get(`user/profile/${userData.user_id}/`);
+      const newImageUrl = freshProfile.data?.image || "";
+      if (newImageUrl) {
+        setImagePreview(newImageUrl);
+      }
+
+      // Dispatch event so Sidebar updates without a hard refresh
+      window.dispatchEvent(
+        new CustomEvent("profile-updated", {
+          detail: {
+            image: newImageUrl,
+            full_name: freshProfile.data?.full_name,
+            email: freshProfile.data?.user?.email || freshProfile.data?.email,
+          },
+        })
       );
 
       Swal.fire({

@@ -28,6 +28,9 @@ const Sidebar = () => {
     const [walletBalance, setWalletBalance] = useState("0.00");
     const [countsLoading, setCountsLoading] = useState(true);
 
+    // Local overrides for profile data (updated via AJAX event from Settings page)
+    const [profileOverride, setProfileOverride] = useState(null);
+
     if (!userData?.user_id || profileError) {
         return (
             <div className="lg:w-1/4">
@@ -77,6 +80,20 @@ const Sidebar = () => {
         return () => window.removeEventListener('notification-count-update', handleCountUpdate);
     }, []);
 
+    // Listen for profile updates from Settings page (image, name, email)
+    useEffect(() => {
+        const handleProfileUpdate = (e) => {
+            setProfileOverride((prev) => ({
+                ...prev,
+                image: e.detail?.image ?? prev?.image,
+                full_name: e.detail?.full_name ?? prev?.full_name,
+                email: e.detail?.email ?? prev?.email,
+            }));
+        };
+        window.addEventListener('profile-updated', handleProfileUpdate);
+        return () => window.removeEventListener('profile-updated', handleProfileUpdate);
+    }, []);
+
     const CountSkeleton = () => (
         <span className="inline-block w-8 h-5 rounded-full bg-gray-200 animate-pulse" />
     );
@@ -119,7 +136,7 @@ const Sidebar = () => {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 text-center">
                 <div className="relative inline-block mx-auto mb-4">
                      <img
-                        src={userProfile?.image || `https://ui-avatars.com/api/?name=${userProfile?.full_name || 'User'}&background=random`}
+                        src={profileOverride?.image || userProfile?.image || `https://ui-avatars.com/api/?name=${profileOverride?.full_name || userProfile?.full_name || 'User'}&background=random`}
                         alt="Profile"
                         className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 shadow-sm"
                      />
@@ -127,8 +144,8 @@ const Sidebar = () => {
                         <Camera size={14} />
                      </Link>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">{userProfile?.full_name || "Welcome Back"}</h3>
-                <p className="text-sm text-gray-500 mt-1">{userProfile?.email || userData?.email}</p>
+                <h3 className="text-xl font-bold text-gray-900">{profileOverride?.full_name || userProfile?.full_name || "Welcome Back"}</h3>
+                <p className="text-sm text-gray-500 mt-1">{profileOverride?.email || userProfile?.email || userData?.email}</p>
             </div>
 
             {/* Navigation */}
